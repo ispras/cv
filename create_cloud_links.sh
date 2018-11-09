@@ -15,7 +15,7 @@ while read line; do
     cd ${branch}
     rm -rf lib/java-benchmark/
     mkdir -p lib/java-benchmark/
-    ln -s ${verifiercloud_dir}/vcloud.jar lib/java-benchmark/
+    cp ${verifiercloud_dir}/vcloud.jar lib/java-benchmark/
     cd ..
 done <../cpa.config
 cd ..
