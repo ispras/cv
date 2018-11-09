@@ -54,10 +54,10 @@ ssh-copy-id -i /home/<user>/.ssh/cloud <имя узла>
 2. Установка (сервер).
 
 2.1. Выкачать репозитории.
-2.1.1. Web-сервер (стабильная ревизия 6075):
-svn co https://svn.sosy-lab.org/software/verifiercloud/trunk verifiercloud
+2.1.1. Web-сервер (ветка cv):
+git clone git@gitlab.com:mutilin/vcloud.git verifiercloud
 cd verifiercloud
-svn up -r 6075
+git checkout cv
 2.1.2. CPAchecker:
 mkdir -p git/cpachecker
 git clone -n -o origin https://svn.sosy-lab.org/git/software/cpachecker.git/ git/cpachecker
