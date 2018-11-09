@@ -1,0 +1,132 @@
+Index: scripts/benchmark/vcloud.py
+===================================================================
+--- scripts/benchmark/vcloud.py	(revision 29648)
++++ scripts/benchmark/vcloud.py	(working copy)
+@@ -94,6 +94,10 @@
+         else:
+             logLevel = "INFO"
+         heapSize = benchmark.config.cloudClientHeap + numberOfRuns//10 # 100 MB and 100 kB per run
++        if heapSize < 256:
++            heapSize = 256
++        if heapSize > 1024:
++            heapSize = 1024
+         lib = os.path.join(_ROOT_DIR, "lib", "java-benchmark", "vcloud.jar")
+         cmdLine = ["java", "-Xmx"+str(heapSize)+"m", "-jar", lib, "benchmark", "--loglevel", logLevel, \
+                    "--run-collection-meta-information", meta_information, \
+Index: src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java
+===================================================================
+--- src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java	(revision 29648)
++++ src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java	(working copy)
+@@ -191,9 +191,10 @@
+             + actualParameters + " parameter(s)", edge);
+ 
+       case C:
+-        throw new CParserException("Method " + functionName + " takes "
++        return;
++        /*throw new CParserException("Method " + functionName + " takes "
+             + declaredParameters + " parameter(s) but is called with "
+-            + actualParameters + " parameter(s)", edge);
++            + actualParameters + " parameter(s)", edge);*/
+ 
+       default:
+         throw new AssertionError("Unhandled language " + language);
+Index: src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java
+===================================================================
+--- src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java	(revision 29648)
++++ src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java	(working copy)
+@@ -387,8 +387,7 @@
+     String functionName = startNode.getFunctionName();
+ 
+     if (cfas.containsKey(functionName)) {
+-      throw new CFAGenerationRuntimeException("Duplicate function " + functionName
+-          + " in " + startNode.getFileLocation() + " and " + cfas.get(functionName).getFileLocation());
++      return;
+     }
+     cfas.put(functionName, startNode);
+     cfaNodes.putAll(functionName, functionBuilder.getCfaNodes());
+Index: src/org/sosy_lab/cpachecker/cfa/postprocessing/function/ThreadCreateTransformer.java
+===================================================================
+--- src/org/sosy_lab/cpachecker/cfa/postprocessing/function/ThreadCreateTransformer.java	(revision 29648)
++++ src/org/sosy_lab/cpachecker/cfa/postprocessing/function/ThreadCreateTransformer.java	(working copy)
+@@ -51,6 +51,7 @@
+ import org.sosy_lab.cpachecker.cfa.ast.c.CIdExpression;
+ import org.sosy_lab.cpachecker.cfa.ast.c.CIntegerLiteralExpression;
+ import org.sosy_lab.cpachecker.cfa.ast.c.CLeftHandSide;
++import org.sosy_lab.cpachecker.cfa.ast.c.CLiteralExpression;
+ import org.sosy_lab.cpachecker.cfa.ast.c.CRightHandSide;
+ import org.sosy_lab.cpachecker.cfa.ast.c.CSimpleDeclaration;
+ import org.sosy_lab.cpachecker.cfa.ast.c.CStatement;
+@@ -167,7 +168,7 @@
+         throw new UnsupportedOperationException("More arguments expected: " + fCall);
+       }
+ 
+-      CIdExpression varName = getThreadVariableName(fCall);
++      String varName = getThreadVariableName(fCall);
+       CExpression calledFunction = args.get(2);
+       CIdExpression functionNameExpression = getFunctionName(calledFunction);
+       List<CExpression> functionParameters = Lists.newArrayList(args.get(3));
+@@ -174,8 +175,9 @@
+       String newThreadName = functionNameExpression.getName();
+       CFunctionEntryNode entryNode = (CFunctionEntryNode) cfa.getFunctionHead(newThreadName);
+       if (entryNode == null) {
+-        throw new UnsupportedOperationException(
+-            "Can not find the body of function " + newThreadName + "(), full line: " + edge);
++        // throw new UnsupportedOperationException(
++        // "Can not find the body of function " + newThreadName + "(), full line: " + edge);
++        continue;
+       }
+ 
+       CFunctionDeclaration functionDeclaration = entryNode.getFunctionDefinition();
+@@ -192,7 +194,10 @@
+       boolean isSelfParallel = !fName.equals(threadCreate);
+       CFunctionCallStatement pFunctionCall =
+           new CThreadCreateStatement(
+-              pFileLocation, pFunctionCallExpression, isSelfParallel, varName.getName());
++              pFileLocation,
++              pFunctionCallExpression,
++              isSelfParallel,
++              varName);
+ 
+       if (edge instanceof CStatementEdge) {
+         CStatement stmnt = ((CStatementEdge) edge).getStatement();
+@@ -247,13 +252,13 @@
+     for (Entry<CFAEdge, CFunctionCallExpression> entry : threadVisitor.threadJoins.entrySet()) {
+       CFAEdge edge = entry.getKey();
+       CFunctionCallExpression fCall = entry.getValue();
+-      CIdExpression varName = getThreadVariableName(fCall);
++      String varName = getThreadVariableName(fCall);
+       FileLocation pFileLocation = edge.getFileLocation();
+ 
+       String fName = fCall.getFunctionNameExpression().toString();
+       boolean isSelfParallel = !fName.equals(threadJoin);
+       CFunctionCallStatement pFunctionCall =
+-          new CThreadJoinStatement(pFileLocation, fCall, isSelfParallel, varName.getName());
++          new CThreadJoinStatement(pFileLocation, fCall, isSelfParallel, varName);
+ 
+       replaceEdgeWith(edge, pFunctionCall);
+     }
+@@ -316,7 +321,7 @@
+     }
+   }
+ 
+-  private CIdExpression getThreadVariableName(CFunctionCallExpression fCall) {
++  private String getThreadVariableName(CFunctionCallExpression fCall) {
+     CExpression var = fCall.getParameterExpressions().get(0);
+ 
+     while (!(var instanceof CIdExpression)) {
+@@ -326,10 +331,13 @@
+       } else if (var instanceof CCastExpression) {
+         // (void *(*)(void * ))(& ldv_factory_scenario_4)
+         var = ((CCastExpression) var).getOperand();
++      } else if (var instanceof CLiteralExpression) {
++        return ((CLiteralExpression) var).toString();
+       } else {
+-        throw new UnsupportedOperationException("Unsupported parameter expression " + var);
++        return var.toString();
++        // throw new UnsupportedOperationException("Unsupported parameter expression " + var);
+       }
+     }
+-    return (CIdExpression) var;
++    return ((CIdExpression) var).getName();
+   }
+ }
