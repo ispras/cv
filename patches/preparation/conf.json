@@ -1,0 +1,5 @@
+{
+  "sed": ["list of sed commands, which should be applied to the prepared source files to prevent verifier fails"],
+  "filters": ["list of regular expression to filter build commands"],
+  "unsupported compiler options": ["list of compiler options, which should be filtered before executing command"]
+}

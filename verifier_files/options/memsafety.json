@@ -1,0 +1,17 @@
+{
+  "-smg-ldv": [],
+  "-spec": [
+    "properties/memsafety.spc"
+  ],
+  "-setprop": [
+    "analysis.stopAfterError=false",
+    "cpa.arg.witness.exportSourcecode=true",
+    "counterexample.export.exportImmediately=true",
+    "cpa.smg.guessSize = 3000",
+    "counterexample.export.filters=PathEqualityCounterexampleFilter",
+    "analysis.algorithm.CEGAR=true",
+    "cegar.refiner=cpa.smg.refiner.SMGBasicRefiner",
+    "cpa.smg.handleUnknownDereferenceAsSafe=true",
+    "solver.solver=Z3"
+  ]
+}

@@ -1,0 +1,99 @@
+Установка веб-сервера Klever Bridge
+===================================
+
+1. Указываются пути относительно tools/klever/
+
+2. Установить библиотеки для python3: django(1.9 для python 3.5), psycopg2
+
+3. Нужно выбрать одну из поддерживаемых баз данных PostgreSQL или MySQL/MariaDB и установить ее.
+
+	Настройка PostgreSQL
+	----------------
+
+	1. Trust all local connections by editing "pg_hba.conf" and by
+	   restarting the PostgreSQL server:
+
+	      $ sudo sed -i '/^local/c\local all all trust' /path/to/pg_hba.conf"
+	      $ Restart (on Ubuntu: sudo service postgresql restart)
+
+	2. Create a new PostgreSQL database (**db_name**):
+
+	      $ createdb -U postgres -T template0 -E utf8 -O postgres db_name
+
+	3. Create "klever/bridge/bridge/db.json":
+
+	      {
+	        "ENGINE": "django.db.backends.postgresql_psycopg2",
+	        "NAME": "db_name",
+	        "USER": "postgres"
+	      }
+
+
+	Настройка MySQL/MariaDB
+	-------------------
+
+	1. Create a new MySQL/MariaDB user (**db_user**) identified by a
+	   password (**db_user_passwd**):
+
+	      MariaDB [(none)]> CREATE USER `db_user`@`localhost` IDENTIFIED BY 'db_user_passwd';
+
+	   Note: Password can be omitted.
+
+	2. Create a new MySQL/MariaDB database (**db_name**) with character
+	   set *utf8* and collation *utf8_bin*. Grant full access on all its
+	   tables to **db_user**:
+
+	      MariaDB [(none)]> CREATE DATABASE `db_name` CHARACTER SET utf8 COLLATE utf8_bin;
+	      MariaDB [(none)]> GRANT ALL ON `db_name`.* TO `db_user`@`localhost`;
+	      MariaDB [(none)]> FLUSH PRIVILEGES;
+
+	3. Create "bridge/bridge/db.json":
+
+	      {
+	        "ENGINE": "django.db.backends.mysql",
+	        "NAME": "db_name",
+	        "USER": "db_user",
+	        "PASSWORD": "db_user_passwd",
+	        "HOST": "127.0.0.1",
+	        "PORT": "3306"
+	      }
+
+	   Note: Password can be omitted if it wasn't set before. Host and
+	     port can be omitted if they don't differ from the values
+	     specified in the example.
+
+
+4. Установка Klever
+-------------------------------------
+
+4.1. Create "bridge/bridge/settings.py":
+
+      from bridge.development import *
+
+4.2. Execute the following manage.py tasks in "bridge" directory:
+
+      $ python3 manage.py compilemessages
+      $ python3 manage.py migrate
+      $ python3 manage.py createsuperuser
+
+   Note: Execution of **manage.py migrate** can take quite much
+     time.
+
+3. The last command will prompt you to create a Klever Bridge
+   administrator **klever_bridge_admin** identified by a password
+   **klever_bridge_admin_passwd**. An email address could be omitted.
+
+4. Run a development server:
+
+      $ python3 manage.py runserver host:8998
+
+   By default the host is 127.0.0.1 and can be omitted:
+
+      $ python3 manage.py runserver 8998
+
+5. Log in as administrator in host:port, prompt any name/password for
+   service user (it is irrelevant) and your new name/password
+   for manager user. After that press "Populate" and then "Sign out".
+
+   After performing these steps you may log in as manager user
+   at any time. Note, that server should be running in order to do it (step 4).

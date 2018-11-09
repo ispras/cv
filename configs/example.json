@@ -1,0 +1,99 @@
+{
+  "dirs": {
+    "work": "this directory is used for different auxiliary results and components debug messages",
+    "install": "tools",
+    "entypoints": "entrypoints",
+    "instrumented_rules": "rules",
+    "results": "this is a directory, in which reports and archives with results will be placed"
+  },
+  "tools": {
+    "cil": "abs path to cilly.asm.exe",
+    "klever": "abs path to Klever core",
+    "benchexec": "abs path to benchexec",
+    "cpachecker": {
+      "unreachability": "abs path to CPAchecker branch ldv-bam",
+      "coverage": "abs path to CPAchecker branch ldv-bam",
+      "memsafety": "abs path to CPAchecker branch smg_witness_for_ldv",
+      "races": "abs path to CPAchecker branch races"
+    }
+  },
+  "Builder": {
+    "make command": "command, which is executed into the source directory for its building",
+    "clade config": "absolute path to Clade configuration, under which the building will be performed",
+    "fail if build fails": "if true, then Builder will not stop on any error during execution of build command (default is false)",
+    "clean sources": "if true, then Builder will clean the source directory before building",
+    "environment variables": {
+      "environment variable name, which is required for building": "value"
+    },
+    "debug": "on true will produce more information on Builder component"
+  },
+  "Main_generator": {
+    "sync": "strategy for sync rules (default is 'threaded')",
+    "strategy": "name of the strategy (only relevant for launching generate_main.py separately)",
+    "input": "path to file with entrypoints (only relevant for launching generate_main.py separately)"
+  },
+  "Preparator": {
+    "source dir": "abs path to source directory",
+    "build_commands": "abs path to cached json-file with build commands",
+    "filter black list": ["list of patterns, which should be excluded while processing build commands"],
+    "filter white list": ["list of patterns, which should not be excluded while processing build commands"],
+    "extra options": ["list of compiler options, which should be added to compilation commands"],
+    "preprocessor": "path to preprocessor (gcc by default)",
+    "resolve missed proto": "if true, then functions with missed prototypes in CIL file will be resolved",
+    "strategy": "strategy for preparation of verification tasks ('subsystem' - join all commands for specified subdirectory, 'library' - create verification task for each library)",
+    "debug": "true|false - overwrites debug value for script preparation.py"
+  },
+  "Launcher": {
+    "scheduler": "local - use local machine for launches, cloud - use preconfigured cloud",
+    "resource limits": {
+      "CPU time": "in seconds (per 1 verifier launch)",
+      "memory size": "in GB (per 1 verifier launch)",
+      "number of cores": "CPU cores per 1 verifier launch"
+    },
+    "backup write": "if true, then copy all progress in backup file during verification process (this may cause some overheads, but is recommended for long launches), false by default",
+    "backup read": "if true, then read previously written backup file and restore progress (working directory must remain unchanged), false by default",
+    "benchmark args": "specify additional parameters for benchmark",
+    "parallel launches": "rewrite the number of parallel verification launches (should be used carefully)"
+  },
+  "Exporter": {
+    "version": "name of the checked system along with its version",
+    "add verifier logs": "if true, then verifier logs will be exported for each unknown result",
+    "debug": "true|false - overwrites debug value for script export_results.py",
+    "timestamp": "timestamp, which is produced by launcher in the following format: %Y_%m_%d_%H_%M_%S (only relevant for launching export_results.py separately)"
+  },
+  "cloud": {
+    "priority": "IDLE < LOW < HIGH < URGENT",
+    "master": "host, on which cloud master is running"
+  },
+  "uploader": {
+    "upload results": "if true, then results will be automatically uploaded into the server (Klever web-interface)",
+    "identifier": "job identifier on the server",
+    "parent id": "if true, then the given identifier will be treated as parent job identifier",
+    "server": "<host>:<port> of Klever web-interface",
+    "user": "valid user name on the server (this user should have access for this job identifier)",
+    "password": "password for the user"
+  },
+  "MEA": {
+    "filters": {
+      "sync:races": "filter for rule sync:races (if not specified, no filter will be used)",
+      "smg": "filter for rule smg (if not specified, filter model_functions_smg will be used)",
+      "others": "filter for unreachability rules (if not specified, filter model_functions will be used)"
+    },
+    "debug": "true|false - overwrites debug value for MEA"
+  },
+  "sources": {
+    "skip": "if true, then preparation of source directory will be skipped",
+    "branch": "the name of the branch, which should be used in the source directory (if omitted, then the current branch will be used)",
+    "build patch": "patch, which should be used for sources building",
+    "patches": ["list with the names of the patches, which will be applied to the source directory (each patch must be placed in 'patches' directory)"],
+    "kartographer cache": "path to previously obtained kartographer resulting json-file (which contains functions call tree), is aimed at debug"
+  },
+  "system": "identifier of a system under verification (subdirectories with this id must present)",
+  "entrypoints desc": ["list of paths to the files with description of entry points (files are searched in the entrypoints directory)"],
+  "rules": ["list of rules"],
+  "commits": ["list of commits, which should be checked - only relevant callers for each commit will be checked"],
+  "callers": ["list of callers, which should be checked (all other callers in the specified subsystems will be ignored), does not work with 'commits' tag"],
+  "debug": "true|false - print debug messages and do not remove auxiliary files in the main script on not",
+  "cached": "true|false - use obtained before CIL-files (is aimed at debug)",
+  "find coverage": "if true (default), then coverage will be calculated as well for each entrypoint"
+}

@@ -1,0 +1,14 @@
+{
+  "sources": {
+    "username": "<repository username>",
+    "password": "<repository password>",
+    "repository": "<repository url>",
+    "path": "<path, in which repository will be downloaded>"
+  },
+  "poll interval": 3600,
+  "configs": ["<list of configs (must be placed in configs directory)>"],
+  "mail": {
+    "server": "<name of the server, which will send emails>",
+    "receivers": ["<list of receivers of emails>"]
+  }
+}

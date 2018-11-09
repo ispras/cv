@@ -1,0 +1,8 @@
+{
+  "-skipRecursion": [],
+  "-setprop": [
+    "parser.readLineDirectives=true",
+    "output.disable=true",
+    "counterexample.export.file="
+  ]
+}

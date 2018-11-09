@@ -1,0 +1,38 @@
+{
+    "metadata": {
+        "include": [
+            "list of include files"
+        ],
+        "subsystem": "subdirectory in source directory (default value is '.')"
+    },
+    "entrypoints": {
+        "name of function from selected subsystem (entry point 1)": {
+            "return": "function return type",
+            "races": "if false, then this entry point will be ignored for sync rules",
+            "args": [
+                {
+                    "type": "type of function argument 1",
+                    "global scope": "if true, then this parameter will be initialized in global scope"
+                },
+                {
+                    "type": "type of function argument k_1",
+                    "global scope": "if true, then this parameter will be initialized in global scope"
+                }
+            ]
+        },
+        "name of function from selected subsystem (entry point l)": {
+            "return": "function return type",
+            "races": "if false, then this entry point will be ignored for sync rules",
+            "args": [
+                {
+                    "type": "type of function argument 1",
+                    "global scope": "if true, then this parameter will be initialized in global scope"
+                },
+                {
+                    "type": "type of function argument k_l",
+                    "global scope": "if true, then this parameter will be initialized in global scope"
+                }
+            ]
+        }
+    }
+}

@@ -1,0 +1,6 @@
+__pycache__/
+work_dir*
+results
+cmds.json
+tools/
+buildbot/
