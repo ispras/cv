@@ -12,6 +12,7 @@ from opts import *
 TAG_MODEL = "model"
 TAG_RESOLVE_MISSED_PROTO = "resolve missed proto"
 TAG_STRATEGY = "strategy"
+TAG_PATH = "path"
 COMMAND_COMPILER = "command"
 
 PREPARATION_STRATEGY_SUBSYSTEM = "subsystem"  # Take all single build commands for specific directory.
@@ -98,6 +99,9 @@ class Preparator(Component):
                 self.preparation_config = json.load(fd)
         else:
             self.preparation_config = {}
+        path_to_compilers = self.component_config.get(TAG_PATH, "")
+        if os.path.exists(path_to_compilers):
+            os.environ["PATH"] += os.pathsep + path_to_compilers
 
     def __get_file_for_preprocess(self, file, work_dir):
         if not file:
