@@ -2,6 +2,7 @@
 
 plugin_dir=$1
 plugin=$2
+is_multiple_plugins=$3
 cv_dir=`pwd`
 verifier_patches_dir="patches/tools/cpachecker"
 tmp_patch="__tmp.patch"
@@ -40,7 +41,10 @@ if [ -n "${verifier_patches}" ]; then
         src_patch=${plugin_dir}/${verifier_patches_dir}/${plugin}/${patch}
         dst_patch=${cv_dir}/${verifier_patches_dir}/${patch}
         if [ -e "${dst_patch}" ]; then
-            git checkout -- ${verifier_patches_dir}/${patch}
+            if [ -z "${is_multiple_plugins}" ];
+            then
+                git checkout -- ${verifier_patches_dir}/${patch}
+            fi
             echo "Updating verifier patch ${dst_patch} by ${src_patch}"
             cat ${dst_patch} ${src_patch} > ${tmp_patch}
             mv ${tmp_patch} ${dst_patch}
