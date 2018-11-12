@@ -1,9 +1,6 @@
 {
   "dirs": {
     "work": "this directory is used for different auxiliary results and components debug messages",
-    "install": "tools",
-    "entypoints": "entrypoints",
-    "instrumented_rules": "rules",
     "results": "this is a directory, in which reports and archives with results will be placed"
   },
   "tools": {

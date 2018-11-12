@@ -484,7 +484,7 @@ if __name__ == '__main__':
     with open(options.config) as data_file:
         config = json.load(data_file)
 
-    install_dir = os.path.abspath(config[TAG_DIRS][TAG_DIRS_INSTALL])
+    install_dir = os.path.abspath(DEFAULT_INSTALL_DIR)
     results_dir = os.path.abspath(config[TAG_DIRS][TAG_DIRS_RESULTS])
     work_dir = os.path.abspath(os.path.join(config[TAG_DIRS][TAG_DIRS_WORK], DEFAULT_EXPORT_DIR))
 

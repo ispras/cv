@@ -31,6 +31,8 @@ DEFAULT_MAIN_DIR = "main"
 DEFAULT_LAUNCHES_DIR = "launches"
 DEFAULT_SOURCE_PATCHES_DIR = "patches/sources"
 DEFAULT_PREPARATION_PATCHES_DIR = "patches/preparation"
+DEFAULT_ENTRYPOINTS_DIR = "entrypoints"
+DEFAULT_RULES_DIR = "rules"
 DEFAULT_BACKUP_PREFIX = "backup_"
 
 TAG_LIMIT_MEMORY = "memory size"
@@ -50,7 +52,6 @@ TAG_BACKUP_WRITE = "backup write"
 TAG_BACKUP_READ = "backup read"
 TAG_BENCHMARK_ARGS = "benchmark args"
 TAG_PARALLEL_LAUNCHES = "parallel launches"
-TAG_BIVK_DIR = "bivk dir"
 TAG_RESOURCE_LIMITATIONS = "resource limits"
 TAG_PROCESSES = "processes"
 TAG_SCHEDULER = "scheduler"
@@ -380,9 +381,9 @@ class Launcher(Component):
         # Remember some useful directories.
         self.root_dir = os.getcwd()  # By default tool-set is run from this directory.
         self.work_dir = os.path.abspath(self.config[TAG_DIRS][TAG_DIRS_WORK])
-        self.install_dir = os.path.abspath(self.config[TAG_DIRS][TAG_DIRS_INSTALL])
-        self.entrypoints_dir = os.path.abspath(self.config[TAG_DIRS][TAG_DIRS_ENTRYPOINTS])
-        self.rules_dir = os.path.abspath(self.config[TAG_DIRS][TAG_DIRS_INSTRUMENTED_RULES])
+        self.install_dir = os.path.join(self.root_dir, DEFAULT_INSTALL_DIR)
+        self.entrypoints_dir = os.path.join(self.root_dir, DEFAULT_ENTRYPOINTS_DIR)
+        self.rules_dir = os.path.join(self.root_dir, DEFAULT_RULES_DIR)
         self.options_dir = os.path.join(self.root_dir, VERIFIER_FILES_DIR, VERIFIER_OPTIONS_DIR)
         self.patches_dir = os.path.join(self.root_dir, DEFAULT_SOURCE_PATCHES_DIR)
 

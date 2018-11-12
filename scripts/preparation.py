@@ -501,7 +501,7 @@ if __name__ == "__main__":
 
     work_dir = config[TAG_DIRS][TAG_DIRS_WORK]
     model = config.get(TAG_MODEL)
-    install_dir = os.path.abspath(config[TAG_DIRS][TAG_DIRS_INSTALL])
+    install_dir = os.path.abspath(DEFAULT_INSTALL_DIR)
     os.chdir(work_dir)
 
     p_bce = Preparator(install_dir, config, model=model, main_file=options.main)
