@@ -24,8 +24,8 @@ all: clean download cpa-install deploy install
 download: clean 
 	@echo "*** Downloading ${klever} ***"
 	@rm -rf ${klever_dir}
-	git clone https://forge.ispras.ru/git/klever.git ${klever_dir}
-	cd ${klever_dir}; git checkout 6b3e0d1b; git apply ${patches_dir}/klever.patch
+	git clone https://github.com/mutilin/klever.git ${klever_dir}
+	cd ${klever_dir}; git checkout cv
 	
 	@echo "*** Downloading ${clade} ***"
 	@rm -rf ${clade_dir}

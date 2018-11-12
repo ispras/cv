@@ -15,7 +15,7 @@
  - для отображения результатов: модуль requests для python3.
 
 1. Инструмент klever — web-интерфейс, отвечающий за визуализацию результатов.
-Репозиторий: https://forge.ispras.ru/git/klever.git
+Репозиторий: https://github.com/mutilin/klever.git
 Развёртывание web-интерфейса описано в инструкции docs/web_interface.txt.
 
 2. Инструмент clade отвечает за сборку ядра.
