@@ -19,7 +19,7 @@
 Развёртывание web-интерфейса описано в инструкции docs/web_interface.txt.
 
 2. Инструмент clade отвечает за сборку ядра.
-Репозиторий clone https://github.com/17451k/clade.git
+Репозиторий https://github.com/mutilin/clade.git
 
 3. Инструмент CIL отвечает за объединение исходных файлов и их упрощение.
 Репозиторий https://forge.ispras.ru/git/cil.git

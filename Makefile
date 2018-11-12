@@ -29,8 +29,8 @@ download: clean
 	
 	@echo "*** Downloading ${clade} ***"
 	@rm -rf ${clade_dir}
-	git clone https://github.com/17451k/clade.git ${clade_dir}
-	cd ${clade_dir}; git checkout v2.0; git apply ${patches_dir}/clade.patch
+	git clone https://github.com/mutilin/clade.git ${clade_dir}
+	cd ${clade_dir}; git checkout cv
 	
 	@echo "*** Downloading ${cil} ***"
 	@rm -rf ${cil_dir}
