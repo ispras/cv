@@ -141,7 +141,7 @@ class AutoChecker:
                "Configs:\t{}\n" \
                "{}".format(last_commit, last_checked_commit, branch, self.hostname, ", ".join(configs), aux)
 
-    def command_caller(self, cmd: str, get_stdout=False):
+    def command_caller(self, cmd: str, get_stdout=False, ignore_errors=False):
         self.logger.debug("Executing command {}".format(cmd))
         try:
             if get_stdout:
@@ -149,12 +149,17 @@ class AutoChecker:
             else:
                 subprocess.check_call(cmd, shell=True, stdout=self.output_desc)
         except subprocess.CalledProcessError as e:
-            self.send_a_message("Failure on automatic checking of new commits",
-                                "Failed command:\t{}\n"
-                                "Host name:\t{}\n"
-                                "Return code:\t{}\n"
-                                "Output:\n{}".format(cmd, self.hostname, e.returncode, e))
-            sys.exit(1)
+            if ignore_errors:
+                self.logger.warning("Cannot execute the following command: '{}' due to '{}'".format(cmd, e))
+                if get_stdout:
+                    return ""
+            else:
+                self.send_a_message("Failure on automatic checking of new commits",
+                                    "Failed command:\t{}\n"
+                                    "Host name:\t{}\n"
+                                    "Return code:\t{}\n"
+                                    "Output:\n{}".format(cmd, self.hostname, e.returncode, e))
+                sys.exit(1)
 
     def __get_new_branches(self, output: str):
         result = set()
@@ -179,13 +184,15 @@ class AutoChecker:
             for branch, configs in self.configs.items():
                 os.chdir(self.source_dir)
                 self.command_caller("git reset --hard")
-                new_branches = new_branches.union(self.__get_new_branches(self.command_caller("git fetch", get_stdout=True)))
+                new_branches = new_branches.union(self.__get_new_branches(self.command_caller("git fetch",
+                                                                                              get_stdout=True,
+                                                                                              ignore_errors=True)))
 
                 if branch in new_branches:
                     new_branches.remove(branch)
                 self.command_caller("git checkout {}".format(branch))
                 self.command_caller("git reset --hard")
-                self.command_caller("git pull origin {}".format(branch))
+                self.command_caller("git pull origin {}".format(branch), ignore_errors=True)
 
                 is_check, last_checked_commit, last_commit = self.check_for_new_commits(branch)
                 os.chdir(self.work_dir)
