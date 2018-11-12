@@ -1,3 +1,39 @@
+Index: config/includes/lockator/lockator-core.properties
+===================================================================
+--- config/includes/lockator/lockator-core.properties	(revision 29648)
++++ config/includes/lockator/lockator-core.properties	(working copy)
+@@ -10,6 +10,7 @@
+ cpa.arg.export = false
+ counterexample.export.enabled = false
+ cpa.bam.exportARGs = false
++cpa.bam.exportBlockPath =
+ coverage.output = coverage.info
+
+ # Disable statistics for memory consumption.
+Index: config/includes/lockator/lockStatistics-predicate.properties
+===================================================================
+--- config/includes/lockator/lockStatistics-predicate.properties	(revision 29648)
++++ config/includes/lockator/lockStatistics-predicate.properties	(working copy)
+@@ -8,15 +8,15 @@
+ solver.solver = SMTINTERPOL
+ analysis.algorithm.CEGAR = true
+
+-cpa.usage.printOnlyTrueUnsafes = true
++cpa.usage.printOnlyTrueUnsafes = false
+
+ [cegar]
+ refiner = cpa.usage.refinement.IdentifierIterator
+ globalRefinement = true
+-# maxIterations = 20
++maxIterations = 0
+
+ [cpa.predicate]
+-useBitwiseAxioms = true
++useBitwiseAxioms = false
+ encodeBitvectorAs = INTEGER
+ encodeFloatAs = RATIONAL
+ useArraysForHeap = false
+
 Index: scripts/benchmark/vcloud.py
 ===================================================================
 --- scripts/benchmark/vcloud.py	(revision 29648)
