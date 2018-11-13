@@ -21,6 +21,9 @@ CONF_SED = "sed"
 CONF_FILTERS = "filters"
 CONF_UNSUPPORTED_OPTIONS = "unsupported compiler options"
 
+STAGE_NONE = 0
+STAGE_PREPROCESS = 1
+
 
 class Preparator(Component):
     """
@@ -28,7 +31,7 @@ class Preparator(Component):
     """
 
     def __init__(self, install_dir, config, subdirectory_pattern=None, model=None, main_file=DEFAULT_MAIN_FILE,
-                 output_file=DEFAULT_CIL_FILE, preparation_config=None):
+                 common_file=None, output_file=DEFAULT_CIL_FILE, preparation_config=None):
         # Here we suggest 2 scenarios:
         # 1. call from launcher.py (main) - script is inside working directory already;
         # 2. manual call (aux) - script changes directory to working before creating instance of Preparator.
@@ -79,14 +82,13 @@ class Preparator(Component):
         self.preprocessing_dir = tempfile.mkdtemp(dir=preprocess_dir)
 
         self.main_file = self.__get_file_for_preprocess(main_file, self.preprocessing_dir)
-        self.spec_file = self.__get_file_for_preprocess(model, self.preprocessing_dir)
-        if self.spec_file:
-            self.common_file = self.__get_file_for_preprocess(
-                os.path.join(os.path.dirname(model), COMMON_HEADER_FOR_RULES), self.preprocessing_dir)
-        else:
-            self.common_file = None
+        spec_file = self.__get_file_for_preprocess(model, self.preprocessing_dir)
+        common_file = self.__get_file_for_preprocess(common_file, self.preprocessing_dir)
 
-        self.models_preprocessed = False
+        self.aux_files = {}
+        for file in [self.main_file, spec_file, common_file]:
+            if file:
+                self.aux_files[file] = STAGE_NONE
 
         # some stats
         self.extracted_commands = 0
@@ -263,26 +265,12 @@ class Preparator(Component):
         processed_files.append(cif_out)
 
         if not ret:
-            # success
-            if not self.models_preprocessed and self.main_file:
-                main_out = self.preprocess_model_file(self.main_file, cif_in, cif_out, cif_args)
-                # We may accidentally choose an auxiliary command, for example, without most of includes,
-                # Do not fail here and try to use next command
-                if main_out:
-                    processed_files.append(main_out)
-                    self.models_preprocessed = True
-                    if self.spec_file:
-                        common_out = self.preprocess_model_file(self.common_file, cif_in, cif_out, cif_args)
-                        if common_out:
-                            processed_files.append(common_out)
-                        else:
-                            self.models_preprocessed = False
-                        spec_out = self.preprocess_model_file(self.spec_file, cif_in, cif_out, cif_args)
-                        if spec_out:
-                            processed_files.append(spec_out)
-                        else:
-                            # Workaround to fail on bad model files.
-                            self.models_preprocessed = False
+            for file, stage in self.aux_files.items():
+                if stage == STAGE_NONE:
+                    aux_file_out = self.preprocess_model_file(file, cif_in, cif_out, cif_args)
+                    if aux_file_out:
+                        processed_files.append(aux_file_out)
+                        self.aux_files[file] = STAGE_PREPROCESS
         return ret, processed_files
 
     def fix_cil_file(self, cil_file):
@@ -382,10 +370,11 @@ class Preparator(Component):
                 elif files:
                     failed_files.extend(files)
 
-        if not self.models_preprocessed:
-            self.logger.critical("Main file or model file was not prepared due to following reasons")
-            self.__print_temp_logs()
-            sys.exit(-1)
+        for aux_file, stage in self.aux_files.items():
+            if stage != STAGE_PREPROCESS:
+                self.logger.critical("Auxiliary file '{}' was not prepared due to following reasons:".format(aux_file))
+                self.__print_temp_logs()
+                sys.exit(-1)
 
         self.complied_commands = len(processed_files)
 
@@ -407,11 +396,10 @@ class Preparator(Component):
         return processed_files
 
     def is_auxiliary(self, file):
-        if re.search(self.main_file, file) or self.spec_file and re.search(self.spec_file, file) \
-                or re.search(os.path.basename(COMMON_HEADER_FOR_RULES), file):
-            return True
-        else:
-            return False
+        for aux_file in self.aux_files.keys():
+            if re.search(aux_file, file):
+                return True
+        return False
 
     def filter_files(self, files):
         checked_files = []
@@ -439,6 +427,8 @@ class Preparator(Component):
                 checked_files.append(file)
             else:
                 self.logger.warning("Skip file '%s' due to failed check", file)
+                if self.is_auxiliary(file):
+                    sys.exit("Stop preparation due to failed check on auxiliary file")
 
         self.logger.debug("%d files were successfully checked", len(checked_files))
 
@@ -468,7 +458,7 @@ class Preparator(Component):
                         if file in checked_files:
                             selected_files.append(file)
                     for file in checked_files:
-                        if re.search(self.main_file, file):
+                        if self.is_auxiliary(file):
                             selected_files.append(file)
                     cil_out = self.cil_out + "_{}.i".format(num)
                     self.__launch_cil(cil_out, selected_files)

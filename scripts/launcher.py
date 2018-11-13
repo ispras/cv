@@ -1110,6 +1110,7 @@ class Launcher(Component):
                 model = self.__get_file_for_system(self.rules_dir, "{0}.c".format(rule))
                 if not model:
                     self.logger.debug("There is no model file for rule {}".format(rule))
+                common_file = self.__get_file_for_system(self.rules_dir, COMMON_HEADER_FOR_RULES)
                 cil_file = os.path.abspath(os.path.join(DEFAULT_CIL_DIR, "{0}_{1}_{2}.i".format(entry_desc.short_name,
                                                                                                 rule, strategy)))
                 try:
@@ -1127,7 +1128,8 @@ class Launcher(Component):
                                     preparator = Preparator(self.install_dir, self.config,
                                                             subdirectory_pattern=entry_desc.subsystem, model=model,
                                                             main_file=main_file_name, output_file=cil_file,
-                                                            preparation_config=preparation_config)
+                                                            preparation_config=preparation_config,
+                                                            common_file=common_file)
                                     process_pool[i] = multiprocessing.Process(target=preparator.prepare_task,
                                                                               name=cil_file, args=(resource_queue,))
                                     process_pool[i].start()
