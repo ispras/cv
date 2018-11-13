@@ -17,7 +17,8 @@ COMMAND_COMPILER = "command"
 
 PREPARATION_STRATEGY_SUBSYSTEM = "subsystem"  # Take all single build commands for specific directory.
 PREPARATION_STRATEGY_LIBRARY = "library"  # Create a single task for each library.
-CONF_SED = "sed"
+CONF_SED_AFTER_CIL = "sed after cil"
+CONF_SED_BEFORE_CIL = "sed before cil"
 CONF_FILTERS = "filters"
 CONF_UNSUPPORTED_OPTIONS = "unsupported compiler options"
 
@@ -216,6 +217,10 @@ class Preparator(Component):
     def __process_single_cc_command(self, command, cif_out, cif_in):
         processed_files = []
 
+        for regexp in self.preparation_config.get(CONF_SED_BEFORE_CIL, []):
+            sed_cmd = "sed -i '{}' {}".format(regexp, cif_in)
+            self.exec_sed_cmd(sed_cmd)
+
         if self.__is_skip_file(cif_out):
             return -1, None
         self.extracted_commands += 1
@@ -281,7 +286,7 @@ class Preparator(Component):
         sed_cmd = "sed -i 's/__builtin_va_arg(/\/\//g' " + cil_file
         self.exec_sed_cmd(sed_cmd)
 
-        for regexp in self.preparation_config.get(CONF_SED, []):
+        for regexp in self.preparation_config.get(CONF_SED_AFTER_CIL, []):
             sed_cmd = "sed -i '{}' {}".format(regexp, cil_file)
             self.exec_sed_cmd(sed_cmd)
 
