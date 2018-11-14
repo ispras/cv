@@ -47,6 +47,7 @@
       "memory size": "in GB (per 1 verifier launch)",
       "number of cores": "CPU cores per 1 verifier launch"
     },
+    "statistics time": "time in seconds, which will be allocated for printing statistics during each verifier launch (this time will be subtracted from the CPU time limit)",
     "backup write": "if true, then copy all progress in backup file during verification process (this may cause some overheads, but is recommended for long launches), false by default",
     "backup read": "if true, then read previously written backup file and restore progress (working directory must remain unchanged), false by default",
     "benchmark args": "specify additional parameters for benchmark",

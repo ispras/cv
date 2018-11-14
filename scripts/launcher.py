@@ -65,6 +65,7 @@ TAG_UPLOADER_USER = "user"
 TAG_UPLOADER_PASSWORD = "password"
 TAG_UPLOADER_PARENT_ID = "parent id"
 TAG_SKIP = "skip"
+TAG_STATISTICS_TIME = "statistics time"
 
 SCHEDULER_CLOUD = "cloud"
 SCHEDULER_LOCAL = "local"
@@ -78,7 +79,7 @@ HARDCODED_RACES_OUTPUT_DIR = "output"
 
 ROUND_DIGITS = 9  # nanoseconds.
 
-DEFAULT_TIME_FOR_STATISTICS = 0  # so far we do not care about printing statistics.
+DEFAULT_TIME_FOR_STATISTICS = 0  # By default we do not allocate time for printing statistics.
 
 RULE_COV_AUX_RACES = "cov_races"
 RULE_COV_AUX_OTHER = "cov_other"
@@ -985,7 +986,13 @@ class Launcher(Component):
         heap_limit = int(memory_limit * 1000 * 13 / 15)  # Basic conversion to get Java heap size (in MB)
 
         time_limit = resource_limits[TAG_LIMIT_CPU_TIME]
-        internal_time_limit = time_limit - DEFAULT_TIME_FOR_STATISTICS
+
+        statistics_time = self.component_config.get(TAG_STATISTICS_TIME, DEFAULT_TIME_FOR_STATISTICS)
+        if statistics_time >= time_limit:
+            self.logger.warning("Specified time for printing statistics {}s is bigger than overall time limit. "
+                                "Ignoring statistics time".format(statistics_time))
+            statistics_time = 0
+        internal_time_limit = time_limit - statistics_time
 
         core_limit = resource_limits.get(TAG_LIMIT_CPU_CORES, max_cores)
         if not self.scheduler == SCHEDULER_CLOUD and max_cores < core_limit:
