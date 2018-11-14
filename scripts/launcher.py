@@ -392,12 +392,12 @@ class Launcher(Component):
         self.cpu_cores = 1
 
         # Defines type of scheduler.
-        self.scheduler = self.config.get(COMPONENT_LAUNCHER, {}).get(TAG_SCHEDULER)
+        self.scheduler = self.component_config.get(TAG_SCHEDULER)
         if not self.scheduler or self.scheduler not in SCHEDULERS:
             self.logger.error("Scheduler '{}' is not known. Choose from {}".format(self.scheduler, SCHEDULERS),
                               exc_info=True)
             exit(1)
-        self.benchmark_args = self.config.get(COMPONENT_LAUNCHER, {}).get(TAG_BENCHMARK_ARGS, "")
+        self.benchmark_args = self.component_config.get(TAG_BENCHMARK_ARGS, "")
         if self.scheduler == SCHEDULER_CLOUD:
             cloud_master = self.config.get(TAG_CLOUD, {}).get(TAG_CLOUD_MASTER)
             cloud_priority = self.config.get(TAG_CLOUD, {}).get(TAG_CLOUD_PRIORITY, DEFAULT_CLOUD_PRIORITY)
@@ -942,7 +942,7 @@ class Launcher(Component):
         results_dir = os.path.abspath(self.config[TAG_DIRS][TAG_DIRS_RESULTS])
 
         results = []  # Verification results.
-        backup_read = self.config.get(COMPONENT_LAUNCHER, {}).get(TAG_BACKUP_READ, False)
+        backup_read = self.component_config.get(TAG_BACKUP_READ, False)
         self.logger.debug("Clearing old working directory '{}'".format(self.work_dir))
         is_cached = self.config.get(TAG_CACHED, False) or backup_read
         if not is_cached:
@@ -973,10 +973,10 @@ class Launcher(Component):
         max_memory = int(int(subprocess.check_output("free -m", shell=True).splitlines()[1].split()[1]) / 1000)
         self.logger.debug("Machine has {}GB of RAM".format(max_memory))
 
-        if self.config.get(COMPONENT_LAUNCHER, {}).get(TAG_BACKUP_WRITE, False):
+        if self.component_config.get(TAG_BACKUP_WRITE, False):
             self.backup = "{0}{1}.csv".format(DEFAULT_BACKUP_PREFIX, self.__get_result_file_prefix())
 
-        resource_limits = self.config.get(COMPONENT_LAUNCHER, {}).get(TAG_RESOURCE_LIMITATIONS)
+        resource_limits = self.component_config.get(TAG_RESOURCE_LIMITATIONS)
         memory_limit = resource_limits.get(TAG_LIMIT_MEMORY, max_memory)
         if not self.scheduler == SCHEDULER_CLOUD and max_memory < memory_limit:
             self.logger.error("There is not enough memory to start scheduler: {0}GB are required, "
@@ -1003,7 +1003,7 @@ class Launcher(Component):
 
         proc_by_memory = int(max_memory / memory_limit)
         proc_by_cores = int(max_cores / core_limit)
-        parallel_launches = int(self.config.get(COMPONENT_LAUNCHER, {}).get(TAG_PARALLEL_LAUNCHES, 0))
+        parallel_launches = int(self.component_config.get(TAG_PARALLEL_LAUNCHES, 0))
         if parallel_launches < 0:
             self.logger.error("Incorrect value for number of parallel launches: {}".format(parallel_launches))
             exit(1)
