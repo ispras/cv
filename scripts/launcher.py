@@ -102,6 +102,8 @@ SOURCE_QUEUE_FUNCTIONS = "functions"
 TAG_ENTRYPOINTS_DESC = "entrypoints desc"
 PREPARATION_CONFIG = "conf.json"
 DEFAULT_COVERAGE_FILE = "coverage.info"
+DEFAULT_PROPERTY_MEMSAFETY = "properties/memsafety.spc"
+DEFAULT_PROPERTY_UNREACHABILITY = "properties/unreachability.spc"
 
 
 class EntryPointDesc:
@@ -490,6 +492,7 @@ class Launcher(Component):
         launch_directory = os.path.abspath(tempfile.mkdtemp(dir=DEFAULT_LAUNCHES_DIR))
 
         # Add specific options.
+        self.__resolve_property_file(benchmark, launch)
         ElementTree.SubElement(benchmark.find("rundefinition"), "option", {"name": "-setprop"}).text = \
             "output.path={0}".format(launch_directory)
         ElementTree.SubElement(benchmark.find("rundefinition"), "option", {"name": "-entryfunction"}).text = \
@@ -718,6 +721,27 @@ class Launcher(Component):
             return ""
         return abs_path
 
+    def __resolve_property_file(self, rundefinition: ElementTree.Element, launch: VerificationTask) -> None:
+        """
+        Property file is resolved in the following way:
+         - rule specific automaton (*.spc file);
+         - based on launch mode (only for unreachability and memsafety).
+        Note, that any manually specified property files in options file will be added as well.
+        :param rundefinition: definition of a single run in BenchExec format;
+        :param launch: verification task to be checked;
+        """
+        automaton_file = self.__get_file_for_system(os.path.join(self.root_dir, VERIFIER_FILES_DIR,
+                                                                 VERIFIER_PROPERTIES_DIR), launch.rule + ".spc")
+        if automaton_file:
+            automaton_file = os.path.relpath(automaton_file, os.path.join(self.root_dir, VERIFIER_FILES_DIR))
+            ElementTree.SubElement(rundefinition, "option", {"name": "-spec"}).text = automaton_file
+        else:
+            if launch.mode == MEMSAFETY:
+                ElementTree.SubElement(rundefinition, "option", {"name": "-spec"}).text = DEFAULT_PROPERTY_MEMSAFETY
+            if launch.mode == UNREACHABILITY:
+                ElementTree.SubElement(rundefinition, "option", {"name": "-spec"}).text = \
+                    DEFAULT_PROPERTY_UNREACHABILITY
+
     def __parse_verifier_options(self, file_name: str, rundefinition: ElementTree.Element) -> None:
         abs_path = self.__get_verifier_options_file_name(file_name)
         if not os.path.exists(abs_path):
@@ -742,16 +766,14 @@ class Launcher(Component):
             "cpuCores": str(core_limit)
         })
         ElementTree.SubElement(benchmark_cur, "resultfiles").text = "**/*"
-        if mode == MEMSAFETY:
-            ElementTree.SubElement(benchmark_cur, "requiredfiles").text = "properties/memsafety.spc"
-        if mode == UNREACHABILITY:
-            ElementTree.SubElement(benchmark_cur, "requiredfiles").text = "properties/unreachability.spc"
+        ElementTree.SubElement(benchmark_cur, "requiredfiles").text = "properties/*"
         for launch in launches:
             name = "{}_{}_{}".format(launch.entrypoint, launch.rule, os.path.basename(launch.cil_file))
             rundefinition = ElementTree.SubElement(benchmark_cur, "rundefinition", {"name": name})
             ElementTree.SubElement(rundefinition, "option", {"name": "-heap"}).text = "{}m".format(heap_limit)
             ElementTree.SubElement(rundefinition, "option", {"name": "-timelimit"}).text = str(
                 internal_time_limit)
+            self.__resolve_property_file(rundefinition, launch)
             self.__parse_verifier_options(VERIFIER_OPTIONS_COMMON, rundefinition)
             if launch.rule in DEADLOCK_SUB_PROPERTIES:
                 mode_for_options = launch.rule

@@ -1,8 +1,5 @@
 {
   "-ldv-bam-optimized": [],
-  "-spec": [
-    "properties/unreachability.spc"
-  ],
   "-setprop": [
     "counterexample.export.graphml=witness.%d.graphml",
     "counterexample.export.compressWitness=false"

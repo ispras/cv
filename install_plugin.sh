@@ -15,7 +15,7 @@ fi
 
 echo "Installing plugin '${plugin}' into Continuous Verification system found in '${cv_dir}'"
 
-special_directories=(configs docs entrypoints patches/preparation patches/sources rules verifier_files/options)
+special_directories=(configs docs entrypoints patches/preparation patches/sources rules verifier_files/options verifier_files/properties)
 echo "Updating special directories"
 for dir in ${special_directories[@]};
 do
