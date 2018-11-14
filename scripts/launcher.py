@@ -100,6 +100,7 @@ SOURCE_QUEUE_FUNCTIONS = "functions"
 
 TAG_ENTRYPOINTS_DESC = "entrypoints desc"
 PREPARATION_CONFIG = "conf.json"
+DEFAULT_COVERAGE_FILE = "coverage.info"
 
 
 class EntryPointDesc:
@@ -507,12 +508,13 @@ class Launcher(Component):
     def __process_single_launch_results(self, result, launch_directory, launch, queue):
         result.parse_output_dir(launch_directory)
 
-        if launch.mode == COVERAGE:
+        if launch.mode == COVERAGE or os.path.exists(os.path.join(launch_directory, DEFAULT_COVERAGE_FILE)):
             cov_lines = 0.0
             cov_funcs = 0.0
             os.chdir(launch_directory)
             try:
-                process_out = subprocess.check_output("genhtml coverage.info --ignore-errors source", shell=True, stderr=subprocess.STDOUT)
+                process_out = subprocess.check_output("genhtml {} --ignore-errors source".format(DEFAULT_COVERAGE_FILE),
+                                                      shell=True, stderr=subprocess.STDOUT)
                 for line in process_out.splitlines():
                     line = line.decode("utf-8", errors="ignore")
                     res = re.search(r'lines......: (.+)% ', line)
@@ -1417,8 +1419,10 @@ class Launcher(Component):
                 # Add coverage information.
                 if result.verdict == VERDICT_SAFE and not result.rule == RULE_COVERAGE:
                     key = self.__get_none_rule_key(result)
-                    result.cov_lines = cov_lines.get(key, 0.0)
-                    result.cov_funcs = cov_funcs.get(key, 0.0)
+                    if not result.cov_lines:
+                        result.cov_lines = cov_lines.get(key, 0.0)
+                    if not result.cov_funcs:
+                        result.cov_funcs = cov_funcs.get(key, 0.0)
                 f_report.write(str(result) + "\n")
 
         report_components = os.path.join(results_dir, "report_components_{0}.csv".format(reports_prefix))
