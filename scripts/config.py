@@ -31,7 +31,7 @@ DEFAULT_TOOL_PATH = {
     UPLOADER: "klever/utils/bin/upload-reports.py",
     BENCHEXEC: "benchexec/bin",
     CPACHECKER: {
-        UNREACHABILITY: "ldv-bam/scripts",
+        UNREACHABILITY: "trunk/scripts",
         MEMSAFETY: "trunk/scripts",
         COVERAGE: "ldv-bam/scripts",
         RACES: "CPALockator-combat-mode/scripts",
@@ -40,7 +40,7 @@ DEFAULT_TOOL_PATH = {
     CIF: "cif/bin",
 }
 DEFAULT_CPACHECKER_CLOUD = {
-    UNREACHABILITY: "ldv-bam",
+    UNREACHABILITY: "trunk",
     MEMSAFETY: "trunk",
     COVERAGE: "ldv-bam",
     RACES: "CPALockator-combat-mode",

@@ -1321,7 +1321,7 @@ class Launcher(Component):
             for launch in launches:
                 mode = self.__get_config_mode(launch.rule)
                 if mode == COVERAGE:
-                    mode = UNREACHABILITY
+                    mode = COVERAGE
                 if mode in DEADLOCK_SUB_PROPERTIES:
                     mode = RACES
                 if mode in launch_groups:

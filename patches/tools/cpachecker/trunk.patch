@@ -13,3 +13,90 @@ Index: scripts/benchmark/vcloud.py
          lib = os.path.join(_ROOT_DIR, "lib", "java-benchmark", "vcloud.jar")
          cmdLine = ["java", "-Xmx"+str(heapSize)+"m", "-jar", lib, "benchmark", "--loglevel", logLevel, \
                     "--run-collection-meta-information", meta_information, \
+--- src/org/sosy_lab/cpachecker/util/predicates/pathformula/SSAMap.java	(revision 29066)
++++ src/org/sosy_lab/cpachecker/util/predicates/pathformula/SSAMap.java	(working copy)
+@@ -40,7 +40,6 @@
+ import org.sosy_lab.cpachecker.cfa.types.c.CComplexType;
+ import org.sosy_lab.cpachecker.cfa.types.c.CComplexType.ComplexTypeKind;
+ import org.sosy_lab.cpachecker.cfa.types.c.CElaboratedType;
+-import org.sosy_lab.cpachecker.cfa.types.c.CFunctionType;
+ import org.sosy_lab.cpachecker.cfa.types.c.CPointerType;
+ import org.sosy_lab.cpachecker.cfa.types.c.CType;
+ import org.sosy_lab.cpachecker.cfa.types.c.CTypes;
+@@ -62,14 +61,12 @@
+       new MergeConflictHandler<String, CType>() {
+         @Override
+         public CType resolveConflict(String name, CType type1, CType type2) {
+-          Preconditions.checkArgument(
+-              (type1 instanceof CFunctionType && type2 instanceof CFunctionType)
+-                  || (isEnumPointerType(type1) && isEnumPointerType(type2))
+-                  || type1.equals(type2),
+-              "Cannot change type of variable %s in SSAMap from %s to %s",
+-              name,
+-              type1,
+-              type2);
++          /*
++           * Preconditions.checkArgument( (type1 instanceof CFunctionType && type2 instanceof
++           * CFunctionType) || (isEnumPointerType(type1) && isEnumPointerType(type2)) ||
++           * type1.equals(type2), "Cannot change type of variable %s in SSAMap from %s to %s", name,
++           * type1, type2);
++           */
+
+           return type1;
+         }
+Index: src/org/sosy_lab/cpachecker/util/refinement/UseDefRelation.java
+===================================================================
+--- src/org/sosy_lab/cpachecker/util/refinement/UseDefRelation.java	(revision 27049)
++++ src/org/sosy_lab/cpachecker/util/refinement/UseDefRelation.java	(working copy)
+@@ -427,7 +425,7 @@
+     final Set<ASimpleDeclaration> allLeftHandSideVariables = acceptAll(leftHandSide);
+     final Set<ASimpleDeclaration> leftHandSideUses = new HashSet<>(filter(allLeftHandSideVariables, not(in(assignedVariables))));
+
+-    if(assignedVariables.size() > 1) {
++    if(assignedVariables.size() > 1 || assignedVariables.size() == 0) {
+       return;
+     }
+Index: src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java
+===================================================================
+--- src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java	(revision 29088)
++++ src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java	(working copy)
+@@ -191,9 +191,10 @@
+             + actualParameters + " parameter(s)", edge);
+
+       case C:
+-        throw new CParserException("Method " + functionName + " takes "
++        return;
++        /*throw new CParserException("Method " + functionName + " takes "
+             + declaredParameters + " parameter(s) but is called with "
+-            + actualParameters + " parameter(s)", edge);
++            + actualParameters + " parameter(s)", edge);*/
+
+       default:
+         throw new AssertionError("Unhandled language " + language);
+Index: src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java
+===================================================================
+--- src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java	(revision 29088)
++++ src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java	(working copy)
+@@ -387,8 +387,7 @@
+     String functionName = startNode.getFunctionName();
+
+     if (cfas.containsKey(functionName)) {
+-      throw new CFAGenerationRuntimeException("Duplicate function " + functionName
+-          + " in " + startNode.getFileLocation() + " and " + cfas.get(functionName).getFileLocation());
++      return;
+     }
+     cfas.put(functionName, startNode);
+     cfaNodes.putAll(functionName, functionBuilder.getCfaNodes());
+
+Index: src/org/sosy_lab/cpachecker/cpa/predicate/BAMPredicateAbstractionRefinementStrategy.java
+===================================================================
+--- src/org/sosy_lab/cpachecker/cpa/predicate/BAMPredicateAbstractionRefinementStrategy.java	(revision 29687)
++++ src/org/sosy_lab/cpachecker/cpa/predicate/BAMPredicateAbstractionRefinementStrategy.java	(working copy)
+@@ -85,6 +85,7 @@
+     // (with 'aggressive caching').
+     // -- to have an imprecise predicate-reduce-operator, which can be refined.
+
++    pRepeatedCounterexample = false;
+     // use flags to wait for the second repeated CEX
+     if (!pRepeatedCounterexample) {
+       pRepeatedCounterexample = false;

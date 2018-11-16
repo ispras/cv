@@ -1,7 +1,15 @@
 {
-  "-ldv-bam-optimized": [],
+  "-ldv-bam": [],
   "-setprop": [
     "counterexample.export.graphml=witness.%d.graphml",
-    "counterexample.export.compressWitness=false"
+    "counterexample.export.compressWitness=false",
+    "cpa.arg.witness.removeInsufficientEdges=false",
+    "cpa.arg.witness.exportSourcecode=true",
+    "cpa.predicate.useMemoryRegions=true",
+    "cpa.predicate.bam.usePrecisionReduction=false",
+    "cpa.predicate.bam.useAbstractionReduction=false",
+    "cpa.predicate.refinement.predicateBasisStrategy=all",
+    "coverage.enabled=true",
+    "coverage.file=coverage.info"
   ]
 }
