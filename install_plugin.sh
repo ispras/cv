@@ -9,7 +9,7 @@ tmp_patch="__tmp.patch"
 
 if [ -z ${plugin} ];
 then
-    echo "Usage: <continuous verification directory> <plugin id>"
+    echo "Usage: <plugin directory> <plugin id>"
     exit 1
 fi
 
