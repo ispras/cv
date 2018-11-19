@@ -51,9 +51,19 @@ install: download
 	
 	@echo "*** Installing ${cif} ***"
 	cd ${cif_dir}; make -j8
+	@if [ -z ${DEBUG} ]; then \
+		@echo "*** Removing installation directories for ${cif} ***" ; \
+		cd ${cif_dir}; prefix=${root_dir}/${cif_dir}_install; \
+		rm -rf ${cif_dir}; \
+		mv ${cif_dir}_install ${cif_dir} ; \
+	fi
 	
 cpa-install: clean
 	./update_cpa.sh
+	@if [ -z ${DEBUG} ]; then \
+		@echo "*** Removing installation directories for CPAchecker ***" ; \
+		rm -rf ${install_dir}/*-svn/ ; \
+	fi
 	
 deploy:
 	@if [ -n "${DEPLOY_DIR}" ]; then \
