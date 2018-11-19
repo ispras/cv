@@ -100,3 +100,95 @@ Index: src/org/sosy_lab/cpachecker/cpa/predicate/BAMPredicateAbstractionRefineme
      // use flags to wait for the second repeated CEX
      if (!pRepeatedCounterexample) {
        pRepeatedCounterexample = false;
+Index: src/org/sosy_lab/cpachecker/cpa/automaton/AutomatonExpressionArguments.java
+===================================================================
+--- src/org/sosy_lab/cpachecker/cpa/automaton/AutomatonExpressionArguments.java	(revision 28904)
++++ src/org/sosy_lab/cpachecker/cpa/automaton/AutomatonExpressionArguments.java	(working copy)
+@@ -24,6 +24,7 @@
+ package org.sosy_lab.cpachecker.cpa.automaton;
+ 
+ import com.google.common.collect.ImmutableList;
++import com.google.common.collect.Maps;
+ import java.math.BigInteger;
+ import java.util.Collections;
+ import java.util.HashMap;
+@@ -60,6 +61,8 @@
+   private AutomatonState state;
+   private CFAEdge cfaEdge;
+   private LogManager logger;
++  private String curArgSign = null;
++  private static Map<AAstNode, String> cache = Maps.newHashMap();
+ 
+   /**
+    * In this String all print messages of the Transition are collected.
+@@ -161,7 +164,7 @@
+           this.getLogger().log(Level.WARNING, "could not replace the transition variable $" + varKey + " (not found).");
+           return null;
+         } else {
+-          result.append(var.toASTString());
++          result.append(process(var));
+         }
+       } catch (NumberFormatException e) {
+         this.getLogger().log(Level.WARNING, "could not parse the int in " + matcher.group() + " , leaving it untouched");
+@@ -189,6 +192,52 @@
+     return result.toString();
+   }
+ 
++  private CAstNode findSubstituteArgSign(CAstNode pNode) {
++    // System.out.println(pNode + " : " + pNode.getClass());
++    if (pNode instanceof CIdExpression) {
++      curArgSign = ((CIdExpression) pNode).getName();
++      return null;
++    } else if (pNode instanceof CArraySubscriptExpression) {
++      // Take value of automata set variables in CArraySubscriptExpression.
++      CArraySubscriptExpression expr = (CArraySubscriptExpression) pNode;
++      return findSubstituteArgSign(expr.getArrayExpression());
++    } else if (pNode instanceof CFieldReference) {
++      // Execute operations for automata variables, which are encoded in field reference.
++      CFieldReference expr = (CFieldReference) pNode;
++      String argSign =
++          expr.getFieldName() + "_of_" + expr.getFieldOwner().getExpressionType().toString();
++      argSign = argSign.replace("(", "").replace(")", "").replace("*", "").replace(" ", "_");
++      curArgSign = argSign;
++      return null;
++      // return new CStringLiteralExpression(pNode.getFileLocation(), CNumericTypes.INT, argSign);
++    }
++    // Do not substitute pNode.
++    return null;
++  }
++
++  private String process(AAstNode var) {
++    if (cache.containsKey(var)) {
++      return cache.get(var);
++    }
++    SubstitutingCAstNodeVisitor visitor =
++        new SubstitutingCAstNodeVisitor(this::findSubstituteArgSign);
++    String result;
++    if (var instanceof CExpression) {
++      curArgSign = null;
++      CExpression substitutedExpr = (CExpression) ((CExpression) var).accept(visitor);
++      if (curArgSign != null) {
++        result = curArgSign;
++      } else {
++        result = substitutedExpr.toASTString();
++      }
++    } else {
++      result = var.toASTString();
++    }
++    // System.out.println("Result " + result + " for " + var);
++    cache.put(var, result);
++    return result;
++  }
++
+   public AutomatonState getState() {
+     return state;
+   }
+@@ -252,7 +301,7 @@
+           String name = subscriptExpr;
+           CAstNode transitionVariable = getTransitionVariable(subscriptExpr);
+           if (transitionVariable != null) {
+-            name = transitionVariable.toASTString();
++            name = process(transitionVariable);
+           }
+           return new CIntegerLiteralExpression(
+               pNode.getFileLocation(),
