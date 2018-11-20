@@ -14,6 +14,13 @@
 Данный шаг необходимо выполнять каждый раз после перезагрузки машины.
 
 1.3 Настройка свопа.
+При наличии установленных контрольных групп проверка наличия свопа выполняется командой:
+if ls /sys/fs/cgroup/memory/memory.memsw.limit_in_bytes || ls /sys/fs/cgroup/memory.memsw.limit_in_bytes ; then
+    echo "Swap is installed";
+else
+    echo "Swap is not installed";
+fi
+Если своп уже установлен, то данный шаг следует пропустить.
 Базовый вариант.
 1.3.1. Добавить "swapaccount=1" к значению переменной GRUB_CMDLINE_LINUX_DEFAULT в файле /etc/default/grub.
 1.3.2. Выполнить sudo update-grub.
