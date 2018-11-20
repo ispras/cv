@@ -6,13 +6,15 @@
  - svn, версия не ниже 1.9;
  - java, версия не ниже 1.8;
  - python, версия не ниже 3.4;
+ - python-dev (Ubuntu), python-devel (Fedora);
+ - модули python:
+   - requests;
+   - ujson;
  - ant;
  - lcov;
  - cmake;
- - lib32z1;
- - для ручной сборки инструмента CIF: ocaml до версии 4.01 включительно;
- - для сборки инструмента CIL: libmpc-dev (Ubuntu), libmpc-devel (Fedora);
- - для отображения результатов: модуль requests для python3.
+ - libmpc-dev (Ubuntu), libmpc-devel (Fedora);
+ - lib32z1.
 
 1. Инструмент klever — web-интерфейс, отвечающий за визуализацию результатов.
 Репозиторий: https://github.com/mutilin/klever.git
