@@ -9,20 +9,8 @@
 1.1.4. (Опционально) Развернуть облако для параллельного решения задач на нескольких машинах согласно инструкции docs/verification_cloud.txt.
 
 1.2. Настройка контрольных групп.
-1.2.1. Подключение контрольных групп.
-По умолчанию для Ubuntu 16.04 и выше контрольные группы уже должны быть установлены, поэтому данный шаг можно пропустить.
-Если команда
-cat /proc/mounts | grep "cgroup"
-ничего не выдает, то для установки контрольных групп необходимо выполнить:
-sudo mount -t cgroup none /sys/fs/cgroup
-1.2.2. Настройка прав на использование контрольх групп.
-sudo chmod o+wt '/sys/fs/cgroup/cpuset/'
-sudo chmod o+wt '/sys/fs/cgroup/freezer/'
-sudo chmod o+wt '/sys/fs/cgroup/cpu,cpuacct/'
-sudo chmod o+wt '/sys/fs/cgroup/memory/'
-sudo chmod o+wt '/sys/fs/cgroup/cpu,cpuacct/user.slice'
-sudo chmod o+wt '/sys/fs/cgroup/memory/user.slice'
-sudo chmod o+wt '/sys/fs/cgroup'
+Для сиситем Ubuntu (12.04, 14.04, 16.04, 18.04) и Fedora 22 выполняется комендой:
+./install_cgroups.sh
 Данный шаг необходимо выполнять каждый раз после перезагрузки машины.
 
 1.3 Настройка свопа.
