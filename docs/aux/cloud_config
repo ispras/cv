@@ -1,0 +1,59 @@
+# Sets the log level.
+# loglevel = (SEVERE|WARNING|INFO|CONFIG|FINE|FINER|FINEST|ALL)
+loglevel = FINEST
+
+# Sets the hostname of the master to connect to.
+# master = <hostname>
+master = server_name
+
+# Sets the port number at the master used by the worker to connect to the master.
+# master-port = <port>
+master-port = 15141
+
+# Specifies whether the worker should stop when another user logs in.
+# stop-worker-on-userlogin = (true|false)
+stop-worker-on-userlogin = true
+
+# A comma-separated list of users that should be ignored when checking if anyone else is currently logged in.
+# ignored-users = [user1,user2,...]
+ignored-users = nobody,crondata,systemd-timesync
+
+# A comma-separated list of programs that should be ignored when checking if anyone else is currently logged in.
+# ignored-programs = [program1,program2,...]
+ignored-programs = ssh-agent
+
+# A comma-separated list of programs that should not be ignored when checking if anyone else is currently logged in. These programs are also checked for ignored users.
+# not-ignored-programs = [program1,program2,...]
+not-ignored-programs =
+
+# The lowest UID that should be checked for running programs when determining whether a (human) user is currently logged in. This can be used to exclude daemons from the check, since they should only have UIDs below a certain (distribution-dependant) threshold.
+# min-human-uid = <uid>
+min-human-uid = 1000
+
+# A white-space-separated list of addtional options passed to RunExec when a run is executed.
+# run-exec-options = [option1 option2 ...]
+run-exec-options =
+
+# Disable this option if overlay file systems are not supported by the linux kernel.
+# overlay-filesystem = (true|false)
+overlay-filesystem = true
+
+# Whether the files and directories created by the worker should be deleted when a run has been completed.
+# no-cleanup = (true|false)
+no-cleanup = false
+
+# Maximal number of result files for a run. The value is set for all workers stared by the master.Defaults to 100,000.
+# max-run-result-files = <max number of input files>
+max-run-result-files = 100000
+
+# If present, files older than the given time span are deleted during indexing.
+# max-file-age = - | [1d] [1h] [1min] 1[s]
+max-file-age = 2d
+
+# If present, files larger than the given size are deleted during indexing.
+# max-file-size = - | [0-9]+ [KMG]
+max-file-size = -
+
+# Command beeing executed in case of an exception or dead lock.
+# error-trigger-command = - | <command>
+error-trigger-command = -

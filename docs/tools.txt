@@ -45,3 +45,5 @@ cd tools; ../download_cpa.sh <ветка> <новая ревизия>; ../instal
 6. Инструмент CIF требуется для проверки коммитов.
 Репозиторий: https://forge.ispras.ru/git/cif.git
 
+7. Верификационное облако (Verification Cloud) позволяет распараллелить решение верификационных задач на нескольких машинах.
+Репозиторий: git@gitlab.com:mutilin/vcloud.git
