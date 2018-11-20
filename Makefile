@@ -16,6 +16,7 @@ clade_dir=${install_dir}/${clade}
 cil_dir=${install_dir}/${cil}
 benchexec_dir=${install_dir}/${benchexec}
 cif_dir=${install_dir}/${cif}
+cif_inst_dir=${install_dir}/${cif}_install
 
 .PHONY: all
 
@@ -41,27 +42,25 @@ download: clean
 	git clone https://github.com/sosy-lab/benchexec.git ${benchexec_dir}
 	
 	@echo "*** Downloading ${cif} ***"
-	@rm -rf ${cif_dir}
-	git clone --recursive https://forge.ispras.ru/git/cif.git ${cif_dir}
-	cd ${cif_dir}; git checkout ca907524; git submodule update
+	@rm -rf ${cif_inst_dir}
+	git clone --recursive https://forge.ispras.ru/git/cif.git ${cif_inst_dir}
+	cd ${cif_inst_dir}; git checkout ca907524; git submodule update
 
 install: download
 	@echo "*** Installing ${clade} ***"
 	cd ${clade_dir}; sudo pip3 install -e .
 	
 	@echo "*** Installing ${cif} ***"
-	cd ${cif_dir}; make -j8
+	cd ${cif_inst_dir}; make -j8; prefix=${root_dir}/${cif_dir} make install
 	@if [ -z ${DEBUG} ]; then \
-		@echo "*** Removing installation directories for ${cif} ***" ; \
-		cd ${cif_dir}; prefix=${root_dir}/${cif_dir}_install; \
-		rm -rf ${cif_dir}; \
-		mv ${cif_dir}_install ${cif_dir} ; \
+		echo "*** Removing installation directories for ${cif} ***" ; \
+		rm -rf ${cif_inst_dir}; \
 	fi
 	
 cpa-install: clean
 	./update_cpa.sh
 	@if [ -z ${DEBUG} ]; then \
-		@echo "*** Removing installation directories for CPAchecker ***" ; \
+		echo "*** Removing installation directories for CPAchecker ***" ; \
 		rm -rf ${install_dir}/*-svn/ ; \
 	fi
 	
