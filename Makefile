@@ -48,7 +48,7 @@ download: clean
 
 install: download
 	@echo "*** Installing ${clade} ***"
-	cd ${clade_dir}; sudo pip3 install -e .
+	cd ${clade_dir}; pip3 install --user -e .
 	
 	@echo "*** Installing ${cif} ***"
 	cd ${cif_inst_dir}; make -j8; prefix=${root_dir}/${cif_dir} make install
@@ -83,6 +83,6 @@ deploy:
 
 clean:
 	@echo "*** Removing old installation ***"
-	@sudo rm -rf ${install_dir}
+	@rm -rf ${install_dir}
 	@git checkout -- ${install_dir}/
 

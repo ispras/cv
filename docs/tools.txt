@@ -10,6 +10,17 @@
  - модули python:
    - requests;
    - ujson;
+   - graphviz;
+   - ply;
+   - pytest;
+   - atomicwrites;
+   - pathlib2;
+   - more-itertools;
+   - pluggy;
+   - py;
+   - attrs;
+   - setuptools;
+   - six;
  - ant;
  - lcov;
  - cmake;
