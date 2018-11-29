@@ -235,7 +235,6 @@ define check_dir
 			echo "Specified directory path '$1' is the same as current directory"; \
 			false ; \
 		else \
-			echo $3 ; \
 			if [ "$3" = "is_exist" ] ; then \
 				if [ -d "$1" ] ; then \
 					true ; \
