@@ -144,7 +144,16 @@ install: check-deploy-dir install-klever install-clade install-benchexec install
 	cp -r ${root_dir}/scripts/ . ; \
 	mkdir -p buildbot
 	@echo "*** Successfully installed into the directory ${DEPLOY_DIR}' ***"
-	
+
+install-cpa-with-cloud-links: | check-deploy-dir $(install-cpa)
+	@$(call check_existed_dir,${VCLOUD_DIR},"VCLOUD_DIR")
+	@for cpa in ${cpa_branches}; do \
+		cd "${DEPLOY_DIR}/${install_dir}/$${cpa}" ; \
+		mkdir -p lib/java-benchmark/ ; \
+		cp ${VCLOUD_DIR}/vcloud.jar lib/java-benchmark/ ; \
+	done
+	@echo "*** Successfully created links for verification cloud in CPAchecker installation directories ***"
+
 clean:
 	@echo "*** Removing old installation ***"
 	@rm -rf ${install_dir}
@@ -202,6 +211,7 @@ define install_cpa
 	echo "*** Installing CPAchecker branch $1 ***"
 	cd ${install_dir}/$1; \
 	tar -xf ${cpa_arch} ; \
+	mkdir -p ${DEPLOY_DIR}/${install_dir} ; \
 	rm -rf ${DEPLOY_DIR}/${install_dir}/$1 ; \
 	mv CPAchecker-*/ ${DEPLOY_DIR}/${install_dir}/$1
 endef
@@ -215,7 +225,27 @@ define check_deploy_dir
 			true ; \
 		fi \
 	else \
-		echo "Specified deploy path '${DEPLOY_DIR}' does not exist. Add correct path to the 'DEPLOY_DIR' environment variable"; \
+		echo "Required variable 'DEPLOY_DIR' '${DEPLOY_DIR}' was not specified"; \
+		false; \
+	fi
+endef
+
+# $1 - absolute directory path, $2 - env variable name
+define check_existed_dir
+	if [ -n "$1" ]; then \
+		if [ "$1" -ef "${root_dir}" ]; then \
+			echo "Specified directory path '$1' is the same as current directory"; \
+			false ; \
+		else \
+			if [ -d "$1" ] ; then \
+				true ; \
+			else \
+				echo "Specified directory path '$1' does not exist. Add correct path to the '$2' environment variable"; \
+				false; \
+			fi ; \
+		fi ; \
+	else \
+		echo "Required variable '$2' was not specified"; \
 		false; \
 	fi
 endef
