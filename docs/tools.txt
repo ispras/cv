@@ -21,6 +21,8 @@
    - attrs;
    - setuptools;
    - six;
+   - django==1.9;
+   - psycopg2;
  - ant;
  - lcov;
  - cmake;
