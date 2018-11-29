@@ -99,7 +99,7 @@ $(install-cpa):
 	@$(call install_cpa,$(patsubst install-cpa-%,%,$@))
 
 check-deploy-dir:
-	@$(call check_deploy_dir)
+	@$(call check_dir,${DEPLOY_DIR},DEPLOY_DIR)
 
 
 install-klever: build-klever check-deploy-dir
@@ -146,13 +146,25 @@ install: check-deploy-dir install-klever install-clade install-benchexec install
 	@echo "*** Successfully installed into the directory ${DEPLOY_DIR}' ***"
 
 install-cpa-with-cloud-links: | check-deploy-dir $(install-cpa)
-	@$(call check_existed_dir,${VCLOUD_DIR},"VCLOUD_DIR")
+	@$(call check_dir,${VCLOUD_DIR},"VCLOUD_DIR","is_exist")
 	@for cpa in ${cpa_branches}; do \
 		cd "${DEPLOY_DIR}/${install_dir}/$${cpa}" ; \
 		mkdir -p lib/java-benchmark/ ; \
 		cp ${VCLOUD_DIR}/vcloud.jar lib/java-benchmark/ ; \
 	done
 	@echo "*** Successfully created links for verification cloud in CPAchecker installation directories ***"
+
+deploy-web-interface: build-klever
+	@$(call check_dir,${WEB_INTERFACE_DIR},"WEB_INTERFACE_DIR")
+	@echo "*** Deploying web-interface into directory ${WEB_INTERFACE_DIR} ***"
+	@rm -rf ${WEB_INTERFACE_DIR}
+	@mkdir -p ${WEB_INTERFACE_DIR}
+	@cp -r ${klever_dir}/* ${WEB_INTERFACE_DIR}
+	@python3 ${WEB_INTERFACE_DIR}/bridge/manage.py compilemessages
+	@python3 ${WEB_INTERFACE_DIR}/bridge/manage.py migrate
+	@python3 ${WEB_INTERFACE_DIR}/bridge/manage.py createsuperuser
+	@echo "*** Successfully installed web-interface into the directory ${WEB_INTERFACE_DIR} ***"
+	@echo "*** Start web-interface with command 'python3 ${WEB_INTERFACE_DIR}/bridge/manage.py runserver <host>:<port>' ***"
 
 clean:
 	@echo "*** Removing old installation ***"
@@ -216,33 +228,24 @@ define install_cpa
 	mv CPAchecker-*/ ${DEPLOY_DIR}/${install_dir}/$1
 endef
 
-define check_deploy_dir
-	if [ -n "${DEPLOY_DIR}" ]; then \
-		if [ ${DEPLOY_DIR} -ef ${root_dir} ]; then \
-			echo "Specified deploy path '${DEPLOY_DIR}' is the same as current directory"; \
-			false ; \
-		else \
-			true ; \
-		fi \
-	else \
-		echo "Required variable 'DEPLOY_DIR' '${DEPLOY_DIR}' was not specified"; \
-		false; \
-	fi
-endef
-
-# $1 - absolute directory path, $2 - env variable name
-define check_existed_dir
+# $1 - absolute directory path, $2 - env variable name, $3 - aux options
+define check_dir
 	if [ -n "$1" ]; then \
 		if [ "$1" -ef "${root_dir}" ]; then \
 			echo "Specified directory path '$1' is the same as current directory"; \
 			false ; \
 		else \
-			if [ -d "$1" ] ; then \
-				true ; \
+			echo $3 ; \
+			if [ "$3" = "is_exist" ] ; then \
+				if [ -d "$1" ] ; then \
+					true ; \
+				else \
+					echo "Specified directory path '$1' does not exist. Add correct path to the '$2' environment variable"; \
+					false; \
+				fi ; \
 			else \
-				echo "Specified directory path '$1' does not exist. Add correct path to the '$2' environment variable"; \
-				false; \
-			fi ; \
+				true ; \
+			fi \
 		fi ; \
 	else \
 		echo "Required variable '$2' was not specified"; \
