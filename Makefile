@@ -59,7 +59,7 @@ build-klever: download-klever
 
 build-clade: download-clade
 	@echo "*** Building ${clade} ***"
-	# Do nothing
+	@cd ${clade_dir}; pip3 install --user -e .
 
 build-benchexec: download-benchexec
 	@echo "*** Building ${benchexec} ***"
