@@ -61,6 +61,7 @@ build-klever: download-klever
 
 build-clade: download-clade
 	@echo "*** Building ${clade} ***"
+	@rm -f ~/.local/lib/python*/site-packages/clade.egg-link
 	@cd ${clade_dir}; pip3 install --user -e .
 
 build-benchexec: download-benchexec
@@ -117,6 +118,7 @@ install-clade: build-clade check-deploy-dir
 	@mkdir -p ${DEPLOY_DIR}/${install_dir}
 	@rm -rf ${DEPLOY_DIR}/${clade_dir}
 	@cp -r ${clade_dir} ${DEPLOY_DIR}/${clade_dir}
+	@rm -f ~/.local/lib/python*/site-packages/clade.egg-link
 	@cd ${DEPLOY_DIR}/${clade_dir}; pip3 install --user -e .
 
 install-benchexec: build-benchexec check-deploy-dir
@@ -151,10 +153,10 @@ install-scripts:
 
 
 install: check-deploy-dir install-klever install-clade install-benchexec install-cil install-cif $(install-cpa) install-scripts
-	@if [ -n "${VCLOUD_DIR}" ]; then \
-		make install-cpa-with-cloud-links ; \
-	fi
 	@echo "*** Successfully installed into the directory ${DEPLOY_DIR}' ***"
+
+install-with-cloud: check-deploy-dir install-klever install-clade install-benchexec install-cil install-cif install-cpa-with-cloud-links install-scripts
+	@echo "*** Successfully installed into the directory ${DEPLOY_DIR}' with access to verification cloud ***"
 
 install-cpa-with-cloud-links: | check-deploy-dir $(install-cpa)
 	@$(call check_dir,${VCLOUD_DIR},"VCLOUD_DIR","is_exist")
