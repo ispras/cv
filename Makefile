@@ -95,6 +95,8 @@ $(rebuild-cpa):
 	@make download-cpa-$(patsubst rebuild-cpa-%,%,$@)
 	@make build-cpa-$(patsubst rebuild-cpa-%,%,$@)
 
+rebuild-cpa: $(rebuild-cpa)
+
 install-cpa := $(addprefix install-cpa-,$(cpa_branches))
 $(install-cpa):
 	@make build-cpa-$(patsubst install-cpa-%,%,$@)
