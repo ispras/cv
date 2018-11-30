@@ -16,6 +16,8 @@ clade_dir=${install_dir}/${clade}
 cil_dir=${install_dir}/${cil}
 benchexec_dir=${install_dir}/${benchexec}
 cif_dir=${install_dir}/${cif}
+plugin_dir="plugin"
+
 cpa_arch="build.tar.bz2"
 
 # Repositories
@@ -133,7 +135,7 @@ install-cif: build-cif check-deploy-dir
 	@rm -rf ${DEPLOY_DIR}/${cif_dir}
 	@cd ${cif_dir}; prefix=${DEPLOY_DIR}/${cif_dir} make install
 
-install: check-deploy-dir install-klever install-clade install-benchexec install-cil install-cif $(install-cpa)
+install-scripts:
 	@mkdir -p ${DEPLOY_DIR}
 	@cd ${DEPLOY_DIR} ; \
 	cp -r ${root_dir}/verifier_files/ . ; \
@@ -142,7 +144,14 @@ install: check-deploy-dir install-klever install-clade install-benchexec install
 	cp -r ${root_dir}/entrypoints/ . ; \
 	cp -r ${root_dir}/configs/ . ; \
 	cp -r ${root_dir}/scripts/ . ; \
+	cp -r ${root_dir}/plugin/ . ; \
 	mkdir -p buildbot
+
+
+install: check-deploy-dir install-klever install-clade install-benchexec install-cil install-cif $(install-cpa) install-scripts
+	@if [ -n "${VCLOUD_DIR}" ]; then \
+		make install-cpa-with-cloud-links ; \
+	fi
 	@echo "*** Successfully installed into the directory ${DEPLOY_DIR}' ***"
 
 install-cpa-with-cloud-links: | check-deploy-dir $(install-cpa)
@@ -166,10 +175,25 @@ deploy-web-interface: build-klever
 	@echo "*** Successfully installed web-interface into the directory ${WEB_INTERFACE_DIR} ***"
 	@echo "*** Start web-interface with command 'python3 ${WEB_INTERFACE_DIR}/bridge/manage.py runserver <host>:<port>' ***"
 
+install-plugin:
+	@$(call check_dir,${PLUGIN_DIR},"PLUGIN_DIR","is_exist")
+	@$(call check_dir,${PLUGIN_ID},"PLUGIN_ID")
+	@echo "*** Installing plugin '${PLUGIN_ID}' into directory '${plugin_dir}/${PLUGIN_ID}' ***"
+	@if [ -d "${plugin_dir}/${PLUGIN_ID}" ]; then \
+		echo "*** Removing old plugin installation '${plugin_dir}/${PLUGIN_ID}' ***" ; \
+	fi
+	@mkdir -p ${plugin_dir}/${PLUGIN_ID}
+	@cp -r ${PLUGIN_DIR}/* ${plugin_dir}/${PLUGIN_ID}
+	
+delete-plugins:
+	@echo "*** Removing all installed plugins ***"
+	@rm -rf plugin/*
+
 clean:
 	@echo "*** Removing old installation ***"
 	@rm -rf ${install_dir}
 	@git checkout -- ${install_dir}/
+
 
 # download_tool(name, path, repository)
 define download_tool
@@ -194,7 +218,7 @@ define download_cpa
 		fi ; \
 	fi
 	cd ${install_dir}/$1; svn up -r $($1); svn revert -R . ; \
-	for patch in ../../patches/tools/cpachecker/$1.patch ../../patches/tools/cpachecker/*/$1.patch; do  \
+	for patch in ../../patches/tools/cpachecker/$1.patch ../../plugin/*/patches/tools/cpachecker/$1.patch; do  \
 		if [ -e "$${patch}" ]; then \
 			echo "Applying patch '$${patch}'" ; \
 			svn patch "$${patch}";\
