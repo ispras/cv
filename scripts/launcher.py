@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import tempfile
 import time
+import threading
 from collections import deque
 from time import sleep
 from xml.dom import minidom
@@ -33,6 +34,8 @@ DEFAULT_SOURCE_PATCHES_DIR = "patches/sources"
 DEFAULT_PREPARATION_PATCHES_DIR = "patches/preparation"
 DEFAULT_ENTRYPOINTS_DIR = "entrypoints"
 DEFAULT_RULES_DIR = "rules"
+DEFAULT_PLUGIN_DIR = "plugin"
+
 DEFAULT_BACKUP_PREFIX = "backup_"
 
 TAG_LIMIT_MEMORY = "memory size"
@@ -390,6 +393,7 @@ class Launcher(Component):
         self.rules_dir = os.path.join(self.root_dir, DEFAULT_RULES_DIR)
         self.options_dir = os.path.join(self.root_dir, VERIFIER_FILES_DIR, VERIFIER_OPTIONS_DIR)
         self.patches_dir = os.path.join(self.root_dir, DEFAULT_SOURCE_PATCHES_DIR)
+        self.plugin_dir = os.path.join(self.root_dir, DEFAULT_PLUGIN_DIR)
 
         self.backup = None  # File, in which backup copy will be placed during verification.
         self.cpu_cores = 1
@@ -409,6 +413,8 @@ class Launcher(Component):
 
         # Id to separate internal files (verifier configs, patches, etc.).
         self.system_id = self.config.get(TAG_SYSTEM_ID, "")
+
+        self.lock = threading.Lock()
 
     def __perform_filtering(self, result: VerificationResults, queue: multiprocessing.Queue(),
                             resource_queue_filter: multiprocessing.Queue()):
@@ -733,7 +739,7 @@ class Launcher(Component):
         automaton_file = self.__get_file_for_system(os.path.join(self.root_dir, VERIFIER_FILES_DIR,
                                                                  VERIFIER_PROPERTIES_DIR), launch.rule + ".spc")
         if automaton_file:
-            automaton_file = os.path.relpath(automaton_file, os.path.join(self.root_dir, VERIFIER_FILES_DIR))
+            automaton_file = os.path.join(VERIFIER_PROPERTIES_DIR, os.path.basename(automaton_file))
             ElementTree.SubElement(rundefinition, "option", {"name": "-spec"}).text = automaton_file
         else:
             if launch.mode == MEMSAFETY:
@@ -796,7 +802,7 @@ class Launcher(Component):
 
         # Creating links.
         cil_abs_dir = os.path.join(os.getcwd(), DEFAULT_CIL_DIR)
-        properties_abs_dir = os.path.join(self.root_dir, VERIFIER_FILES_DIR, VERIFIER_PROPERTIES_DIR)
+        properties_abs_dir = os.path.join(self.work_dir, VERIFIER_PROPERTIES_DIR)
         benchmark_abs_dir = os.path.abspath(benchmark_name)
         cil_rel_dir = DEFAULT_CIL_DIR
         properties_rel_dir = VERIFIER_PROPERTIES_DIR
@@ -807,6 +813,8 @@ class Launcher(Component):
         cur_dir = os.getcwd()
         os.chdir(verifier_dir)
 
+        # This may be accessed from different threads.
+        self.lock.acquire()
         if os.path.islink(cil_rel_dir):
             os.unlink(cil_rel_dir)
         if os.path.islink(properties_rel_dir):
@@ -817,6 +825,7 @@ class Launcher(Component):
         os.symlink(cil_abs_dir, cil_rel_dir)
         os.symlink(properties_abs_dir, properties_rel_dir)
         os.symlink(benchmark_abs_dir, benchmark_rel_dir)
+        self.lock.release()
 
         log_file_name = os.path.join(group_directory, CLOUD_BENCHMARK_LOG)
         with open(log_file_name, 'w') as f_log:
@@ -938,26 +947,29 @@ class Launcher(Component):
             return
 
     def __get_file_for_system(self, prefix: str, file: str) -> str:
+        plugin_dir = os.path.join(self.plugin_dir, self.system_id, os.path.relpath(prefix, self.root_dir))
         if self.system_id:
-            new_path = os.path.join(prefix, self.system_id, file)
+            new_path = os.path.join(plugin_dir, file)
             if os.path.exists(new_path):
                 return new_path
         new_path = os.path.join(prefix, file)
         if os.path.exists(new_path):
             return new_path
-        self.logger.debug("Cannot find file {} in directory {} for system {}".format(file, prefix, self.system_id))
+        self.logger.debug("Cannot find file {} neither in basic directory {} nor in plugin directory {}".
+                          format(file, prefix, plugin_dir))
         return ""
 
     def __get_files_for_system(self, prefix: str, pattern: str) -> list:
+        plugin_dir = os.path.join(self.plugin_dir, self.system_id, os.path.relpath(prefix, self.root_dir))
         if self.system_id:
-            result = glob.glob(os.path.join(prefix, self.system_id, pattern))
+            result = glob.glob(os.path.join(plugin_dir, pattern))
             if result:
                 return result
         result = glob.glob(os.path.join(prefix, pattern))
         if result:
             return result
-        self.logger.debug("Cannot find any files by pattern {} in directory {} for system {}".
-                          format(pattern, prefix, self.system_id))
+        self.logger.debug("Cannot find any files by pattern {} neither in basic directory {} nor in plugin directory {}"
+                          .format(pattern, prefix, plugin_dir))
         return []
 
     def launch(self):
@@ -979,8 +991,8 @@ class Launcher(Component):
             if not backup_read:
                 shutil.rmtree(DEFAULT_LAUNCHES_DIR, ignore_errors=True)
             shutil.rmtree(DEFAULT_EXPORT_DIR, ignore_errors=True)
-            if os.path.exists(VERIFIER_PROPERTIES_DIR):
-                os.remove(VERIFIER_PROPERTIES_DIR)
+            shutil.rmtree(VERIFIER_PROPERTIES_DIR, ignore_errors=True)
+        os.makedirs(VERIFIER_PROPERTIES_DIR, exist_ok=True)
         os.makedirs(DEFAULT_CIL_DIR, exist_ok=True)
         os.makedirs(DEFAULT_MAIN_DIR, exist_ok=True)
         os.makedirs(DEFAULT_LAUNCHES_DIR, exist_ok=True)
@@ -1064,7 +1076,7 @@ class Launcher(Component):
                                         "This group will be ignored.".format(group))
                 for file in files:
                     self.logger.debug("Processing file with entry point description '{}'".format(file))
-                    identifier = os.path.relpath(file, self.entrypoints_dir)[:-len(JSON_EXTENSION)]
+                    identifier = os.path.basename(file)[:-len(JSON_EXTENSION)]
                     entrypoints_desc.add(EntryPointDesc(file, identifier))
             if not entrypoints_desc:
                 sys.exit("No file with description of entry points to be checked were found")
@@ -1295,9 +1307,14 @@ class Launcher(Component):
             ElementTree.SubElement(rundefinition, "option", {"name": "-timelimit"}).text = str(internal_time_limit)
 
             # Create links to the properties.
-            if not os.path.exists(VERIFIER_PROPERTIES_DIR):
-                os.symlink(os.path.join(self.root_dir, VERIFIER_FILES_DIR, VERIFIER_PROPERTIES_DIR),
-                           VERIFIER_PROPERTIES_DIR)
+            for file in glob.glob(os.path.join(self.root_dir, VERIFIER_FILES_DIR, VERIFIER_PROPERTIES_DIR, "*")):
+                if os.path.isfile(file):
+                    shutil.copy(file, VERIFIER_PROPERTIES_DIR)
+            if self.system_id:
+                for file in glob.glob(os.path.join(self.plugin_dir, self.system_id, VERIFIER_FILES_DIR,
+                                                   VERIFIER_PROPERTIES_DIR, "*")):
+                    if os.path.isfile(file):
+                        shutil.copy(file, VERIFIER_PROPERTIES_DIR)
 
             # Get options from files.
             self.__parse_verifier_options(VERIFIER_OPTIONS_COMMON, rundefinition)
