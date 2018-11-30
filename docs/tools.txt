@@ -26,7 +26,8 @@
  - cmake;
  - libmpc-dev (Ubuntu), libmpc-devel (Fedora);
  - lib32z1;
- - libxslt-devel.
+ - libxslt-devel
+ - libxml2-devel.x86_64
 
 1. Инструмент klever — web-интерфейс, отвечающий за визуализацию результатов.
 Репозиторий: https://github.com/mutilin/klever.git

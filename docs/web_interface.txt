@@ -4,6 +4,7 @@
 1. Указываются пути относительно tools/klever/
 
 2. Установить библиотеки для python3: django(1.9 для python 3.5), psycopg2
+   Для mysql: библиотеку mysqlclient, требует mariadb-devel, python3-devel
 
 3. Нужно выбрать одну из поддерживаемых баз данных PostgreSQL или MySQL/MariaDB и установить ее.
 
