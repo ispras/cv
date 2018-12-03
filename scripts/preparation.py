@@ -32,7 +32,7 @@ class Preparator(Component):
     """
 
     def __init__(self, install_dir, config, subdirectory_pattern=None, model=None, main_file=DEFAULT_MAIN_FILE,
-                 common_file=None, output_file=DEFAULT_CIL_FILE, preparation_config=None):
+                 common_file=None, output_file=DEFAULT_CIL_FILE, preparation_config=None, build_results=None):
         # Here we suggest 2 scenarios:
         # 1. call from launcher.py (main) - script is inside working directory already;
         # 2. manual call (aux) - script changes directory to working before creating instance of Preparator.
@@ -40,13 +40,14 @@ class Preparator(Component):
 
         super(Preparator, self).__init__(COMPONENT_PREPARATOR, config)
 
+        if not build_results:
+            sys.exit("Build results were not passed")
+        self.build_results = build_results
+
         self.install_dir = install_dir  # Must be absolute path here.
 
         # Configure CIL.
         self.cil_out = self.component_config.get('cil_out', os.path.join(self.work_dir, output_file))
-        self.source_dir = self.component_config.get(TAG_SOURCE_DIR)
-        if not self.source_dir:
-            sys.exit("Source directory must present")
 
         cil_bin = self.get_tool_path(DEFAULT_TOOL_PATH[CIL], self.component_config.get(TAG_TOOLS, {}).get(CIL))
         cil_options = [cil_bin, "--printCilAsIs", "--domakeCFG", "--decil",
@@ -55,12 +56,6 @@ class Preparator(Component):
                        "--no-convert-field-offsets", "--no-split-structs",
                        "--rmUnusedInlines", "--out"]
         self.cil = cil_options
-
-        self.build_commands = self.component_config.get(TAG_BUILD_COMMANDS, os.path.join(self.work_dir,
-                                                                                         DEFAULT_BUILD_COMMANDS_FILE))
-        if not os.path.exists(self.build_commands):
-            self.logger.error("File with build commands does not exist: '{}'".format(self.build_commands))
-            exit(1)
 
         self.white_list = self.component_config.get(TAG_FILTER_WHITE_LIST, [])
         self.black_list = self.component_config.get(TAG_FILTER_BLACK_LIST, [])
@@ -174,7 +169,7 @@ class Preparator(Component):
         # If no regexp was applied then do not skip the file.
         return False
 
-    def process_cc_command(self, command):
+    def process_cc_command(self, command, source_dir):
         # Workarounds for bad cc commands
 
         cif_in = self.get_first_target(command, "in")
@@ -192,7 +187,7 @@ class Preparator(Component):
                     cif_in = os.path.normpath(os.path.join(command["cwd"], cif_in))
                 cif_out = cif_in + ".i"
 
-                ret, files = self.__process_single_cc_command(command, cif_out, cif_in)
+                ret, files = self.__process_single_cc_command(command, cif_out, cif_in, source_dir)
                 if not ret:
                     self.libs[counter].append(cif_out)
                 if files:
@@ -212,9 +207,9 @@ class Preparator(Component):
                 cif_out = os.path.normpath(os.path.join(command["cwd"], cif_out))
             if not os.path.isabs(cif_in):
                 cif_in = os.path.normpath(os.path.join(command["cwd"], cif_in))
-            return self.__process_single_cc_command(command, cif_out, cif_in)
+            return self.__process_single_cc_command(command, cif_out, cif_in, source_dir)
 
-    def __process_single_cc_command(self, command, cif_out, cif_in):
+    def __process_single_cc_command(self, command, cif_out, cif_in, source_dir):
         processed_files = []
 
         for regexp in self.preparation_config.get(CONF_SED_BEFORE_CIL, []):
@@ -228,9 +223,9 @@ class Preparator(Component):
         if "cwd" in command:
             os.chdir(command["cwd"])
         else:
-            os.chdir(self.source_dir)
+            os.chdir(source_dir)
 
-        cif_out = os.path.normpath(os.path.join(self.preprocessing_dir, os.path.relpath(cif_out, start=self.source_dir)))
+        cif_out = os.path.normpath(os.path.join(self.preprocessing_dir, os.path.relpath(cif_out, start=source_dir)))
 
         os.makedirs(os.path.dirname(cif_out), exist_ok=True)
 
@@ -262,7 +257,7 @@ class Preparator(Component):
 
         self.logger.debug(" ".join(cif_args))
 
-        os.chdir(self.source_dir)
+        os.chdir(source_dir)
         # Redirecting output into Pipe fails on some CIF calls
         ret = self.command_caller(cif_args, self.preprocessing_dir)
 
@@ -352,28 +347,29 @@ class Preparator(Component):
 
         self.logger.debug("Start parsing build commands")
         prev_cwd = os.getcwd()
-        with open(self.build_commands, "r", errors='ignore') as bc_fh:
-            bc_json = json.load(bc_fh)
+        for source_dir, build_commands in self.build_results.items():
+            with open(build_commands, "r", errors='ignore') as bc_fh:
+                bc_json = json.load(bc_fh)
 
-            number_of_commands = len(bc_json)
-            if number_of_commands == 0:
-                sys.exit("Specified json file doesn't contain valid cc or ld commands")
-            self.logger.debug("Found {} build commands".format(number_of_commands))
+                number_of_commands = len(bc_json)
+                if number_of_commands == 0:
+                    sys.exit("Specified json file doesn't contain valid cc or ld commands")
+                self.logger.debug("Found {} build commands".format(number_of_commands))
 
-            # TODO: Need to prevent none-deterministic issues.
-            for command in bc_json:
-                if "command" not in command:
-                    sys.exit("Can't find 'command' field in the next build command: {}".format(command))
-                elif "in" not in command:
-                    sys.exit("Can't find 'in' field in build command: {}".format(command))
-                elif "out" not in command:
-                    sys.exit("Can't find 'out' field in build command: {}".format(command))
+                # TODO: Need to prevent none-deterministic issues.
+                for command in bc_json:
+                    if "command" not in command:
+                        sys.exit("Can't find 'command' field in the next build command: {}".format(command))
+                    elif "in" not in command:
+                        sys.exit("Can't find 'in' field in build command: {}".format(command))
+                    elif "out" not in command:
+                        sys.exit("Can't find 'out' field in build command: {}".format(command))
 
-                ret, files = self.process_cc_command(command)
-                if not ret:
-                    processed_files.extend(files)
-                elif files:
-                    failed_files.extend(files)
+                    ret, files = self.process_cc_command(command, source_dir)
+                    if not ret:
+                        processed_files.extend(files)
+                    elif files:
+                        failed_files.extend(files)
 
         for aux_file, stage in self.aux_files.items():
             if stage != STAGE_PREPROCESS:

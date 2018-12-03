@@ -69,6 +69,8 @@ TAG_UPLOADER_PASSWORD = "password"
 TAG_UPLOADER_PARENT_ID = "parent id"
 TAG_SKIP = "skip"
 TAG_STATISTICS_TIME = "statistics time"
+TAG_BUILD_CONFIG = "build config"
+TAG_ID = "id"
 
 SCHEDULER_CLOUD = "cloud"
 SCHEDULER_LOCAL = "local"
@@ -101,6 +103,7 @@ SOURCE_QUEUE_BUILDER_RESOURCES = "builder resources"
 SOURCE_QUEUE_QUALIFIER_RESOURCES = "qualifier resources"
 SOURCE_QUEUE_FILES = "files"
 SOURCE_QUEUE_FUNCTIONS = "functions"
+SOURCE_QUEUE_RESULTS = "results"
 
 TAG_ENTRYPOINTS_DESC = "entrypoints desc"
 PREPARATION_CONFIG = "conf.json"
@@ -653,70 +656,115 @@ class Launcher(Component):
 
     def __prepare_sources(self, sources_queue: multiprocessing.Queue()):
         """
+        For each specified source directory the following actions can be performed:
+        1. Clean.
+        2. Switch to specified branch/commit.
+        3. Build (with build commands as a result).
+        4. Apply specified patches.
+        5. Find changes of specified commits (with changed functions as a result).
         This should be performed in a separated process.
         """
 
         qualifier_resources = {}
+        builder_resources = {}
         specific_sources = set()
         specific_functions = set()
+        build_results = {}  # Information, that will be used by Preparator (source directories and build commands).
         cur_dir = os.getcwd()
 
-        sources_config = self.config.get(TAG_SOURCES, {})
-        branch = sources_config.get(TAG_BRANCH)
-        commits = self.config.get(TAG_COMMITS, None)
-        patches = sources_config.get(TAG_PATCH)
-        build_patch = sources_config.get(TAG_BUILD_PATCH, None)
-        skip = sources_config.get(TAG_SKIP, False)
-        if skip:
-            self.logger.debug("Skipping preparation of source directory "
-                              "(it is assumed, that the directory has already been prepared manually)")
-            sys.exit(0)
-
-        # Get build commands.
         self.logger.info("Preparing source directories")
-        preparator_config = self.config.get(COMPONENT_PREPARATOR, {})
-        build_commands = preparator_config.get(TAG_BUILD_COMMANDS, None)
+        sources = self.config.get(COMPONENT_BUILDER, {}).get(TAG_SOURCES, {})
 
-        source_dir = preparator_config.get(TAG_SOURCE_DIR)
-        if not source_dir or not os.path.exists(source_dir):
-            self.logger.error("Source directory '{}' does not exist".format(source_dir))
+        if not sources:
+            self.logger.error("Sources to be verified were not specified")
             exit(1)
 
-        builder = Builder(self.install_dir, self.config, source_dir)
-        builder.clean()
-        if branch:
-            builder.change_branch(branch)
-        if build_patch:
-            build_patch = self.__get_file_for_system(self.patches_dir, build_patch)
-            builder.patch(build_patch)
+        builders = {}
+        for sources_config in sources:
+            identifier = sources_config.get(TAG_ID)
+            source_dir = sources_config.get(TAG_SOURCE_DIR)
+            branch = sources_config.get(TAG_BRANCH, None)
+            build_patch = sources_config.get(TAG_BUILD_PATCH, None)
+            skip = sources_config.get(TAG_SKIP, False)
+            build_config = sources_config.get(TAG_BUILD_CONFIG, {})
+            cached_commands = sources_config.get(TAG_CACHED_COMMANDS, None)
+            build_commands = os.path.join(cur_dir, "cmds_{}.json".format(re.sub("\W", "_", identifier)))
 
-        if build_commands and os.path.exists(build_commands):
-            self.logger.debug("Taking build commands from cached file {}".format(build_commands))
-            shutil.copy(build_commands, os.path.join(cur_dir, DEFAULT_BUILD_COMMANDS_FILE))
-        else:
-            build_commands = os.path.join(cur_dir, DEFAULT_BUILD_COMMANDS_FILE)
-            self.logger.debug("Generating build commands in file {}".format(build_commands))
-            builder.build()
+            if not source_dir or not os.path.exists(source_dir):
+                self.logger.error("Source directory '{}' does not exist".format(source_dir))
+                exit(1)
 
-        builder_resources = builder.get_component_stats()
+            if build_config:
+                build_results[source_dir] = build_commands
 
-        if commits:
-            self.logger.info("Finding all entrypoints for specific commits")
-            qualifier = Qualifier(self.install_dir, source_dir, self.entrypoints_dir, self.config)
-            specific_sources, specific_functions = qualifier.analyse_commits(commits)
-            specific_functions = qualifier.find_functions(specific_functions)
-            qualifier_resources = qualifier.stop()
+            if skip:
+                self.logger.debug("Skipping building of sources '{}' (directory {})".format(identifier, source_dir))
+                if build_config:
+                    if not (cached_commands and os.path.exists(cached_commands)):
+                        self.logger.error("Cached build commands were not specified for sources '{}', "
+                                          "preparation of which was skipped".format(identifier))
+                        exit(1)
+                    shutil.copy(cached_commands, build_commands)
+                continue
+            else:
+                self.logger.debug("Building of sources '{}' (directory {})".format(identifier, source_dir))
 
-        if patches:
-            for patch in patches:
-                patch = self.__get_file_for_system(self.patches_dir, patch)
-                builder.patch(patch)
+            builder = Builder(self.install_dir, self.config, source_dir, build_config)
+            builder.clean()
+
+            if branch:
+                builder.change_branch(branch)
+
+            if build_patch:
+                build_patch = self.__get_file_for_system(self.patches_dir, build_patch)
+                builder.patch(build_patch)
+
+            builders[builder] = None
+            if build_config:
+                if cached_commands and os.path.exists(cached_commands):
+                    self.logger.debug("Taking build commands from cached file {}".format(cached_commands))
+                    shutil.copy(cached_commands, build_commands)
+                else:
+                    self.logger.debug("Generating build commands in file {}".format(build_commands))
+                    builders[builder] = build_commands
+
+        for sources_config in sources:
+            source_dir = sources_config.get(TAG_SOURCE_DIR)
+            commits = self.config.get(TAG_COMMITS, None)
+            patches = sources_config.get(TAG_PATCH, [])
+
+            builder = None
+            for tmp_builder in builders.keys():
+                if tmp_builder.source_dir == source_dir:
+                    builder = tmp_builder
+                    break
+
+            if builder:
+                build_commands = builders[builder]
+                if build_commands:
+                    builder.build(build_commands)
+                builder_resources = self.add_resources(builder.get_component_stats(), builder_resources)
+
+            if commits:
+                self.logger.debug("Finding all entrypoints for specified commits {}".format(commits))
+                qualifier = Qualifier(self.install_dir, source_dir, self.entrypoints_dir, self.config)
+                specific_sources_new, specific_functions_new = qualifier.analyse_commits(commits)
+                specific_functions_new = qualifier.find_functions(specific_functions_new)
+                specific_sources = specific_sources.union(specific_sources_new)
+                specific_functions = specific_functions.union(specific_functions_new)
+                qualifier_resources = self.add_resources(qualifier.stop(), qualifier_resources)
+
+            if patches:
+                for patch in patches:
+                    patch = self.__get_file_for_system(self.patches_dir, patch)
+                    builder.patch(patch)
 
         sources_queue.put({
             SOURCE_QUEUE_QUALIFIER_RESOURCES: qualifier_resources,
             SOURCE_QUEUE_BUILDER_RESOURCES: builder_resources,
             SOURCE_QUEUE_FILES: specific_sources,
-            SOURCE_QUEUE_FUNCTIONS: specific_functions
+            SOURCE_QUEUE_FUNCTIONS: specific_functions,
+            SOURCE_QUEUE_RESULTS: build_results
         })
         sys.exit(0)
 
@@ -1087,6 +1135,7 @@ class Launcher(Component):
                                                   args=(sources_queue, ))
         sources_process.start()
         sources_process.join()  # Wait here since this information may reduce future preparation work.
+        build_results = {}
         if not sources_process.exitcode:
             if sources_queue.qsize():
                 data = sources_queue.get()
@@ -1095,8 +1144,9 @@ class Launcher(Component):
                 specific_sources = data.get(SOURCE_QUEUE_FILES)
                 qualifier_resources = data.get(SOURCE_QUEUE_QUALIFIER_RESOURCES)
                 builder_resources = data.get(SOURCE_QUEUE_BUILDER_RESOURCES)
+                build_results = data.get(SOURCE_QUEUE_RESULTS)
         else:
-            self.logger.error("Source directory was not prepared")
+            self.logger.error("Source directories were not prepared")
             exit(sources_process.exitcode)
 
         self.logger.info("Preparing verification tasks based on the given configuration")
@@ -1172,7 +1222,7 @@ class Launcher(Component):
                                                             subdirectory_pattern=entry_desc.subsystem, model=model,
                                                             main_file=main_file_name, output_file=cil_file,
                                                             preparation_config=preparation_config,
-                                                            common_file=common_file)
+                                                            common_file=common_file, build_results=build_results)
                                     process_pool[i] = multiprocessing.Process(target=preparator.prepare_task,
                                                                               name=cil_file, args=(resource_queue,))
                                     process_pool[i].start()

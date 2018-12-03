@@ -89,7 +89,7 @@ TAG_WALL_TIME = "wall"
 TAG_MEMORY_USAGE = "memory"
 TAG_EXITCODE = "exit code"
 
-TAG_BUILD_COMMANDS = "build_commands"
+TAG_CACHED_COMMANDS = "cached commands"
 TAG_DEBUG = "debug"
 TAG_TOOLS = "tools"
 TAG_FILTERS = "filters"
@@ -126,8 +126,6 @@ VERDICT_UNKNOWN = "UNKNOWN"
 MEA_DEFAULT_FILTER_OTHERS = "model_functions"
 MEA_DEFAULT_FILTER_RACES = "model_functions"
 MEA_DEFAULT_FILTER_SMG = "model_functions_smg"
-
-DEFAULT_BUILD_COMMANDS_FILE = "cmds.json"
 
 ENTRY_POINT_SUFFIX = "_caller"
 

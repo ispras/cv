@@ -7,7 +7,7 @@ import shutil
 import sys
 
 from component import Component
-from config import CLADE_CC, CLADE_INTERCEPT, DEFAULT_BUILD_COMMANDS_FILE, COMPONENT_BUILDER, TAG_CLADE_CONF, \
+from config import CLADE_CC, CLADE_INTERCEPT, COMPONENT_BUILDER, TAG_CLADE_CONF, \
     TAG_MAKE_COMMAND, TAG_FAIL_IF_FAILURE, CLADE_BASE_FILE, CLADE_DEFAULT_CONFIG_FILE, CLADE_WORK_DIR, \
     DEFAULT_INSTALL_DIR
 
@@ -23,12 +23,17 @@ CLADE_BASIC_CONFIG = {
 
 
 class Builder(Component):
-    def __init__(self, install_dir, config, source_dir):
+    def __init__(self, install_dir, config, source_dir, builder_config={}):
         super(Builder, self).__init__(COMPONENT_BUILDER, config)
         self.install_dir = install_dir
         self.source_dir = source_dir
 
-        self.clade_conf = self.component_config.get(TAG_CLADE_CONF, None)
+        if not builder_config:
+            self.is_build = False
+        else:
+            self.is_build = True
+
+        self.clade_conf = builder_config.get(TAG_CLADE_CONF, None)
         if self.clade_conf:
             if not os.path.exists(self.clade_conf):
                 sys.exit("Specified clade config file '{}' does not exist".format(self.clade_conf))
@@ -37,9 +42,9 @@ class Builder(Component):
                 json.dump(CLADE_BASIC_CONFIG, fd, sort_keys=True, indent=4)
             self.clade_conf = os.path.join(os.getcwd(), CLADE_DEFAULT_CONFIG_FILE)
 
-        self.make_command = self.component_config.get(TAG_MAKE_COMMAND, "make")
-        self.fail_if_failure = self.component_config.get(TAG_FAIL_IF_FAILURE, True)
-        self.clean_sources = self.component_config.get(TAG_CLEAN_SOURCES, False)
+        self.make_command = builder_config.get(TAG_MAKE_COMMAND, "make")
+        self.fail_if_failure = builder_config.get(TAG_FAIL_IF_FAILURE, True)
+        self.clean_sources = builder_config.get(TAG_CLEAN_SOURCES, False)
         self.env = self.component_config.get(TAG_ENVIRON_VARS, {})
 
     def clean(self):
@@ -69,9 +74,10 @@ class Builder(Component):
             sys.exit("Cannot apply patch '{}' to the source directory {}".format(patch, self.source_dir))
         os.chdir(self.work_dir)
 
-    def build(self):
+    def build(self, build_commands_file: str):
+        if not self.is_build:
+            return
         os.chdir(self.source_dir)
-        build_commands_file = os.path.join(self.work_dir, DEFAULT_BUILD_COMMANDS_FILE)
 
         # Remove Clade working directory and temporary files
         tmp_path = os.path.join(self.source_dir, CLADE_WORK_DIR)
@@ -103,6 +109,7 @@ class Builder(Component):
         self.logger.info("Sources has been successfully built")
 
 
+#TODO: not supported.
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--install", "-i", help="install directory", default=os.path.abspath(DEFAULT_INSTALL_DIR))

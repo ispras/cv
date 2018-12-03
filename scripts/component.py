@@ -212,3 +212,15 @@ class Component:
             TAG_WALL_TIME: wall_time,
             TAG_LOG_FILE: self.error_logs
         }
+
+    def add_resources(self, resources_1: dict, resources_2: dict) -> dict:
+        memory = resources_1.get(TAG_MEMORY_USAGE, 0) + resources_2.get(TAG_MEMORY_USAGE, 0)
+        cpu_time = resources_1.get(TAG_CPU_TIME, 0.0) + resources_2.get(TAG_CPU_TIME, 0.0)
+        wall_time = resources_1.get(TAG_WALL_TIME, 0.0) + resources_2.get(TAG_WALL_TIME, 0.0)
+        logs = resources_1.get(TAG_LOG_FILE, set()).union(resources_2.get(TAG_LOG_FILE, set()))
+        return {
+            TAG_MEMORY_USAGE: memory,
+            TAG_CPU_TIME: cpu_time,
+            TAG_WALL_TIME: wall_time,
+            TAG_LOG_FILE: logs
+        }
