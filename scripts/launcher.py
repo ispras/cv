@@ -11,7 +11,6 @@ import shutil
 import subprocess
 import tempfile
 import time
-import threading
 from collections import deque
 from time import sleep
 from xml.dom import minidom
@@ -416,8 +415,6 @@ class Launcher(Component):
 
         # Id to separate internal files (verifier configs, patches, etc.).
         self.system_id = self.config.get(TAG_SYSTEM_ID, "")
-
-        self.lock = threading.Lock()
 
     def __perform_filtering(self, result: VerificationResults, queue: multiprocessing.Queue(),
                             resource_queue_filter: multiprocessing.Queue()):
@@ -861,19 +858,18 @@ class Launcher(Component):
         cur_dir = os.getcwd()
         os.chdir(verifier_dir)
 
-        # This may be accessed from different threads.
-        self.lock.acquire()
-        if os.path.islink(cil_rel_dir):
-            os.unlink(cil_rel_dir)
-        if os.path.islink(properties_rel_dir):
-            os.unlink(properties_rel_dir)
+        os.makedirs(cil_rel_dir, exist_ok=True)
+        os.makedirs(properties_rel_dir, exist_ok=True)
+        for file in glob.glob(os.path.join(cil_abs_dir, "*")):
+            if os.path.isfile(file):
+                shutil.copy(file, cil_rel_dir)
+        for file in glob.glob(os.path.join(properties_abs_dir, "*")):
+            if os.path.isfile(file):
+                shutil.copy(file, properties_rel_dir)
+
         if os.path.islink(benchmark_rel_dir):
             os.unlink(benchmark_rel_dir)
-
-        os.symlink(cil_abs_dir, cil_rel_dir)
-        os.symlink(properties_abs_dir, properties_rel_dir)
         os.symlink(benchmark_abs_dir, benchmark_rel_dir)
-        self.lock.release()
 
         log_file_name = os.path.join(group_directory, CLOUD_BENCHMARK_LOG)
         with open(log_file_name, 'w') as f_log:
@@ -1567,6 +1563,10 @@ class Launcher(Component):
 
         if not self.debug:
             self.logger.info("Cleaning working directories")
+            for mode, path in DEFAULT_CPACHECKER_CLOUD.items():
+                cpa_path = self.get_tool_path(path)
+                shutil.rmtree(os.path.join(cpa_path, DEFAULT_CIL_DIR), ignore_errors=True)
+                shutil.rmtree(os.path.join(cpa_path, VERIFIER_PROPERTIES_DIR), ignore_errors=True)
             shutil.rmtree(DEFAULT_MAIN_DIR, ignore_errors=True)
             shutil.rmtree(DEFAULT_EXPORT_DIR, ignore_errors=True)
             if self.backup and os.path.exists(self.backup):
