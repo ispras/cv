@@ -15,10 +15,38 @@
     }
   },
   "Builder": {
-    "make command": "command, which is executed into the source directory for its building",
-    "clade config": "absolute path to Clade configuration, under which the building will be performed",
-    "fail if build fails": "if true, then Builder will not stop on any error during execution of build command (default is false)",
-    "clean sources": "if true, then Builder will clean the source directory before building",
+    "sources": [
+      {
+        "id": "sources id 1",
+        "source dir": "absolute path to the source directory 1",
+        "branch": "branch of the source repository 1",
+        "build patch": "patch, which will be applied to the source directory 1 before building",
+        "patches": ["list of patches, which will be applied to the source directory 1 after building"],
+        "skip": "if true, then source directory 1 will not be changed (this step will be skipped)",
+        "build config": {
+          "make command": "make command for source directory 1",
+          "clade config": "absolute path to Clade configuration, under which the building will be performed for source directory 1",
+          "fail if build fails": "if true, then Builder will not stop on any error during execution of build command (default is false)",
+          "clean sources": "if true, then Builder will clean the source directory before building"
+        },
+        "cached commands ": "absolute path to cached json-file with build commands"
+      },
+      {
+        "id": "sources id N",
+        "source dir": "absolute path to the source directory N",
+        "branch": "branch of the source repository N",
+        "build patch": "patch, which will be applied to the source directory N before building",
+        "patches": ["list of patches, which will be applied to the source directory N after building"],
+        "skip": "if true, then source directory N will not be changed (this step will be skipped)",
+        "build config": {
+          "make command": "make command for source directory N",
+          "clade config": "absolute path to Clade configuration, under which the building will be performed for source directory N",
+          "fail if build fails": "if true, then Builder will not stop on any error during execution of build command (default is false)",
+          "clean sources": "if true, then Builder will clean the source directory before building"
+        },
+        "cached commands ": "absolute path to cached json-file with build commands"
+      }
+    ],
     "environment variables": {
       "environment variable name, which is required for building": "value"
     },
@@ -30,8 +58,6 @@
     "input": "path to file with entrypoints (only relevant for launching generate_main.py separately)"
   },
   "Preparator": {
-    "source dir": "abs path to source directory",
-    "build_commands": "abs path to cached json-file with build commands",
     "filter black list": ["list of patterns, which should be excluded while processing build commands"],
     "filter white list": ["list of patterns, which should not be excluded while processing build commands"],
     "extra options": ["list of compiler options, which should be added to compilation commands"],
@@ -78,13 +104,6 @@
       "others": "filter for unreachability rules (if not specified, filter model_functions will be used)"
     },
     "debug": "true|false - overwrites debug value for MEA"
-  },
-  "sources": {
-    "skip": "if true, then preparation of source directory will be skipped",
-    "branch": "the name of the branch, which should be used in the source directory (if omitted, then the current branch will be used)",
-    "build patch": "patch, which should be used for sources building",
-    "patches": ["list with the names of the patches, which will be applied to the source directory (each patch must be placed in 'patches' directory)"],
-    "kartographer cache": "path to previously obtained kartographer resulting json-file (which contains functions call tree), is aimed at debug"
   },
   "system": "identifier of a system under verification (subdirectories with this id must present)",
   "entrypoints desc": ["list of paths to the files with description of entry points (files are searched in the entrypoints directory)"],
