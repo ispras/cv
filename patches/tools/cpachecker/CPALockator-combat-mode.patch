@@ -1,6 +1,6 @@
 Index: config/includes/lockator/lockator-core.properties
 ===================================================================
---- config/includes/lockator/lockator-core.properties	(revision 29648)
+--- config/includes/lockator/lockator-core.properties	(revision 29939)
 +++ config/includes/lockator/lockator-core.properties	(working copy)
 @@ -10,6 +10,7 @@
  cpa.arg.export = false
@@ -10,33 +10,47 @@ Index: config/includes/lockator/lockator-core.properties
  coverage.output = coverage.info
 
  # Disable statistics for memory consumption.
+Index: config/includes/lockator/lockStatistics-core.properties
+===================================================================
+--- config/includes/lockator/lockStatistics-core.properties	(revision 29939)
++++ config/includes/lockator/lockStatistics-core.properties	(working copy)
+@@ -5,8 +5,8 @@
+ cpa.bam.blockHeuristic = FunctionPartitioning
+ cpa.bam.aggressiveCaching = false
+ 
+-cpa.lock.reduceLockCounters = BLOCK
+-cpa.lock.reduceUselessLocks = true
++cpa.lock.reduceLockCounters = ALL
++cpa.lock.reduceUselessLocks = false
+ # cpa.lock.stopMode = emptylockset
+ 
+ cpa = cpa.bam.BAMCPA
 Index: config/includes/lockator/lockStatistics-predicate.properties
 ===================================================================
---- config/includes/lockator/lockStatistics-predicate.properties	(revision 29648)
+--- config/includes/lockator/lockStatistics-predicate.properties	(revision 29939)
 +++ config/includes/lockator/lockStatistics-predicate.properties	(working copy)
 @@ -8,15 +8,15 @@
  solver.solver = SMTINTERPOL
  analysis.algorithm.CEGAR = true
-
+ 
 -cpa.usage.printOnlyTrueUnsafes = true
 +cpa.usage.printOnlyTrueUnsafes = false
-
+ 
  [cegar]
  refiner = cpa.usage.refinement.IdentifierIterator
  globalRefinement = true
 -# maxIterations = 20
 +maxIterations = 0
-
+ 
  [cpa.predicate]
 -useBitwiseAxioms = true
 +useBitwiseAxioms = false
  encodeBitvectorAs = INTEGER
  encodeFloatAs = RATIONAL
  useArraysForHeap = false
-
 Index: scripts/benchmark/vcloud.py
 ===================================================================
---- scripts/benchmark/vcloud.py	(revision 29648)
+--- scripts/benchmark/vcloud.py	(revision 29939)
 +++ scripts/benchmark/vcloud.py	(working copy)
 @@ -94,6 +94,10 @@
          else:
@@ -51,7 +65,7 @@ Index: scripts/benchmark/vcloud.py
                     "--run-collection-meta-information", meta_information, \
 Index: src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java
 ===================================================================
---- src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java	(revision 29648)
+--- src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java	(revision 29939)
 +++ src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java	(working copy)
 @@ -191,9 +191,10 @@
              + actualParameters + " parameter(s)", edge);
@@ -68,7 +82,7 @@ Index: src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java
          throw new AssertionError("Unhandled language " + language);
 Index: src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java
 ===================================================================
---- src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java	(revision 29648)
+--- src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java	(revision 29939)
 +++ src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java	(working copy)
 @@ -387,8 +387,7 @@
      String functionName = startNode.getFunctionName();
@@ -82,7 +96,7 @@ Index: src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java
      cfaNodes.putAll(functionName, functionBuilder.getCfaNodes());
 Index: src/org/sosy_lab/cpachecker/cfa/postprocessing/function/ThreadCreateTransformer.java
 ===================================================================
---- src/org/sosy_lab/cpachecker/cfa/postprocessing/function/ThreadCreateTransformer.java	(revision 29648)
+--- src/org/sosy_lab/cpachecker/cfa/postprocessing/function/ThreadCreateTransformer.java	(revision 29939)
 +++ src/org/sosy_lab/cpachecker/cfa/postprocessing/function/ThreadCreateTransformer.java	(working copy)
 @@ -51,6 +51,7 @@
  import org.sosy_lab.cpachecker.cfa.ast.c.CIdExpression;
