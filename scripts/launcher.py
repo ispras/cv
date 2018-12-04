@@ -742,19 +742,19 @@ class Launcher(Component):
                     builder.build(build_commands)
                 builder_resources = self.add_resources(builder.get_component_stats(), builder_resources)
 
-            if commits:
-                self.logger.debug("Finding all entrypoints for specified commits {}".format(commits))
-                qualifier = Qualifier(self.install_dir, source_dir, self.entrypoints_dir, self.config)
-                specific_sources_new, specific_functions_new = qualifier.analyse_commits(commits)
-                specific_functions_new = qualifier.find_functions(specific_functions_new)
-                specific_sources = specific_sources.union(specific_sources_new)
-                specific_functions = specific_functions.union(specific_functions_new)
-                qualifier_resources = self.add_resources(qualifier.stop(), qualifier_resources)
+                if commits:
+                    self.logger.debug("Finding all entrypoints for specified commits {}".format(commits))
+                    qualifier = Qualifier(self.install_dir, source_dir, self.entrypoints_dir, self.config)
+                    specific_sources_new, specific_functions_new = qualifier.analyse_commits(commits)
+                    specific_functions_new = qualifier.find_functions(specific_functions_new)
+                    specific_sources = specific_sources.union(specific_sources_new)
+                    specific_functions = specific_functions.union(specific_functions_new)
+                    qualifier_resources = self.add_resources(qualifier.stop(), qualifier_resources)
 
-            if patches:
-                for patch in patches:
-                    patch = self.__get_file_for_system(self.patches_dir, patch)
-                    builder.patch(patch)
+                if patches:
+                    for patch in patches:
+                        patch = self.__get_file_for_system(self.patches_dir, patch)
+                        builder.patch(patch)
 
         sources_queue.put({
             SOURCE_QUEUE_QUALIFIER_RESOURCES: qualifier_resources,
