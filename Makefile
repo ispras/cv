@@ -12,7 +12,6 @@ cif="cif"
 root_dir=$(shell pwd)
 install_dir=tools
 klever_dir=${install_dir}/${klever}
-clade_dir=${install_dir}/${clade}
 cil_dir=${install_dir}/${cil}
 benchexec_dir=${install_dir}/${benchexec}
 cif_dir=${install_dir}/${cif}
@@ -35,10 +34,6 @@ download-klever:
 	@$(call download_tool,${klever},${klever_dir},${klever_repo})
 	@cd ${klever_dir}; git checkout cv
 
-download-clade:
-	@$(call download_tool,${clade},${clade_dir},${clade_repo})
-	@cd ${clade_dir}; git checkout cv
-
 download-benchexec:
 	@$(call download_tool,${benchexec},${benchexec_dir},${benchexec_repo})
 	@cd ${benchexec_dir}; git checkout 1.16
@@ -51,18 +46,13 @@ download-cpa := $(addprefix download-cpa-,$(cpa_branches))
 $(download-cpa):
 	@$(call download_cpa,$(patsubst download-cpa-%,%,$@))
 	
-download: download-klever download-clade download-benchexec download-cif $(download-cpa)
+download: download-klever download-benchexec download-cif $(download-cpa)
 	@echo "*** Downloading has been completed ***"
 
 
 build-klever: download-klever
 	@echo "*** Building ${klever} ***"
 	@echo "from bridge.development import *" > ${klever_dir}/bridge/bridge/settings.py
-
-build-clade: download-clade
-	@echo "*** Building ${clade} ***"
-	@rm -f ~/.local/lib/python*/site-packages/clade.egg-link
-	@cd ${clade_dir}; pip3 install --user -e .
 
 build-benchexec: download-benchexec
 	@echo "*** Building ${benchexec} ***"
@@ -83,7 +73,7 @@ $(build-cpa):
 	@make download-cpa-$(patsubst build-cpa-%,%,$@)
 	@$(call build_cpa,$(patsubst build-cpa-%,%,$@))
 
-build: build-klever build-clade build-benchexec build-cif build-cil $(build-cpa)
+build: build-klever build-benchexec build-cif build-cil $(build-cpa)
 	@echo "*** Building has been completed ***"
 
 clean-cpa := $(addprefix clean-cpa-,$(cpa_branches))
@@ -113,13 +103,11 @@ install-klever: build-klever check-deploy-dir
 	@rm -rf ${DEPLOY_DIR}/${klever_dir}
 	@cp -r ${klever_dir} ${DEPLOY_DIR}/${klever_dir}
 
-install-clade: build-clade check-deploy-dir
-	@echo "*** Installing ${clade} ***"
-	@mkdir -p ${DEPLOY_DIR}/${install_dir}
-	@rm -rf ${DEPLOY_DIR}/${clade_dir}
-	@cp -r ${clade_dir} ${DEPLOY_DIR}/${clade_dir}
+install-clade: check-deploy-dir
+	@echo "*** Installing ${clade} into directory ${DEPLOY_DIR} ***"
+	@$(call download_tool,${clade},${DEPLOY_DIR},${clade_repo})
 	@rm -f ~/.local/lib/python*/site-packages/clade.egg-link
-	@cd ${DEPLOY_DIR}/${clade_dir}; pip3 install --user -e .
+	@cd ${DEPLOY_DIR}; git checkout cv; pip3 install --user -e .
 
 install-benchexec: build-benchexec check-deploy-dir
 	@echo "*** Installing ${benchexec} ***"
@@ -152,10 +140,10 @@ install-scripts:
 	mkdir -p buildbot
 
 
-install: check-deploy-dir install-klever install-clade install-benchexec install-cil install-cif $(install-cpa) install-scripts
+install: check-deploy-dir install-klever install-benchexec install-cil install-cif $(install-cpa) install-scripts
 	@echo "*** Successfully installed into the directory ${DEPLOY_DIR}' ***"
 
-install-with-cloud: check-deploy-dir install-klever install-clade install-benchexec install-cil install-cif install-cpa-with-cloud-links install-scripts
+install-with-cloud: check-deploy-dir install-klever install-benchexec install-cil install-cif install-cpa-with-cloud-links install-scripts
 	@echo "*** Successfully installed into the directory ${DEPLOY_DIR}' with access to verification cloud ***"
 
 install-cpa-with-cloud-links: | check-deploy-dir $(install-cpa)

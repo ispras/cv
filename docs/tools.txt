@@ -28,8 +28,9 @@
  - cmake;
  - libmpc-dev (Ubuntu), libmpc-devel (Fedora);
  - lib32z1;
- - libxslt-devel
- - libxml2-devel.x86_64
+ - libxslt-devel;
+ - libxml2-devel.x86_64;
+ - clade (cм. п. 2).
 
 1. Инструмент klever — web-интерфейс, отвечающий за визуализацию результатов.
 Репозиторий: https://github.com/mutilin/klever.git
@@ -37,6 +38,8 @@
 
 2. Инструмент clade отвечает за сборку ядра.
 Репозиторий https://github.com/mutilin/clade.git
+Для установки необходимо выполнить:
+make install-clade DEPLOY_DIR=<директория, в которую инструмент будет установлен>
 
 3. Инструмент CIL отвечает за объединение исходных файлов и их упрощение.
 Репозиторий https://forge.ispras.ru/git/cil.git
