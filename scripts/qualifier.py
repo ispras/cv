@@ -105,6 +105,7 @@ class Qualifier(Component):
                 start_commit = commit
                 last_commit = commit
 
+            # TODO: those git commands should be placed outside.
             self.command_caller("git reset --hard")
             if self.command_caller("git checkout {}".format(last_commit)):
                 sys.exit("Cannot checkout to the commit '{}'".format(last_commit))

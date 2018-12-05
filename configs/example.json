@@ -23,6 +23,7 @@
         "build patch": "patch, which will be applied to the source directory 1 before building",
         "patches": ["list of patches, which will be applied to the source directory 1 after building"],
         "skip": "if true, then source directory 1 will not be changed (this step will be skipped)",
+        "repository": "type of sources repository",
         "build config": {
           "make command": "make command for source directory 1",
           "clade config": "absolute path to Clade configuration, under which the building will be performed for source directory 1",
@@ -38,6 +39,7 @@
         "build patch": "patch, which will be applied to the source directory N before building",
         "patches": ["list of patches, which will be applied to the source directory N after building"],
         "skip": "if true, then source directory N will not be changed (this step will be skipped)",
+        "repository": "type of sources repository",
         "build config": {
           "make command": "make command for source directory N",
           "clade config": "absolute path to Clade configuration, under which the building will be performed for source directory N",

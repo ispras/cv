@@ -70,6 +70,7 @@ TAG_SKIP = "skip"
 TAG_STATISTICS_TIME = "statistics time"
 TAG_BUILD_CONFIG = "build config"
 TAG_ID = "id"
+TAG_REPOSITORY = "repository"
 
 SCHEDULER_CLOUD = "cloud"
 SCHEDULER_LOCAL = "local"
@@ -685,6 +686,7 @@ class Launcher(Component):
             skip = sources_config.get(TAG_SKIP, False)
             build_config = sources_config.get(TAG_BUILD_CONFIG, {})
             cached_commands = sources_config.get(TAG_CACHED_COMMANDS, None)
+            repository = sources_config.get(TAG_REPOSITORY, None)
             build_commands = os.path.join(cur_dir, "cmds_{}.json".format(re.sub("\W", "_", identifier)))
 
             if not source_dir or not os.path.exists(source_dir):
@@ -706,7 +708,7 @@ class Launcher(Component):
             else:
                 self.logger.debug("Building of sources '{}' (directory {})".format(identifier, source_dir))
 
-            builder = Builder(self.install_dir, self.config, source_dir, build_config)
+            builder = Builder(self.install_dir, self.config, source_dir, build_config, repository)
             builder.clean()
 
             if branch:
@@ -743,6 +745,9 @@ class Launcher(Component):
                 builder_resources = self.add_resources(builder.get_component_stats(), builder_resources)
 
                 if commits:
+                    if not builder.repository:
+                        self.logger.error("Cannot check commits without repository")
+                        exit(1)
                     self.logger.debug("Finding all entrypoints for specified commits {}".format(commits))
                     qualifier = Qualifier(self.install_dir, source_dir, self.entrypoints_dir, self.config)
                     specific_sources_new, specific_functions_new = qualifier.analyse_commits(commits)
