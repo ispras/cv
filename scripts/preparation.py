@@ -269,8 +269,10 @@ class Preparator(Component):
                 if stage == STAGE_NONE:
                     aux_file_out = self.preprocess_model_file(file, cif_in, cif_out, cif_args)
                     if aux_file_out:
-                        processed_files.append(aux_file_out)
-                        self.aux_files[file] = STAGE_PREPROCESS
+                        cil_args = self.cil + [self.cil_out, aux_file_out]
+                        if not self.command_caller(cil_args, self.preprocessing_dir):
+                            processed_files.append(aux_file_out)
+                            self.aux_files[file] = STAGE_PREPROCESS
         return ret, processed_files
 
     def fix_cil_file(self, cil_file):
