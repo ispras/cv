@@ -107,6 +107,7 @@ class Builder(Component):
             else:
                 self.start_commit = commit
                 self.last_commit = commit
+            self.command_caller("git reset --hard")
             self.change_branch(self.last_commit)
         else:
             # TODO: support SVN.
