@@ -392,9 +392,17 @@ class Preparator(Component):
                     out_fh.write(file + "\n")
 
         processed_files.sort()
+        processed_files_sorted = []
+        for file in processed_files:
+            if self.is_auxiliary(file):
+                # Put aux files to the start (they may rewrite other functions).
+                processed_files_sorted.insert(0, file)
+            else:
+                processed_files_sorted.append(file)
+
         self.logger.debug("Parsing build commands is finished")
-        self.logger.debug("{} files were found for further processing".format(len(processed_files)))
-        return processed_files
+        self.logger.debug("{} files were found for further processing".format(len(processed_files_sorted)))
+        return processed_files_sorted
 
     def is_auxiliary(self, file):
         for aux_file in self.aux_files.keys():
@@ -433,7 +441,6 @@ class Preparator(Component):
 
         self.logger.debug("%d files were successfully checked", len(checked_files))
 
-        checked_files.sort()
         self.processed_commands = len(checked_files)
         return checked_files
 
