@@ -1,10 +1,9 @@
 import json
 import os
-import re
 import shutil
-import subprocess
 import sys
 
+from builder import Builder
 from component import Component
 from config import COMPONENT_QUALIFIER, DEFAULT_TOOL_PATH, CIF, TAG_CLADE_CONF, CLADE_BASE_FILE, \
     CLADE_DEFAULT_CONFIG_FILE, CLADE_WORK_DIR, CLADE_CALLGRAPH, JSON_EXTENSION
@@ -14,10 +13,11 @@ TAG_CACHE = "cached call graph"
 
 
 class Qualifier(Component):
-    def __init__(self, install_dir, source_dir, entrypoints_dir, config):
-        super(Qualifier, self).__init__(COMPONENT_QUALIFIER, config)
-        self.install_dir = install_dir
-        self.source_dir = source_dir
+    def __init__(self, builder: Builder, entrypoints_files: list):
+        super(Qualifier, self).__init__(COMPONENT_QUALIFIER, builder.config)
+        self.install_dir = builder.install_dir
+        self.source_dir = builder.source_dir
+        self.builder = builder
 
         self.clade_conf = self.component_config.get(TAG_CLADE_CONF, None)
         if self.clade_conf:
@@ -53,17 +53,15 @@ class Qualifier(Component):
 
         self.logger.debug("Reading files with description of entry points")
         self.entrypoints = set()
-        for root, _, file_names in os.walk(entrypoints_dir):
-            for file_name in file_names:
-                file = os.path.join(root, file_name)
-                if file.endswith(JSON_EXTENSION):
-                    with open(file, errors='ignore') as data_file:
-                        data = json.load(data_file)
-                        identifier = os.path.relpath(file, entrypoints_dir)[:-len(JSON_EXTENSION)]
-                        self.logger.debug("Description {} contains {} entry points".
-                                          format(identifier, len(data.get("entrypoints", {}))))
-                        for name, etc in data.get("entrypoints", {}).items():
-                            self.entrypoints.add(name)
+        for file in entrypoints_files:
+            if os.path.isfile(file) and file.endswith(JSON_EXTENSION):
+                with open(file, errors='ignore') as data_file:
+                    data = json.load(data_file)
+                    identifier = os.path.basename(file)[:-len(JSON_EXTENSION)]
+                    self.logger.debug("Description {} contains {} entry points".
+                                      format(identifier, len(data.get("entrypoints", {}))))
+                    for name, etc in data.get("entrypoints", {}).items():
+                        self.entrypoints.add(name)
 
         os.chdir(self.work_dir)
 
@@ -97,44 +95,9 @@ class Qualifier(Component):
         os.chdir(self.source_dir)
         for commit in commits:
             self.logger.debug("Checking commit '{}' in the source directory".format(commit))
-            res = re.search(r'(\w+)\.\.(\w+)', commit)
-            if res:
-                start_commit = res.group(1)
-                last_commit = res.group(2)
-            else:
-                start_commit = commit
-                last_commit = commit
-
-            # TODO: those git commands should be placed outside.
-            self.command_caller("git reset --hard")
-            if self.command_caller("git checkout {}".format(last_commit)):
-                sys.exit("Cannot checkout to the commit '{}'".format(last_commit))
-
-            files = subprocess.check_output("git diff --name-only {0}~1..{1}".format(start_commit, last_commit),
-                                            shell=True)
-            for file in files.decode("utf-8", errors="ignore").split():
-                specific_sources.add(os.path.abspath(file))
-
-            out = subprocess.check_output("git diff --function-context {0}~1..{1}".format(start_commit, last_commit),
-                                          shell=True)
-            prev_line = None
-            for line in out.splitlines():
-                line = line.decode("utf-8", errors="ignore")
-
-                if not prev_line:
-                    prev_line = line
-                    continue
-                else:
-                    line = prev_line + line
-                    prev_line = line.replace(prev_line, "")
-
-                res = re.search(r'@@ (.+) @@(.*)(\W+)(\w+)(\s*)\((\w+)\)', line)  # Macro
-                if res:
-                    specific_functions.add(res.group(4))
-                    specific_functions.add(res.group(6))
-                res = re.search(r'@@ (.+) @@(.*)(\W+)(\w+)(\s*)\((.*)\)', line)  # Function
-                if res:
-                    specific_functions.add(res.group(4))
+            self.builder.check_commit(commit)
+            specific_sources = specific_sources.union(self.builder.get_changed_files())
+            specific_functions = specific_functions.union(self.builder.get_changed_functions())
         os.chdir(self.work_dir)
         self.logger.debug("Modified files: '{}'".format(specific_sources))
         self.logger.debug("Modified functions: '{}'".format(specific_functions))

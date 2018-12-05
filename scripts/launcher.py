@@ -672,6 +672,7 @@ class Launcher(Component):
 
         self.logger.info("Preparing source directories")
         sources = self.config.get(COMPONENT_BUILDER, {}).get(TAG_SOURCES, {})
+        commits = self.config.get(TAG_COMMITS, None)
 
         if not sources:
             self.logger.error("Sources to be verified were not specified")
@@ -729,7 +730,6 @@ class Launcher(Component):
 
         for sources_config in sources:
             source_dir = sources_config.get(TAG_SOURCE_DIR)
-            commits = self.config.get(TAG_COMMITS, None)
             patches = sources_config.get(TAG_PATCH, [])
 
             builder = None
@@ -749,7 +749,8 @@ class Launcher(Component):
                         self.logger.error("Cannot check commits without repository")
                         exit(1)
                     self.logger.debug("Finding all entrypoints for specified commits {}".format(commits))
-                    qualifier = Qualifier(self.install_dir, source_dir, self.entrypoints_dir, self.config)
+                    qualifier = Qualifier(builder,
+                                          self.__get_files_for_system(self.entrypoints_dir, "*" + JSON_EXTENSION))
                     specific_sources_new, specific_functions_new = qualifier.analyse_commits(commits)
                     specific_functions_new = qualifier.find_functions(specific_functions_new)
                     specific_sources = specific_sources.union(specific_sources_new)

@@ -2,6 +2,8 @@
 
 import json
 import os
+import re
+import subprocess
 import shutil
 import sys
 
@@ -27,6 +29,10 @@ CLADE_BASIC_CONFIG = {
 
 
 class Builder(Component):
+    """
+    This component is used for processing source directories (repositories).
+    """
+
     def __init__(self, install_dir, config, source_dir, builder_config={}, repository=REPOSITORY_NONE):
         super(Builder, self).__init__(COMPONENT_BUILDER, config)
         self.install_dir = install_dir
@@ -55,6 +61,10 @@ class Builder(Component):
         self.fail_if_failure = builder_config.get(TAG_FAIL_IF_FAILURE, True)
         self.clean_sources = builder_config.get(TAG_CLEAN_SOURCES, False)
         self.env = self.component_config.get(TAG_ENVIRON_VARS, {})
+
+        # Commits range, which should be checked.
+        self.start_commit = None
+        self.last_commit = None
 
     def clean(self):
         if self.repository:
@@ -86,6 +96,72 @@ class Builder(Component):
                 sys.exit("Operation 'change branch' is not implemented for repository type '{}'".
                          format(self.repository))
             os.chdir(self.work_dir)
+
+    def check_commit(self, commit: str) -> None:
+        os.chdir(self.source_dir)
+        if self.repository == REPOSITORY_GIT:
+            res = re.search(r'(\w+)\.\.(\w+)', commit)
+            if res:
+                self.start_commit = res.group(1)
+                self.last_commit = res.group(2)
+            else:
+                self.start_commit = commit
+                self.last_commit = commit
+            self.change_branch(self.last_commit)
+        else:
+            # TODO: support SVN.
+            sys.exit("Operation 'check commit' is not implemented for repository type '{}'".format(self.repository))
+        os.chdir(self.work_dir)
+
+    def get_changed_files(self) -> set:
+        assert self.start_commit
+        assert self.last_commit
+        result = set()
+        os.chdir(self.source_dir)
+        if self.repository == REPOSITORY_GIT:
+            files = subprocess.check_output("git diff --name-only {0}~1..{1}".format(self.start_commit,
+                                                                                     self.last_commit), shell=True)
+            for file in files.decode("utf-8", errors="ignore").split():
+                result.add(os.path.abspath(file))
+        else:
+            # TODO: support SVN.
+            sys.exit("Operation 'get changed files' is not implemented for repository type '{}'".
+                     format(self.repository))
+        os.chdir(self.work_dir)
+        return result
+
+    def get_changed_functions(self) -> set:
+        assert self.start_commit
+        assert self.last_commit
+        result = set()
+        os.chdir(self.source_dir)
+        if self.repository == REPOSITORY_GIT:
+            out = subprocess.check_output("git diff --function-context {0}~1..{1}".format(self.start_commit,
+                                                                                          self.last_commit), shell=True)
+            prev_line = None
+            for line in out.splitlines():
+                line = line.decode("utf-8", errors="ignore")
+
+                if not prev_line:
+                    prev_line = line
+                    continue
+                else:
+                    line = prev_line + line
+                    prev_line = line.replace(prev_line, "")
+
+                res = re.search(r'@@ (.+) @@(.*)(\W+)(\w+)(\s*)\((\w+)\)', line)  # Macro
+                if res:
+                    result.add(res.group(4))
+                    result.add(res.group(6))
+                res = re.search(r'@@ (.+) @@(.*)(\W+)(\w+)(\s*)\((.*)\)', line)  # Function
+                if res:
+                    result.add(res.group(4))
+        else:
+            # TODO: support SVN.
+            sys.exit("Operation 'get changed functions' is not implemented for repository type '{}'".
+                     format(self.repository))
+        os.chdir(self.work_dir)
+        return result
 
     def patch(self, patch: str):
         os.chdir(self.source_dir)
@@ -142,7 +218,6 @@ class Builder(Component):
         self.logger.info("Sources has been successfully built")
 
 
-# TODO: not supported anymore.
 '''
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
