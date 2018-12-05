@@ -83,7 +83,6 @@ $(clean-cpa):
 rebuild-cpa := $(addprefix rebuild-cpa-,$(cpa_branches))
 $(rebuild-cpa):
 	@make clean-cpa-$(patsubst rebuild-cpa-%,%,$@)
-	@make download-cpa-$(patsubst rebuild-cpa-%,%,$@)
 	@make build-cpa-$(patsubst rebuild-cpa-%,%,$@)
 
 rebuild-cpa: $(rebuild-cpa)
@@ -231,7 +230,7 @@ endef
 # $1 - branch
 define clean_cpa
 	echo "*** Cleaning CPAchecker branch $1 ***"
-	cd ${install_dir}/$1; ant clean; rm -f ${cpa_arch}
+	cd ${install_dir}/$1; ant clean; rm -f ${cpa_arch}; rm -rf *; svn revert -R .
 endef
 
 # $1 - branch
