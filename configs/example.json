@@ -97,7 +97,8 @@
     "parent id": "if true, then the given identifier will be treated as parent job identifier",
     "server": "<host>:<port> of Klever web-interface",
     "user": "valid user name on the server (this user should have access for this job identifier)",
-    "password": "password for the user"
+    "password": "password for the user",
+    "name": "name of the report to be uploaded"
   },
   "MEA": {
     "filters": {

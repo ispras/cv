@@ -71,6 +71,9 @@ TAG_STATISTICS_TIME = "statistics time"
 TAG_BUILD_CONFIG = "build config"
 TAG_ID = "id"
 TAG_REPOSITORY = "repository"
+TAG_NAME = "name"
+
+TIMESTAMP_PATTERN = "<timestamp>"
 
 SCHEDULER_CLOUD = "cloud"
 SCHEDULER_LOCAL = "local"
@@ -954,6 +957,7 @@ class Launcher(Component):
         user = uploader_config.get(TAG_UPLOADER_USER)
         password = uploader_config.get(TAG_UPLOADER_PASSWORD)
         is_parent = uploader_config.get(TAG_UPLOADER_PARENT_ID, False)
+        predefined_name = uploader_config.get(TAG_NAME, None)
         if not server:
             self.logger.error("Server was not provided for uploading results, skipping it.")
             return
@@ -975,10 +979,13 @@ class Launcher(Component):
                     commit = res.group(2)
                     commits = commit[:7]
             timestamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H_%M_%S')
-            if commits:
+            if predefined_name:
+                job_name = predefined_name.replace(TIMESTAMP_PATTERN, timestamp)
+            elif commits:
                 job_name = "{}: {} ({})".format(self.config_file, commits, timestamp)
             else:
                 job_name = "{} ({})".format(self.config_file, timestamp)
+            self.logger.debug("Using name '{}' for uploaded report".format(job_name))
             command = "PYTHONPATH={} {} {} --host={} --username={} --password={} --archive={} --name='{}'".\
                 format(uploader_python_path, uploader, identifier, server, user, password, result_file, job_name)
             if is_parent:
