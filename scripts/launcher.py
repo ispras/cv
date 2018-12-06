@@ -991,7 +991,7 @@ class Launcher(Component):
             if is_parent:
                 command = "{} --copy".format(command)
             try:
-                subprocess.check_call(command, shell=True, stderr=self.output_desc, stdout=self.output_desc)
+                subprocess.check_call(command, shell=True)
             except:
                 self.logger.warning("Report with the given name already exists:", exc_info=True)
                 if is_parent:
