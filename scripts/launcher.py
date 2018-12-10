@@ -412,7 +412,6 @@ class Launcher(Component):
             get(TAG_ADDITIONAL_MODEL_FUNCTIONS, self.config.get(COMPONENT_MEA, {}).get(TAG_ADDITIONAL_MODEL_FUNCTIONS,
                                                                                        None))
         mea_config_abs_path = self.__get_file_for_system(self.mea_config_dir, mea_config_rel_path)
-        print(mea_config_abs_path)
         result.filter_traces(launch_directory, mea_config_abs_path)
         queue.put(result)
         resource_queue_filter.put({TAG_MEMORY_USAGE: int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) * 1024,
