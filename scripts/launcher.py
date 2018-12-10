@@ -992,6 +992,8 @@ class Launcher(Component):
             return
 
     def __get_file_for_system(self, prefix: str, file: str) -> str:
+        if not file:
+            return ""
         plugin_dir = os.path.join(self.plugin_dir, self.system_id, os.path.relpath(prefix, self.root_dir))
         if self.system_id:
             new_path = os.path.join(plugin_dir, file)
