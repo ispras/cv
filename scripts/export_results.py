@@ -14,7 +14,7 @@ import time
 import zipfile
 from filecmp import cmp
 from pathlib import Path
-from xml.dom import minidom  # TODO: get rid of this lib
+from xml.etree import ElementTree
 
 from common import *
 from component import Component
@@ -107,41 +107,28 @@ class Exporter(Component):
 
     # Add warnings and thread number
     def __process_single_trace(self, witness_orig, witness_processed):
-        with open(witness_orig, errors='ignore') as fp:
-            dom = minidom.parse(fp)
-
-        graphml = dom.getElementsByTagName('graphml')[0]
-        graph = graphml.getElementsByTagName('graph')[0]
-
+        tree = ElementTree.ElementTree()
+        tree.parse(witness_orig)
+        root = tree.getroot()
         is_main_process = False
         is_warn = False
-
+        prefix = root.tag[:-len("graphml")]
         edge = None
-        for edge in graph.getElementsByTagName('edge'):
-            for data in edge.getElementsByTagName('data'):
-                if data.getAttribute('key') == 'enterFunction':
+        for edge in root.findall('./{0}graph/{0}edge'.format(prefix)):
+            for data in edge.findall('./{0}data'.format(prefix)):
+                key = data.attrib['key']
+                if not is_main_process and key == 'enterFunction':
                     is_main_process = True
-                if data.getAttribute('key') == 'warning':
+                elif not is_warn and key == 'warning':
                     is_warn = True
-
-            thread = dom.createElement('data')
             if is_main_process:
-                txt = dom.createTextNode('1')
+                thread = '1'
             else:
-                txt = dom.createTextNode('0')
-            thread.appendChild(txt)
-            thread.setAttribute('key', 'threadId')
-            edge.appendChild(thread)
-
+                thread = '0'
+            ElementTree.SubElement(edge, "{0}data".format(prefix), {'key': 'threadId'}).text = thread
         if not is_warn and edge:
-            warn = dom.createElement('data')
-            txt = dom.createTextNode('error')
-            warn.appendChild(txt)
-            warn.setAttribute('key', 'warning')
-            edge.appendChild(warn)
-
-        with open(witness_processed, 'w', encoding='utf8') as fp:
-            graphml.writexml(fp)
+            ElementTree.SubElement(edge, "{0}data".format(prefix), {'key': 'warning'}).text = 'error'
+        tree.write(witness_processed)
 
     def __count_resource_usage(self, queue: multiprocessing.Queue):
         iteration_memory = 0
