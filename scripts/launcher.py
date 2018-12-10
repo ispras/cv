@@ -22,7 +22,7 @@ from component import Component
 from config import *
 from export_results import Exporter
 from generate_main import generate_main, PARTIAL_STRATEGY
-from mea import MEA, check_error_trace
+from mea import MEA
 from preparation import Preparator
 from qualifier import Qualifier
 
@@ -34,6 +34,7 @@ DEFAULT_PREPARATION_PATCHES_DIR = "patches/preparation"
 DEFAULT_ENTRYPOINTS_DIR = "entrypoints"
 DEFAULT_RULES_DIR = "rules"
 DEFAULT_PLUGIN_DIR = "plugin"
+DEFAULT_MEA_CONFIG_DIR = "verifier_files/mea"
 
 DEFAULT_BACKUP_PREFIX = "backup_"
 
@@ -130,6 +131,7 @@ class EntryPointDesc:
         return self.id
 
 
+# TODO: move it to some results processor class (Component) to operate with arbitrary BenchExec output directory.
 class VerificationTask:
     def __init__(self, entry_desc: EntryPointDesc, rule, entrypoint, path_to_verifier, cil_file):
         self.entry_desc = entry_desc
@@ -154,7 +156,7 @@ class VerificationTask:
 
 
 class VerificationResults:
-    def __init__(self, verification_task=None, config=dict):
+    def __init__(self, verification_task, config: dict):
         if verification_task:
             self.id = verification_task.entry_desc.subsystem
             self.rule = verification_task.rule
@@ -176,16 +178,7 @@ class VerificationResults:
         self.cov_funcs = 0.0
         self.filtered_traces = 0
         self.debug = config.get(TAG_DEBUG, False)
-        self.debug_mea = config.get(COMPONENT_MEA, {}).get(TAG_DEBUG, self.debug)
-        if self.rule == RULE_RACES:
-            self.filter = config.get(COMPONENT_MEA, {}).get(TAG_FILTERS, {}).get(RULE_RACES, MEA_DEFAULT_FILTER_RACES)
-        elif self.rule in DEADLOCK_SUB_PROPERTIES:
-            self.filter = config.get(COMPONENT_MEA, {}).get(TAG_FILTERS, {}).get(RULE_DEADLOCK,
-                                                                                 MEA_DEFAULT_FILTER_RACES)
-        elif self.rule == RULE_MEMSAFETY:
-            self.filter = config.get(COMPONENT_MEA, {}).get(TAG_FILTERS, {}).get(RULE_MEMSAFETY, MEA_DEFAULT_FILTER_SMG)
-        else:
-            self.filter = config.get(COMPONENT_MEA, {}).get(TAG_FILTERS, {}).get("others", MEA_DEFAULT_FILTER_OTHERS)
+        self.config = config
 
     def is_equal(self, verification_task: VerificationTask):
         return self.id == verification_task.entry_desc.subsystem and \
@@ -195,26 +188,31 @@ class VerificationResults:
     def parse_output_dir(self, launch_dir):
         # Process BenchExec log file.
         for file in glob.glob(os.path.join(launch_dir, 'benchmark*.xml')):
-            with open(file, errors='ignore') as f_res:
-                dom = minidom.parse(f_res)
-                for run in dom.getElementsByTagName('run'):
-                    for column in run.getElementsByTagName('column'):
-                        title = column.getAttribute('title')
-                        if title == 'status':
-                            self.verdict = column.getAttribute('value')
-                            if 'true' in self.verdict:
-                                self.verdict = VERDICT_SAFE
-                                self.termination_reason = TERMINATION_SUCCESS
-                            elif 'false' in self.verdict:
-                                self.verdict = VERDICT_UNSAFE
-                                self.termination_reason = TERMINATION_SUCCESS
-                            else:
-                                self.termination_reason = self.verdict
-                                self.verdict = VERDICT_UNKNOWN
-                        self.__process_resources(column)
-                if not self.cpu or not self.wall:
-                    for column in dom.getElementsByTagName('column'):
-                        self.__process_resources(column)
+            tree = ElementTree.ElementTree()
+            tree.parse(file)
+            root = tree.getroot()
+            for column in root.findall('./run/column'):
+                title = column.attrib['title']
+                if title == 'status':
+                    self.verdict = column.attrib['value']
+                    if 'true' in self.verdict:
+                        self.verdict = VERDICT_SAFE
+                        self.termination_reason = TERMINATION_SUCCESS
+                    elif 'false' in self.verdict:
+                        self.verdict = VERDICT_UNSAFE
+                        self.termination_reason = TERMINATION_SUCCESS
+                    else:
+                        self.termination_reason = self.verdict
+                        self.verdict = VERDICT_UNKNOWN
+                elif title == 'cputime':
+                    value = column.attrib['value']
+                    self.cpu = int(float(value[:-1]))
+                elif title == 'walltime':
+                    value = column.attrib['value']
+                    self.wall = int(float(value[:-1]))
+                elif title == 'memUsage':
+                    value = column.attrib['value']
+                    self.mem = int(int(value) / 1000000)
 
         # Process log file
         try:
@@ -237,7 +235,8 @@ class VerificationResults:
             print("WARNING: log file was not found for entry point '{}'".format(self.entrypoint))
             pass
 
-        self.initial_traces = len(glob.glob("{}/witness*".format(launch_dir)))
+        error_traces = glob.glob("{}/witness*".format(launch_dir))
+        self.initial_traces = len(error_traces)
         self.filtered_traces = self.initial_traces
 
         if not self.verdict == VERDICT_SAFE:
@@ -245,9 +244,8 @@ class VerificationResults:
 
         # If there is only one trace, filtering will not be performed and it will not be examined.
         if self.initial_traces == 1:
-            error_trace = glob.glob("{}/witness*".format(launch_dir))[0]
             # Trace should be checked if it is correct or not.
-            if check_error_trace(error_trace):
+            if MEA(self.config, error_traces, self.rule).check_error_traces():
                 # Trace is fine, just recheck final verdict.
                 self.verdict = VERDICT_UNSAFE
             else:
@@ -255,7 +253,6 @@ class VerificationResults:
                 self.verdict = VERDICT_UNKNOWN
                 self.initial_traces = 0
                 self.filtered_traces = 0
-                os.remove(error_trace)
 
         # Remove auxiliary files.
         if not self.debug:
@@ -265,33 +262,19 @@ class VerificationResults:
                 else:
                     os.remove(file)
 
-    def filter_traces(self, launch_dir):
+    def filter_traces(self, launch_dir: str, mea_config_file: str):
         # Perform Multiple Error Analysis to filter found error traces (only for several traces).
         start_time_cpu = time.process_time()
         traces = glob.glob("{}/witness*".format(launch_dir))
-        traces.sort()
-        mea = MEA(traces, traces_filter=self.filter, debug=self.debug_mea)
-        traces = mea.execute()
+        mea = MEA(self.config, traces, self.rule, mea_config_file)
+        traces = mea.filter()
         self.filtered_traces = len(traces)
         if traces:
             self.verdict = VERDICT_UNSAFE
-        for file in glob.glob("{}/witness*".format(launch_dir)):
+        for file in mea.error_traces:
             if file not in traces:
                 os.remove(file)
         self.filtering_cpu = time.process_time() - start_time_cpu
-
-    def __process_resources(self, column):
-        title = column.getAttribute('title')
-        value = column.getAttribute('value')
-        try:
-            if title == 'cputime':
-                self.cpu = int(float(value[:-1]))
-            if title == 'walltime':
-                self.wall = int(float(value[:-1]))
-            if title == 'memUsage':
-                self.mem = int(int(value) / 1000000)
-        except ValueError:
-            pass
 
     def parse_line(self, line: str):
         values = line.split(";")
@@ -400,6 +383,7 @@ class Launcher(Component):
         self.options_dir = os.path.join(self.root_dir, VERIFIER_FILES_DIR, VERIFIER_OPTIONS_DIR)
         self.patches_dir = os.path.join(self.root_dir, DEFAULT_SOURCE_PATCHES_DIR)
         self.plugin_dir = os.path.join(self.root_dir, DEFAULT_PLUGIN_DIR)
+        self.mea_config_dir = os.path.join(self.root_dir, DEFAULT_MEA_CONFIG_DIR)
 
         self.backup = None  # File, in which backup copy will be placed during verification.
         self.cpu_cores = 1
@@ -424,7 +408,12 @@ class Launcher(Component):
                             resource_queue_filter: multiprocessing.Queue()):
         wall_time_start = time.time()
         launch_directory = result.work_dir
-        result.filter_traces(launch_directory)
+        mea_config_rel_path = self.config.get(COMPONENT_MEA, {}).get(result.rule, {}).\
+            get(TAG_ADDITIONAL_MODEL_FUNCTIONS, self.config.get(COMPONENT_MEA, {}).get(TAG_ADDITIONAL_MODEL_FUNCTIONS,
+                                                                                       None))
+        mea_config_abs_path = self.__get_file_for_system(self.mea_config_dir, mea_config_rel_path)
+        print(mea_config_abs_path)
+        result.filter_traces(launch_directory, mea_config_abs_path)
         queue.put(result)
         resource_queue_filter.put({TAG_MEMORY_USAGE: int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) * 1024,
                                    TAG_WALL_TIME: time.time() - wall_time_start})
@@ -1322,7 +1311,7 @@ class Launcher(Component):
             for file in backup_files:
                 with open(file, "r", errors='ignore') as f_res:
                     for line in f_res.readlines():
-                        result = VerificationResults(None)
+                        result = VerificationResults(None, self.config)
                         result.parse_line(line)
                         for launch in launches:
                             if result.is_equal(launch):

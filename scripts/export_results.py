@@ -14,7 +14,7 @@ import time
 import zipfile
 from filecmp import cmp
 from pathlib import Path
-from xml.dom import minidom
+from xml.dom import minidom  # TODO: get rid of this lib
 
 from common import *
 from component import Component

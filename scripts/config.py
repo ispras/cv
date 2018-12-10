@@ -123,10 +123,6 @@ VERDICT_SAFE = "TRUE"
 VERDICT_UNSAFE = "FALSE"
 VERDICT_UNKNOWN = "UNKNOWN"
 
-MEA_DEFAULT_FILTER_OTHERS = "model_functions"
-MEA_DEFAULT_FILTER_RACES = "model_functions"
-MEA_DEFAULT_FILTER_SMG = "model_functions_smg"
-
 ENTRY_POINT_SUFFIX = "_caller"
 
 JSON_EXTENSION = ".json"
@@ -140,3 +136,6 @@ TAG_SUBSYSTEM = "subsystem"
 CLADE_WORK_DIR = "clade-work-dir"
 CLADE_BASE_FILE = "cmds.txt"
 CLADE_DEFAULT_CONFIG_FILE = "clade_conf.json"
+
+TAG_ADDITIONAL_MODEL_FUNCTIONS = "additional model functions"
+
