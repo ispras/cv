@@ -10,24 +10,6 @@ Index: config/includes/lockator/lockator-core.properties
 
  # Disable statistics for memory consumption.
  statistics.memory = true
-Index: config/includes/lockator/lockStatistics-core.properties
-===================================================================
---- config/includes/lockator/lockStatistics-core.properties	(revision 29965)
-+++ config/includes/lockator/lockStatistics-core.properties	(working copy)
-@@ -5,10 +5,12 @@
- cpa.bam.blockHeuristic = FunctionPartitioning
- cpa.bam.aggressiveCaching = false
-
--cpa.lock.reduceLockCounters = BLOCK
-+cpa.lock.reduceLockCounters = ALL
- cpa.lock.reduceUselessLocks = true
- # cpa.lock.stopMode = emptylockset
-
-+usage.processCoveredUsages = false
-+
- cpa = cpa.bam.BAMCPA
- BAMCPA.cpa = cpa.arg.ARGCPA
- ARGCPA.cpa = cpa.usage.UsageCPA
 Index: config/includes/lockator/lockStatistics-predicate.properties
 ===================================================================
 --- config/includes/lockator/lockStatistics-predicate.properties	(revision 29939)
@@ -72,7 +54,7 @@ Index: src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java
 +++ src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java	(working copy)
 @@ -191,9 +191,10 @@
              + actualParameters + " parameter(s)", edge);
- 
+
        case C:
 -        throw new CParserException("Method " + functionName + " takes "
 +        return;
@@ -80,7 +62,7 @@ Index: src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java
              + declaredParameters + " parameter(s) but is called with "
 -            + actualParameters + " parameter(s)", edge);
 +            + actualParameters + " parameter(s)", edge);*/
- 
+
        default:
          throw new AssertionError("Unhandled language " + language);
 Index: src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java
