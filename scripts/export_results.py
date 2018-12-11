@@ -29,6 +29,10 @@ ARTIFICIAL_SUFFIX = "_caller"
 
 TAG_VERSION = "version"
 TAG_ADD_VERIFIER_LOGS = "add verifier logs"
+TAG_SOURCE_FILES = "source files"
+
+DEFAULT_SOURCES_ARCH = "sources.zip"
+SRC_FILES = "src.files"
 
 
 class Exporter(Component):
@@ -45,6 +49,7 @@ class Exporter(Component):
 
         self.version = self.component_config.get(TAG_VERSION)
         self.add_logs = self.component_config.get(TAG_ADD_VERIFIER_LOGS, True)
+        self.lock = multiprocessing.Lock()
 
     def __format_attr(self, name: str, value, compare=False):
         res = {
@@ -83,6 +88,7 @@ class Exporter(Component):
         # Those messages are waste of space.
         logger = logging.getLogger(name="Klever")
         logger.setLevel(logging.ERROR)
+        src = set()
 
         try:
             if rule not in [RULE_RACES] + DEADLOCK_SUB_PROPERTIES:
@@ -92,13 +98,12 @@ class Exporter(Component):
             trace_json = import_error_trace(logger, witness_processed)
             if not self.debug:
                 os.remove(witness_processed)
+            for src_file in trace_json['files']:
+                if Path(src_file).is_file():
+                    src.add(src_file)
             with open(ERROR_TRACE_FILE, 'w', encoding='utf8') as fp:
                 json.dump(trace_json, fp, ensure_ascii=False, sort_keys=True, indent=4)
             with zipfile.ZipFile(report_files_archive_abs, mode='w') as zfp:
-                for src_file in trace_json['files']:
-                    path = Path(src_file)
-                    if path.is_file():
-                        zfp.write(src_file)
                 zfp.write(ERROR_TRACE_FILE, arcname="error trace.json")
             if os.path.exists(ERROR_TRACE_FILE) and not self.debug:
                 os.remove(ERROR_TRACE_FILE)
@@ -111,8 +116,15 @@ class Exporter(Component):
         if not self.debug:
             shutil.rmtree(tmp_dir, ignore_errors=True)
         utime, stime, memory = resource.getrusage(resource.RUSAGE_SELF)[0:3]
-        queue.put({TAG_CPU_TIME: float(utime + stime),
-                   TAG_MEMORY_USAGE: int(memory) * 1024})
+        self.lock.acquire()
+        with open(SRC_FILES, "a") as fd:
+            for file in src:
+                fd.write(file + "\n")
+        self.lock.release()
+        queue.put({
+            TAG_CPU_TIME: float(utime + stime),
+            TAG_MEMORY_USAGE: int(memory) * 1024
+        })
         sys.exit(0)
 
     # Add warnings and thread number
@@ -347,7 +359,8 @@ class Exporter(Component):
 
                             unsafe_element['id'] = "/CPAchecker/" + archive_id
                             unsafe_element['attrs'] = attrs
-                            unsafe_element['error trace'] = report_files_archive
+                            unsafe_element['error traces'] = [report_files_archive]
+                            unsafe_element['sources'] = DEFAULT_SOURCES_ARCH
                             reports.append(unsafe_element)
                             unsafes.append(report_files_archive_abs)
 
@@ -459,6 +472,15 @@ class Exporter(Component):
                     "wall time": overall_wall
                 }
                 reports.append(root_element)
+                src = set()
+                with open(SRC_FILES, "r") as fd:
+                    for line in fd.readlines():
+                        line = line.rstrip()
+                        src.add(line)
+                with zipfile.ZipFile(DEFAULT_SOURCES_ARCH, mode='w') as zfp:
+                    for src_file in src:
+                        zfp.write(src_file)
+                final_zip.write(DEFAULT_SOURCES_ARCH)
 
                 with open(FINAL_REPORT, 'w', encoding='utf8') as f_results:
                     json.dump(reports, f_results, ensure_ascii=False, sort_keys=True, indent=4)
