@@ -24,10 +24,12 @@ DEFAULT_PARSER = PARSER_GRAHML
 CONVERSION_FUNCTION_CALL_TREE = "call_tree"
 CONVERSION_FUNCTION_MODEL_FUNCTIONS = "model_functions"
 CONVERSION_FUNCTION_CONDITIONS = "conditions"
+CONVERSION_FULL = "full"
 CONVERSION_FUNCTIONS = [
     CONVERSION_FUNCTION_CALL_TREE,
     CONVERSION_FUNCTION_MODEL_FUNCTIONS,
-    CONVERSION_FUNCTION_CONDITIONS
+    CONVERSION_FUNCTION_CONDITIONS,
+    CONVERSION_FULL
 ]
 DEFAULT_CONVERSION_FUNCTION = CONVERSION_FUNCTION_MODEL_FUNCTIONS
 
@@ -185,7 +187,8 @@ class MEA(Component):
         functions = {
             CONVERSION_FUNCTION_MODEL_FUNCTIONS: self.__converse_model_functions,
             CONVERSION_FUNCTION_CALL_TREE: self.__converse_call_tree_filter,
-            CONVERSION_FUNCTION_CONDITIONS: self.__converse_conditions
+            CONVERSION_FUNCTION_CONDITIONS: self.__converse_conditions,
+            CONVERSION_FULL: self.__converse_full
         }
         start_time = time.process_time()
         result = functions[self.conversion_function](internal_trace)
@@ -207,6 +210,34 @@ class MEA(Component):
                 function_return = data.text
                 call_tree.append({function_return: _RET})
         return call_tree
+
+    def __converse_full(self, internal_trace) -> list:
+        """
+        Extract list of all conditions from error trace.
+        """
+        prefix = internal_trace.tag[:-len("graphml")]
+        trace = []
+        for edge in internal_trace.findall('./{0}graph/{0}edge'.format(prefix)):
+            assume_type = None
+            source_code = None
+            for data in edge.findall('./{0}data'.format(prefix)):
+                key = data.attrib['key']
+                if key == 'control':
+                    if data.text == "condition-true":
+                        assume_type = _ASSUME_TRUE
+                    elif data.text == "condition-false":
+                        assume_type = _ASSUME_FALSE
+                elif key == 'sourcecode':
+                    source_code = data.text
+                elif key == 'enterFunction':
+                    function_call = data.text
+                    trace.append({function_call: _CALL})
+                elif key == 'returnFrom':
+                    function_return = data.text
+                    trace.append({function_return: _RET})
+            if assume_type:
+                trace.append({source_code: assume_type})
+        return trace
 
     def __converse_conditions(self, internal_trace) -> list:
         """
