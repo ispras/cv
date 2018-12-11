@@ -46,6 +46,16 @@ class Exporter(Component):
         self.version = self.component_config.get(TAG_VERSION)
         self.add_logs = self.component_config.get(TAG_ADD_VERIFIER_LOGS, True)
 
+    def __format_attr(self, name: str, value, compare=False):
+        res = {
+            "name": name,
+            "value": value
+        }
+        if compare:
+            res["compare"] = True
+            res["associate"] = True
+        return res
+
     def __create_component_report(self, name, cpu, wall, mem):
         component = dict()
         component['id'] = "/{}".format(name)
@@ -177,11 +187,7 @@ class Exporter(Component):
             {"Linux kernel version": subprocess.check_output("uname -n", shell=True).decode().rstrip()},
             {"architecture": subprocess.check_output("uname -m", shell=True).decode().rstrip()}
         ]
-        root_element['attrs'] = [
-            {
-                TAG_VERSION: self.version
-            }
-        ]
+        root_element['attrs'] = [self.__format_attr(TAG_VERSION, self.version)]
 
         launcher_id = "/"
         with zipfile.ZipFile(archive_name, mode='w') as final_zip:
@@ -282,10 +288,10 @@ class Exporter(Component):
                         verification_element['parent id'] = launcher_id
                         verification_element['type'] = "verification"
                         verification_element['name'] = "CPAchecker"
-                        attrs = []
-                        attrs.append({"Subsystem": subsystem})
-                        attrs.append({"Verification object": entrypoint})
-                        attrs.append({"Rule specification": rule})
+                        attrs = list()
+                        attrs.append(self.__format_attr("Subsystem", subsystem, True))
+                        attrs.append(self.__format_attr("Verification object", entrypoint, True))
+                        attrs.append(self.__format_attr("Rule specification", rule, True))
                         verification_element['attrs'] = attrs
                         verification_element['resources'] = {
                             "CPU time": cpu,
@@ -301,16 +307,16 @@ class Exporter(Component):
                             unsafe_element['parent id'] = "/CPAchecker_{}".format(verifier_counter)
                             unsafe_element['type'] = "unsafe"
                             attrs = [
-                                {"Traces":[
-                                    {"Filtered": str(filtered)},
-                                    {"Initial": str(et)}
-                                ]},
-                                {"Found all traces": str(not incomplete_result)},
-                                {"Filtering time": str(filter_cpu)}
+                                self.__format_attr("Traces", [
+                                    self.__format_attr("Filtered", str(filtered)),
+                                    self.__format_attr("Initial", str(et))
+                                ]),
+                                self.__format_attr("Found all traces", str(not incomplete_result)),
+                                self.__format_attr("Filtering time", str(filter_cpu))
                             ]
                             m = re.search(r'witness\.(.*)\.graphml', witness)
                             identifier = m.group(1)
-                            attrs.append({'Id': identifier})
+                            attrs.append(self.__format_attr('Id', identifier))
 
                             archive_id = "unsafe_{}".format(trace_counter)
                             trace_counter += 1
@@ -350,14 +356,14 @@ class Exporter(Component):
                             if verdict == VERDICT_SAFE:
                                 verdict = "safe"
                                 attrs = [
-                                    {"Coverage": [
-                                        {"Lines": "{0}%".format(cov_lines)},
-                                        {"Functions": "{0}%".format(cov_funcs)}
-                                    ]}
+                                    self.__format_attr("Coverage", [
+                                        self.__format_attr("Lines", "{0}%".format(cov_lines)),
+                                        self.__format_attr("Functions", "{0}%".format(cov_funcs))
+                                    ])
                                 ]
                                 # TODO: how to determine relevancy there?
                                 if rule not in [RULE_RACES] + DEADLOCK_SUB_PROPERTIES:
-                                    attrs.append({"Relevancy": relevancy})
+                                    attrs.append(self.__format_attr("Relevancy", relevancy))
                             else:
                                 if rule == RULE_TERMINATION and verdict == VERDICT_UNSAFE:
                                     text = "Program never terminates"
@@ -428,10 +434,11 @@ class Exporter(Component):
                         if mea_all_unsafes != 0:
                             percent_of_unsafe_incomplete = round(100 * mea_unsafe_incomplete / mea_all_unsafes, 2)
 
-                        report["attrs"].append({"Unsafes": str(mea_all_unsafes)})
-                        report["attrs"].append({"Unsafe-incomplete": str(percent_of_unsafe_incomplete) + "%"})
-                        report["attrs"].append({"Initial traces": str(mea_overall_initial_traces)})
-                        report["attrs"].append({"Filtered traces": str(mea_overall_filtered_traces)})
+                        report["attrs"].append(self.__format_attr("Unsafes", str(mea_all_unsafes)))
+                        report["attrs"].append(self.__format_attr("Unsafe-incomplete",
+                                                                  str(percent_of_unsafe_incomplete) + "%"))
+                        report["attrs"].append(self.__format_attr("Initial traces", str(mea_overall_initial_traces)))
+                        report["attrs"].append(self.__format_attr("Filtered traces", str(mea_overall_filtered_traces)))
                         break
 
                 self.__count_resource_usage(queue)
