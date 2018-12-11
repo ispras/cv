@@ -101,11 +101,22 @@
     "name": "name of the report to be uploaded"
   },
   "MEA": {
-    "filters": {
-      "sync:races": "filter for rule sync:races (if not specified, no filter will be used)",
-      "smg": "filter for rule smg (if not specified, filter model_functions_smg will be used)",
-      "others": "filter for unreachability rules (if not specified, filter model_functions will be used)"
+    "rule 1": {
+      "additional model functions": "path to the file with additional model functions (for rule 1)",
+      "conversion function": "conversion function (for rule 1)",
+      "comparison function": "comparison function (for rule 1)",
+      "parser": "parser name (for rule 1)"
     },
+    "rule N": {
+      "additional model functions": "path to the file with additional model functions (for rule N)",
+      "conversion function": "conversion function (for rule N)",
+      "comparison function": "comparison function (for rule N)",
+      "parser": "parser name (for rule N)"
+    },
+    "additional model functions": "path to the file with additional model functions (for none-specified rules)",
+    "conversion function": "conversion function (for none-specified rules)",
+    "comparison function": "comparison function (for none-specified rules)",
+    "parser": "parser name (for none-specified rules)",
     "debug": "true|false - overwrites debug value for MEA"
   },
   "system": "identifier of a system under verification (subdirectories with this id must present)",
