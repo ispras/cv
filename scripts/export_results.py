@@ -13,7 +13,6 @@ import tempfile
 import time
 import zipfile
 from filecmp import cmp
-from pathlib import Path
 from xml.etree import ElementTree
 
 from common import *
@@ -98,9 +97,13 @@ class Exporter(Component):
             trace_json = import_error_trace(logger, witness_processed)
             if not self.debug:
                 os.remove(witness_processed)
+            src_files = list()
             for src_file in trace_json['files']:
-                if Path(src_file).is_file():
+                src_file = os.path.normpath(src_file)
+                src_files.append(src_file)
+                if os.path.exists(src_file):
                     src.add(src_file)
+            trace_json['files'] = src_files
             with open(ERROR_TRACE_FILE, 'w', encoding='utf8') as fp:
                 json.dump(trace_json, fp, ensure_ascii=False, sort_keys=True, indent=4)
             with zipfile.ZipFile(report_files_archive_abs, mode='w') as zfp:
@@ -476,7 +479,7 @@ class Exporter(Component):
                 with open(SRC_FILES, "r") as fd:
                     for line in fd.readlines():
                         line = line.rstrip()
-                        src.add(line)
+                        src.add(os.path.normpath(line))
                 with zipfile.ZipFile(DEFAULT_SOURCES_ARCH, mode='w') as zfp:
                     for src_file in src:
                         zfp.write(src_file)
