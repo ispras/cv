@@ -13,7 +13,6 @@ import tempfile
 import time
 import zipfile
 from filecmp import cmp
-from pathlib import Path
 from xml.etree import ElementTree
 
 from common import *
@@ -98,9 +97,13 @@ class Exporter(Component):
             trace_json = import_error_trace(logger, witness_processed)
             if not self.debug:
                 os.remove(witness_processed)
+            src_files = list()
             for src_file in trace_json['files']:
-                if Path(src_file).is_file():
+                src_file = os.path.normpath(src_file)  # Klever fails on /../
+                src_files.append(src_file)
+                if os.path.exists(src_file):
                     src.add(src_file)
+            trace_json['files'] = src_files
             with open(ERROR_TRACE_FILE, 'w', encoding='utf8') as fp:
                 json.dump(trace_json, fp, ensure_ascii=False, sort_keys=True, indent=4)
             with zipfile.ZipFile(report_files_archive_abs, mode='w') as zfp:
@@ -314,6 +317,7 @@ class Exporter(Component):
                         max_memory = max(max_memory, mem)
                         reports.append(verification_element)
                         witnesses = glob.glob("{}/*.graphml".format(work_dir))
+                        reports_arch = list()
                         for witness in witnesses:
                             unsafe_element = {}
                             unsafe_element['parent id'] = "/CPAchecker_{}".format(verifier_counter)
@@ -333,7 +337,9 @@ class Exporter(Component):
                             archive_id = "unsafe_{}".format(trace_counter)
                             trace_counter += 1
                             report_files_archive = archive_id + ".zip"
+                            reports_arch.append(report_files_archive)
                             report_files_archive_abs = os.path.abspath(report_files_archive)
+                            unsafes.append(report_files_archive_abs)
 
                             try:
                                 while True:
@@ -357,12 +363,12 @@ class Exporter(Component):
                                 self.logger.error("Could not export results:", exc_info=True)
                                 kill_launches(process_pool)
 
+                        if witnesses:
                             unsafe_element['id'] = "/CPAchecker/" + archive_id
                             unsafe_element['attrs'] = attrs
-                            unsafe_element['error traces'] = [report_files_archive]
+                            unsafe_element['error traces'] = reports_arch
                             unsafe_element['sources'] = DEFAULT_SOURCES_ARCH
                             reports.append(unsafe_element)
-                            unsafes.append(report_files_archive_abs)
 
                         if not witnesses or incomplete_result:
                             other_element = dict()
@@ -476,7 +482,7 @@ class Exporter(Component):
                 with open(SRC_FILES, "r") as fd:
                     for line in fd.readlines():
                         line = line.rstrip()
-                        src.add(line)
+                        src.add(os.path.normpath(line))
                 with zipfile.ZipFile(DEFAULT_SOURCES_ARCH, mode='w') as zfp:
                     for src_file in src:
                         zfp.write(src_file)
