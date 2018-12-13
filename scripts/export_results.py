@@ -90,10 +90,7 @@ class Exporter(Component):
         src = set()
 
         try:
-            if rule not in [RULE_RACES] + DEADLOCK_SUB_PROPERTIES:
-                self.__process_single_trace(witness, witness_processed)
-            else:
-                shutil.copy(witness, witness_processed)
+            shutil.copy(witness, witness_processed)
             trace_json = import_error_trace(logger, witness_processed)
             if not self.debug:
                 os.remove(witness_processed)
@@ -104,6 +101,9 @@ class Exporter(Component):
                 if os.path.exists(src_file):
                     src.add(src_file)
             trace_json['files'] = src_files
+
+            if rule not in [RULE_RACES] + DEADLOCK_SUB_PROPERTIES:
+                self.__process_single_trace(trace_json)
             with open(ERROR_TRACE_FILE, 'w', encoding='utf8') as fp:
                 json.dump(trace_json, fp, ensure_ascii=False, sort_keys=True, indent=4)
             with zipfile.ZipFile(report_files_archive_abs, mode='w') as zfp:
@@ -131,29 +131,21 @@ class Exporter(Component):
         sys.exit(0)
 
     # Add warnings and thread number
-    def __process_single_trace(self, witness_orig, witness_processed):
-        tree = ElementTree.ElementTree()
-        tree.parse(witness_orig)
-        root = tree.getroot()
+    def __process_single_trace(self, parsed_trace: dict):
         is_main_process = False
         is_warn = False
-        prefix = root.tag[:-len("graphml")]
         edge = None
-        for edge in root.findall('./{0}graph/{0}edge'.format(prefix)):
-            for data in edge.findall('./{0}data'.format(prefix)):
-                key = data.attrib['key']
-                if not is_main_process and key == 'enterFunction':
-                    is_main_process = True
-                elif not is_warn and key == 'warning':
+        for edge in parsed_trace['edges']:
+            if not is_main_process and 'enter' in edge:
+                is_main_process = True
+            elif not is_warn and 'warn' in edge:
                     is_warn = True
             if is_main_process:
-                thread = '1'
+                edge['thread'] = '1'
             else:
-                thread = '0'
-            ElementTree.SubElement(edge, "{0}data".format(prefix), {'key': 'threadId'}).text = thread
+                edge['thread'] = '0'
         if not is_warn and edge:
-            ElementTree.SubElement(edge, "{0}data".format(prefix), {'key': 'warning'}).text = 'error'
-        tree.write(witness_processed)
+            edge['warn'] = 'Auto generated error message'
 
     def __count_resource_usage(self, queue: multiprocessing.Queue):
         iteration_memory = 0
