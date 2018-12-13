@@ -323,7 +323,6 @@ class Exporter(Component):
                             ]
                             m = re.search(r'witness\.(.*)\.graphml', witness)
                             identifier = m.group(1)
-                            attrs.append(self.__format_attr('Id', identifier))
 
                             archive_id = "unsafe_{}".format(trace_counter)
                             trace_counter += 1
