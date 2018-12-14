@@ -467,14 +467,15 @@ class Exporter(Component):
                 }
                 reports.append(root_element)
                 src = set()
-                with open(SRC_FILES, "r") as fd:
-                    for line in fd.readlines():
-                        line = line.rstrip()
-                        src.add(os.path.normpath(line))
-                with zipfile.ZipFile(DEFAULT_SOURCES_ARCH, mode='w') as zfp:
-                    for src_file in src:
-                        zfp.write(src_file)
-                final_zip.write(DEFAULT_SOURCES_ARCH)
+                if os.path.exists(SRC_FILES):
+                    with open(SRC_FILES, "r") as fd:
+                        for line in fd.readlines():
+                            line = line.rstrip()
+                            src.add(os.path.normpath(line))
+                    with zipfile.ZipFile(DEFAULT_SOURCES_ARCH, mode='w') as zfp:
+                        for src_file in src:
+                            zfp.write(src_file)
+                    final_zip.write(DEFAULT_SOURCES_ARCH)
 
                 with open(FINAL_REPORT, 'w', encoding='utf8') as f_results:
                     json.dump(reports, f_results, ensure_ascii=False, sort_keys=True, indent=4)
