@@ -11,7 +11,7 @@ from config import *
 DEFAULT_TYPE = "int"
 DEFAULT_THREAD_CREATE_FUNCTION = "ldv_thread_create"
 DEFAULT_CHECK_FINAL_STATE_FUNCTION = "ldv_check_final_state"
-ARGUMENT_PREFIX = "arg__"
+ARGUMENT_PREFIX = "ldv_"
 IGNORE_TYPES = False  # if true, then callers arguments type will be ignored (all arguments will get default type)
 PRINT_PROTOTYPES = False
 
@@ -22,10 +22,10 @@ TAG_OUTPUT_FILE = "output"
 IS_LOCAL = False
 
 
-def getFormattedType(origin):
+def get_formatted_type(origin):
     formatted_type = re.sub(r' ', "_", origin)
     formatted_type = re.sub(r'\*', "", formatted_type)
-    return formatted_type
+    return ARGUMENT_PREFIX + formatted_type
 
 
 def simplify_type(var_type: str):
@@ -84,7 +84,7 @@ def generate_main(strategy: str, input_file: str, output_file: str):
                     #Do not format type and use it as it is
                     var_def = re.sub(r'\$', var_name, var_type)
                 else:
-                    var_name = getFormattedType(var_type) + "_" + caller + "_" + str(i)
+                    var_name = get_formatted_type(var_type) + "_" + caller + "_" + str(i)
                     if re.search(r' \*', var_type):
                         #Already has valuable space
                         var_def = var_type + var_name
