@@ -111,7 +111,7 @@ SOURCE_QUEUE_RESULTS = "results"
 
 TAG_ENTRYPOINTS_DESC = "entrypoints desc"
 PREPARATION_CONFIG = "conf.json"
-DEFAULT_COVERAGE_FILE = "coverage.info"
+DEFAULT_COVERAGE_FILES = ["coverage.info", "subcoverage.info"]
 DEFAULT_PROPERTY_MEMSAFETY = "properties/memsafety.spc"
 DEFAULT_PROPERTY_UNREACHABILITY = "properties/unreachability.spc"
 
@@ -510,12 +510,17 @@ class Launcher(Component):
     def __process_single_launch_results(self, result, launch_directory, launch, queue):
         result.parse_output_dir(launch_directory)
 
-        if launch.mode == COVERAGE or os.path.exists(os.path.join(launch_directory, DEFAULT_COVERAGE_FILE)):
+        coverage_file = None
+        for file in DEFAULT_COVERAGE_FILES:
+            if os.path.exists(os.path.join(launch_directory, file)):
+                coverage_file = file
+                break
+        if coverage_file:
             cov_lines = 0.0
             cov_funcs = 0.0
             os.chdir(launch_directory)
             try:
-                process_out = subprocess.check_output("genhtml {} --ignore-errors source".format(DEFAULT_COVERAGE_FILE),
+                process_out = subprocess.check_output("genhtml {} --ignore-errors source".format(coverage_file),
                                                       shell=True, stderr=subprocess.STDOUT)
                 for line in process_out.splitlines():
                     line = line.decode("utf-8", errors="ignore")
