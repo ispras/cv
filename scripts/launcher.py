@@ -73,6 +73,7 @@ TAG_BUILD_CONFIG = "build config"
 TAG_ID = "id"
 TAG_REPOSITORY = "repository"
 TAG_NAME = "name"
+TAG_VERIFIER_OPTIONS = "verifier options"
 
 TIMESTAMP_PATTERN = "<timestamp>"
 
@@ -403,6 +404,9 @@ class Launcher(Component):
 
         # Id to separate internal files (verifier configs, patches, etc.).
         self.system_id = self.config.get(TAG_SYSTEM_ID, "")
+
+        # Map of verifier modes to files with specific options.
+        self.verifier_options = {}
 
     def __perform_filtering(self, result: VerificationResults, queue: multiprocessing.Queue(),
                             resource_queue_filter: multiprocessing.Queue()):
@@ -796,7 +800,10 @@ class Launcher(Component):
                     DEFAULT_PROPERTY_UNREACHABILITY
 
     def __parse_verifier_options(self, file_name: str, rundefinition: ElementTree.Element) -> None:
-        abs_path = self.__get_verifier_options_file_name(file_name)
+        if file_name in self.verifier_options.keys():
+            abs_path = self.verifier_options[file_name]
+        else:
+            abs_path = self.__get_verifier_options_file_name(file_name)
         if not os.path.exists(abs_path):
             # No new options for specific rule and system id.
             return
@@ -1132,6 +1139,16 @@ class Launcher(Component):
                     entrypoints_desc.add(EntryPointDesc(file, identifier))
             if not entrypoints_desc:
                 sys.exit("No file with description of entry points to be checked were found")
+
+        for mode, file in self.component_config.get(TAG_VERIFIER_OPTIONS, {}).items():
+            if mode not in VERIFIER_MODES:
+                sys.exit("Cannot set options for verifier mode '{}'".format(mode))
+            path = self.__get_verifier_options_file_name(str(file))
+            if path:
+                self.verifier_options[mode] = path
+                self.logger.debug("Using verifier options from file '{}' for verification mode '{}'".format(path, mode))
+            else:
+                sys.exit("File with verifier options '{}' for verification mode '{}' does not exist".format(file, mode))
 
         # Process sources in separate process.
         sources_queue = multiprocessing.Queue()

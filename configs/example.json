@@ -79,7 +79,11 @@
     "backup write": "if true, then copy all progress in backup file during verification process (this may cause some overheads, but is recommended for long launches), false by default",
     "backup read": "if true, then read previously written backup file and restore progress (working directory must remain unchanged), false by default",
     "benchmark args": "specify additional parameters for benchmark",
-    "parallel launches": "rewrite the number of parallel verification launches (should be used carefully)"
+    "parallel launches": "rewrite the number of parallel verification launches (should be used carefully)",
+    "verifier options": {
+      "verification mode 1": "file (json in directory 'verifier_files/options')",
+      "verification mode N": "file (json in directory 'verifier_files/options')"
+    }
   },
   "Exporter": {
     "version": "name of the checked system along with its version",
