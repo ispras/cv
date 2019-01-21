@@ -974,7 +974,7 @@ class Launcher(Component):
             else:
                 job_name = "{} ({})".format(self.config_file, timestamp)
             self.logger.debug("Using name '{}' for uploaded report".format(job_name))
-            command = "PYTHONPATH={} {} {} --host={} --username={} --password={} --archive={} --name='{}'".\
+            command = "PYTHONPATH={} {} {} --host='{}' --username='{}' --password='{}' --archive='{}' --name='{}'".\
                 format(uploader_python_path, uploader, identifier, server, user, password, result_file, job_name)
             if is_parent:
                 command = "{} --copy".format(command)
