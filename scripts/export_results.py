@@ -13,7 +13,6 @@ import tempfile
 import time
 import zipfile
 from filecmp import cmp
-from pathlib import Path
 from xml.etree import ElementTree
 
 from common import *
@@ -29,6 +28,10 @@ ARTIFICIAL_SUFFIX = "_caller"
 
 TAG_VERSION = "version"
 TAG_ADD_VERIFIER_LOGS = "add verifier logs"
+TAG_SOURCE_FILES = "source files"
+
+DEFAULT_SOURCES_ARCH = "sources.zip"
+SRC_FILES = "src.files"
 
 
 class Exporter(Component):
@@ -45,6 +48,17 @@ class Exporter(Component):
 
         self.version = self.component_config.get(TAG_VERSION)
         self.add_logs = self.component_config.get(TAG_ADD_VERIFIER_LOGS, True)
+        self.lock = multiprocessing.Lock()
+
+    def __format_attr(self, name: str, value, compare=False):
+        res = {
+            "name": name,
+            "value": value
+        }
+        if compare:
+            res["compare"] = True
+            res["associate"] = True
+        return res
 
     def __create_component_report(self, name, cpu, wall, mem):
         component = dict()
@@ -73,22 +87,26 @@ class Exporter(Component):
         # Those messages are waste of space.
         logger = logging.getLogger(name="Klever")
         logger.setLevel(logging.ERROR)
+        src = set()
 
         try:
-            if rule not in [RULE_RACES] + DEADLOCK_SUB_PROPERTIES:
-                self.__process_single_trace(witness, witness_processed)
-            else:
-                shutil.copy(witness, witness_processed)
+            shutil.copy(witness, witness_processed)
             trace_json = import_error_trace(logger, witness_processed)
             if not self.debug:
                 os.remove(witness_processed)
+            src_files = list()
+            for src_file in trace_json['files']:
+                src_file = os.path.normpath(src_file)
+                src_files.append(src_file)
+                if os.path.exists(src_file):
+                    src.add(src_file)
+            trace_json['files'] = src_files
+
+            if rule not in [RULE_RACES] + DEADLOCK_SUB_PROPERTIES:
+                self.__process_single_trace(trace_json)
             with open(ERROR_TRACE_FILE, 'w', encoding='utf8') as fp:
                 json.dump(trace_json, fp, ensure_ascii=False, sort_keys=True, indent=4)
             with zipfile.ZipFile(report_files_archive_abs, mode='w') as zfp:
-                for src_file in trace_json['files']:
-                    path = Path(src_file)
-                    if path.is_file():
-                        zfp.write(src_file)
                 zfp.write(ERROR_TRACE_FILE, arcname="error trace.json")
             if os.path.exists(ERROR_TRACE_FILE) and not self.debug:
                 os.remove(ERROR_TRACE_FILE)
@@ -101,34 +119,33 @@ class Exporter(Component):
         if not self.debug:
             shutil.rmtree(tmp_dir, ignore_errors=True)
         utime, stime, memory = resource.getrusage(resource.RUSAGE_SELF)[0:3]
-        queue.put({TAG_CPU_TIME: float(utime + stime),
-                   TAG_MEMORY_USAGE: int(memory) * 1024})
+        self.lock.acquire()
+        with open(SRC_FILES, "a") as fd:
+            for file in src:
+                fd.write(file + "\n")
+        self.lock.release()
+        queue.put({
+            TAG_CPU_TIME: float(utime + stime),
+            TAG_MEMORY_USAGE: int(memory) * 1024
+        })
         sys.exit(0)
 
     # Add warnings and thread number
-    def __process_single_trace(self, witness_orig, witness_processed):
-        tree = ElementTree.ElementTree()
-        tree.parse(witness_orig)
-        root = tree.getroot()
+    def __process_single_trace(self, parsed_trace: dict):
         is_main_process = False
         is_warn = False
-        prefix = root.tag[:-len("graphml")]
         edge = None
-        for edge in root.findall('./{0}graph/{0}edge'.format(prefix)):
-            for data in edge.findall('./{0}data'.format(prefix)):
-                key = data.attrib['key']
-                if not is_main_process and key == 'enterFunction':
-                    is_main_process = True
-                elif not is_warn and key == 'warning':
+        for edge in parsed_trace['edges']:
+            if not is_main_process and 'enter' in edge:
+                is_main_process = True
+            elif not is_warn and 'warn' in edge:
                     is_warn = True
             if is_main_process:
-                thread = '1'
+                edge['thread'] = '1'
             else:
-                thread = '0'
-            ElementTree.SubElement(edge, "{0}data".format(prefix), {'key': 'threadId'}).text = thread
+                edge['thread'] = '0'
         if not is_warn and edge:
-            ElementTree.SubElement(edge, "{0}data".format(prefix), {'key': 'warning'}).text = 'error'
-        tree.write(witness_processed)
+            edge['warn'] = 'Auto generated error message'
 
     def __count_resource_usage(self, queue: multiprocessing.Queue):
         iteration_memory = 0
@@ -177,11 +194,7 @@ class Exporter(Component):
             {"Linux kernel version": subprocess.check_output("uname -n", shell=True).decode().rstrip()},
             {"architecture": subprocess.check_output("uname -m", shell=True).decode().rstrip()}
         ]
-        root_element['attrs'] = [
-            {
-                TAG_VERSION: self.version
-            }
-        ]
+        root_element['attrs'] = [self.__format_attr(TAG_VERSION, self.version)]
 
         launcher_id = "/"
         with zipfile.ZipFile(archive_name, mode='w') as final_zip:
@@ -282,10 +295,10 @@ class Exporter(Component):
                         verification_element['parent id'] = launcher_id
                         verification_element['type'] = "verification"
                         verification_element['name'] = "CPAchecker"
-                        attrs = []
-                        attrs.append({"Subsystem": subsystem})
-                        attrs.append({"Verification object": entrypoint})
-                        attrs.append({"Rule specification": rule})
+                        attrs = list()
+                        attrs.append(self.__format_attr("Subsystem", subsystem, True))
+                        attrs.append(self.__format_attr("Verification object", entrypoint, True))
+                        attrs.append(self.__format_attr("Rule specification", rule, True))
                         verification_element['attrs'] = attrs
                         verification_element['resources'] = {
                             "CPU time": cpu,
@@ -301,16 +314,15 @@ class Exporter(Component):
                             unsafe_element['parent id'] = "/CPAchecker_{}".format(verifier_counter)
                             unsafe_element['type'] = "unsafe"
                             attrs = [
-                                {"Traces":[
-                                    {"Filtered": str(filtered)},
-                                    {"Initial": str(et)}
-                                ]},
-                                {"Found all traces": str(not incomplete_result)},
-                                {"Filtering time": str(filter_cpu)}
+                                self.__format_attr("Traces", [
+                                    self.__format_attr("Filtered", str(filtered)),
+                                    self.__format_attr("Initial", str(et))
+                                ]),
+                                self.__format_attr("Found all traces", str(not incomplete_result)),
+                                self.__format_attr("Filtering time", str(filter_cpu))
                             ]
                             m = re.search(r'witness\.(.*)\.graphml', witness)
                             identifier = m.group(1)
-                            attrs.append({'Id': identifier})
 
                             archive_id = "unsafe_{}".format(trace_counter)
                             trace_counter += 1
@@ -341,7 +353,8 @@ class Exporter(Component):
 
                             unsafe_element['id'] = "/CPAchecker/" + archive_id
                             unsafe_element['attrs'] = attrs
-                            unsafe_element['error trace'] = report_files_archive
+                            unsafe_element['error traces'] = [report_files_archive]
+                            unsafe_element['sources'] = DEFAULT_SOURCES_ARCH
                             reports.append(unsafe_element)
                             unsafes.append(report_files_archive_abs)
 
@@ -350,14 +363,14 @@ class Exporter(Component):
                             if verdict == VERDICT_SAFE:
                                 verdict = "safe"
                                 attrs = [
-                                    {"Coverage": [
-                                        {"Lines": "{0}%".format(cov_lines)},
-                                        {"Functions": "{0}%".format(cov_funcs)}
-                                    ]}
+                                    self.__format_attr("Coverage", [
+                                        self.__format_attr("Lines", "{0}%".format(cov_lines)),
+                                        self.__format_attr("Functions", "{0}%".format(cov_funcs))
+                                    ])
                                 ]
                                 # TODO: how to determine relevancy there?
                                 if rule not in [RULE_RACES] + DEADLOCK_SUB_PROPERTIES:
-                                    attrs.append({"Relevancy": relevancy})
+                                    attrs.append(self.__format_attr("Relevancy", relevancy))
                             else:
                                 if rule == RULE_TERMINATION and verdict == VERDICT_UNSAFE:
                                     text = "Program never terminates"
@@ -417,7 +430,7 @@ class Exporter(Component):
                     else:
                         # delete corresponding record.
                         for report in reports:
-                            if report.get("type") == "unsafe" and report.get("error trace") == base_name:
+                            if report.get("type") == "unsafe" and report.get("error traces")[0] == base_name:
                                 reports.remove(report)
                                 failed_reports += 1
                                 break
@@ -428,10 +441,11 @@ class Exporter(Component):
                         if mea_all_unsafes != 0:
                             percent_of_unsafe_incomplete = round(100 * mea_unsafe_incomplete / mea_all_unsafes, 2)
 
-                        report["attrs"].append({"Unsafes": str(mea_all_unsafes)})
-                        report["attrs"].append({"Unsafe-incomplete": str(percent_of_unsafe_incomplete) + "%"})
-                        report["attrs"].append({"Initial traces": str(mea_overall_initial_traces)})
-                        report["attrs"].append({"Filtered traces": str(mea_overall_filtered_traces)})
+                        report["attrs"].append(self.__format_attr("Unsafes", str(mea_all_unsafes)))
+                        report["attrs"].append(self.__format_attr("Unsafe-incomplete",
+                                                                  str(percent_of_unsafe_incomplete) + "%"))
+                        report["attrs"].append(self.__format_attr("Initial traces", str(mea_overall_initial_traces)))
+                        report["attrs"].append(self.__format_attr("Filtered traces", str(mea_overall_filtered_traces)))
                         break
 
                 self.__count_resource_usage(queue)
@@ -452,6 +466,16 @@ class Exporter(Component):
                     "wall time": overall_wall
                 }
                 reports.append(root_element)
+                src = set()
+                if os.path.exists(SRC_FILES):
+                    with open(SRC_FILES, "r") as fd:
+                        for line in fd.readlines():
+                            line = line.rstrip()
+                            src.add(os.path.normpath(line))
+                    with zipfile.ZipFile(DEFAULT_SOURCES_ARCH, mode='w') as zfp:
+                        for src_file in src:
+                            zfp.write(src_file)
+                    final_zip.write(DEFAULT_SOURCES_ARCH)
 
                 with open(FINAL_REPORT, 'w', encoding='utf8') as f_results:
                     json.dump(reports, f_results, ensure_ascii=False, sort_keys=True, indent=4)

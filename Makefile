@@ -32,7 +32,7 @@ include $(root_dir)/cpa.config
 
 download-klever:
 	@$(call download_tool,${klever},${klever_dir},${klever_repo})
-	@cd ${klever_dir}; git checkout cv
+	@cd ${klever_dir}; git checkout cv-v2.0
 
 download-benchexec:
 	@$(call download_tool,${benchexec},${benchexec_dir},${benchexec_repo})
@@ -126,7 +126,7 @@ install-cif: build-cif check-deploy-dir
 	@rm -rf ${DEPLOY_DIR}/${cif_dir}
 	@cd ${cif_dir}; prefix=${DEPLOY_DIR}/${cif_dir} make install
 
-install-scripts:
+install-scripts: check-deploy-dir
 	@mkdir -p ${DEPLOY_DIR}
 	@cd ${DEPLOY_DIR} ; \
 	cp -r ${root_dir}/verifier_files/ . ; \
@@ -194,6 +194,7 @@ define download_tool
 		echo "*** Downloading tool $1 into directory $2 ***" ; \
 		git clone --recursive $3 $2 ; \
 	fi
+	cd $2; git fetch
 endef
 
 # $1 - branch, $($1) - revision
