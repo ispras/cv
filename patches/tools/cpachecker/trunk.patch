@@ -15,14 +15,6 @@ Index: scripts/benchmark/vcloud.py
                     "--run-collection-meta-information", meta_information, \
 --- src/org/sosy_lab/cpachecker/util/predicates/pathformula/SSAMap.java	(revision 29066)
 +++ src/org/sosy_lab/cpachecker/util/predicates/pathformula/SSAMap.java	(working copy)
-@@ -40,7 +40,6 @@
- import org.sosy_lab.cpachecker.cfa.types.c.CComplexType;
- import org.sosy_lab.cpachecker.cfa.types.c.CComplexType.ComplexTypeKind;
- import org.sosy_lab.cpachecker.cfa.types.c.CElaboratedType;
--import org.sosy_lab.cpachecker.cfa.types.c.CFunctionType;
- import org.sosy_lab.cpachecker.cfa.types.c.CPointerType;
- import org.sosy_lab.cpachecker.cfa.types.c.CType;
- import org.sosy_lab.cpachecker.cfa.types.c.CTypes;
 @@ -62,14 +61,12 @@
        new MergeConflictHandler<String, CType>() {
          @Override
