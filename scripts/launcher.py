@@ -958,38 +958,31 @@ class Launcher(Component):
         self.logger.info("Uploading results into server {} with identifier {}".format(server, identifier))
         uploader = self.get_tool_path(DEFAULT_TOOL_PATH[UPLOADER])
         uploader_python_path = os.path.abspath(os.path.join(os.path.dirname(uploader), os.path.pardir))
+        commits = self.config.get(TAG_COMMITS)
+        if commits:
+            commit = commits[0]
+            res = re.search(r'(\w+)\.\.(\w+)', commit)
+            if res:
+                commit = res.group(2)
+                commits = commit[:7]
+        timestamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H_%M_%S')
+        if predefined_name:
+            job_name = predefined_name.replace(TIMESTAMP_PATTERN, timestamp)
+        elif commits:
+            job_name = "{}: {} ({})".format(self.config_file, commits, timestamp)
+        else:
+            job_name = "{} ({})".format(self.config_file, timestamp)
+        self.logger.debug("Using name '{}' for uploaded report".format(job_name))
+        command = "PYTHONPATH={} {} {} --host='{}' --username='{}' --password='{}' --archive='{}' --name='{}'".\
+            format(uploader_python_path, uploader, identifier, server, user, password, result_file, job_name)
+        if is_parent:
+            command = "{} --copy".format(command)
         try:
-            commits = self.config.get(TAG_COMMITS)
-            if commits:
-                commit = commits[0]
-                res = re.search(r'(\w+)\.\.(\w+)', commit)
-                if res:
-                    commit = res.group(2)
-                    commits = commit[:7]
-            timestamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H_%M_%S')
-            if predefined_name:
-                job_name = predefined_name.replace(TIMESTAMP_PATTERN, timestamp)
-            elif commits:
-                job_name = "{}: {} ({})".format(self.config_file, commits, timestamp)
-            else:
-                job_name = "{} ({})".format(self.config_file, timestamp)
-            self.logger.debug("Using name '{}' for uploaded report".format(job_name))
-            command = "PYTHONPATH={} {} {} --host='{}' --username='{}' --password='{}' --archive='{}' --name='{}'".\
-                format(uploader_python_path, uploader, identifier, server, user, password, result_file, job_name)
-            if is_parent:
-                command = "{} --copy".format(command)
-            try:
-                subprocess.check_call(command, shell=True)
-            except:
-                self.logger.warning("Report with the given name already exists:", exc_info=True)
-                if is_parent:
-                    command = "PYTHONPATH={} {} {} --host={} --username={} --password={} --archive={} --copy".\
-                        format(uploader_python_path, uploader, identifier, server, user, password, result_file)
-                    subprocess.check_call(command, shell=True, stderr=self.output_desc, stdout=self.output_desc)
-            self.logger.info("Results were successfully uploaded into the server: {}/jobs".format(server))
+            subprocess.check_call(command, shell=True)
         except:
-            self.logger.error("Error during uploading results:", exc_info=True)
-            return
+            self.logger.warning("Error on uploading of report archive '{}' via command '{}':\n".
+                                format(result_file, command), exc_info=True)
+        self.logger.info("Results were successfully uploaded into the server: {}/jobs".format(server))
 
     def __get_file_for_system(self, prefix: str, file: str) -> str:
         if not file:
