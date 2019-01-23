@@ -310,8 +310,11 @@ class MEA(Component):
                 func = data.text
                 stack.append(func)
             elif key == 'returnFrom':
-                # func = data.text  # check the name of the function?
-                stack.pop()
+                func = data.text  # check the name of the function?
+                if stack:
+                    stack.pop()
+                else:
+                    self.logger.warning("Return from function '{}' with no function call in error trace".format(func))
             elif key == 'warning':
                 if len(stack) > 0:
                     model_functions.add(stack[len(stack) - 1])
