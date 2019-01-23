@@ -430,7 +430,7 @@ class Exporter(Component):
                     else:
                         # delete corresponding record.
                         for report in reports:
-                            if report.get("type") == "unsafe" and report.get("error trace") == base_name:
+                            if report.get("type") == "unsafe" and report.get("error traces")[0] == base_name:
                                 reports.remove(report)
                                 failed_reports += 1
                                 break
