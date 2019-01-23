@@ -126,7 +126,7 @@ install-cif: build-cif check-deploy-dir
 	@rm -rf ${DEPLOY_DIR}/${cif_dir}
 	@cd ${cif_dir}; prefix=${DEPLOY_DIR}/${cif_dir} make install
 
-install-scripts:
+install-scripts: check-deploy-dir
 	@mkdir -p ${DEPLOY_DIR}
 	@cd ${DEPLOY_DIR} ; \
 	cp -r ${root_dir}/verifier_files/ . ; \
