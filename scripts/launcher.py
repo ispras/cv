@@ -969,7 +969,7 @@ class Launcher(Component):
         timestamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H_%M_%S')
         if predefined_name:
             job_name = predefined_name.replace(TIMESTAMP_PATTERN, timestamp)
-            job_name = job_name.replace(COMMIT_PATTERN, commits)
+            job_name = job_name.replace(COMMIT_PATTERN, str(commits))
         elif commits:
             job_name = "{}: {} ({})".format(self.config_file, commits, timestamp)
         else:
