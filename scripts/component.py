@@ -11,7 +11,7 @@ from config import TAG_DIRS, TAG_DEBUG, TAG_TOOLS, DEFAULT_TOOL_PATH, BENCHEXEC,
     TAG_WALL_TIME, TAG_LOG_FILE
 
 DEFAULT_MEMORY_LIMIT = "3GB"
-
+TAG_RUNEXEC = "runexec"
 
 class Component:
     def __init__(self, name: str, config: dict):
@@ -24,6 +24,7 @@ class Component:
 
         # Config.
         self.config = config
+        self.runexec = self.config.get(TAG_RUNEXEC, True)
         self.__propagate_config()
 
         # Debug and logging.
@@ -54,6 +55,8 @@ class Component:
         :param output_file: use specified path for output.
         :return: exit code of a command.
         """
+        if not self.runexec:
+            return self.command_caller(cmd)
         path_to_benchexec = self.get_tool_path(DEFAULT_TOOL_PATH[BENCHEXEC])
         os.environ["PATH"] += os.pathsep + path_to_benchexec
 
