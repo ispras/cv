@@ -1,26 +1,29 @@
 Index: config/includes/lockator/lockator-core.properties
 ===================================================================
---- config/includes/lockator/lockator-core.properties	(revision 29956)
+--- config/includes/lockator/lockator-core.properties	(revision 30474)
 +++ config/includes/lockator/lockator-core.properties	(working copy)
 @@ -11,6 +11,7 @@
  cpa.arg.export = false
  counterexample.export.enabled = false
  cpa.bam.exportARGs = false
-+cpa.bam.exportBlockPath =
-
- # Disable statistics for memory consumption.
- statistics.memory = true
++cpa.bam.exportBlockPath=
+ cpa.bam.argFile=
+ cpa.bam.simplifiedArgFile=
+ report.export = false
 Index: config/includes/lockator/lockStatistics-predicate.properties
 ===================================================================
---- config/includes/lockator/lockStatistics-predicate.properties	(revision 29939)
+--- config/includes/lockator/lockStatistics-predicate.properties	(revision 30474)
 +++ config/includes/lockator/lockStatistics-predicate.properties	(working copy)
-@@ -8,15 +8,15 @@
+@@ -8,17 +8,17 @@
  solver.solver = SMTINTERPOL
  analysis.algorithm.CEGAR = true
- 
+
 -cpa.usage.printOnlyTrueUnsafes = true
 +cpa.usage.printOnlyTrueUnsafes = false
- 
+ cpa.usage.refinement.iterationLimit = 2
+-cpa.lock.refinement = true
++cpa.lock.refinement = false
+
  [cegar]
  refiner = cpa.usage.refinement.IdentifierIterator
  globalRefinement = true
