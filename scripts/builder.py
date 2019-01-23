@@ -9,7 +9,8 @@ import sys
 
 from component import Component
 from config import CLADE_CC, CLADE_INTERCEPT, COMPONENT_BUILDER, TAG_CLADE_CONF, \
-    TAG_MAKE_COMMAND, TAG_FAIL_IF_FAILURE, CLADE_BASE_FILE, CLADE_DEFAULT_CONFIG_FILE, CLADE_WORK_DIR
+    TAG_MAKE_COMMAND, TAG_FAIL_IF_FAILURE, CLADE_BASE_FILE, CLADE_DEFAULT_CONFIG_FILE, CLADE_WORK_DIR, \
+    TAG_MAKE_CLEAN_COMMAND
 
 REPOSITORY_GIT = "git"
 REPOSITORY_SVN = "svn"
@@ -20,6 +21,7 @@ REPOSITORY_TYPES = [REPOSITORY_GIT, REPOSITORY_SVN, REPOSITORY_NONE]
 TAG_ENVIRON_VARS = "environment variables"
 TAG_CLEAN_SOURCES = "clean sources"
 DEFAULT_MAKE_CLEAN = "make clean"
+DEFAULT_MAKE = "make"
 CLADE_BASIC_CONFIG = {
   "CC.which_list": [".*?gcc$"],
   "CC.filter_deps": False,
@@ -57,7 +59,8 @@ class Builder(Component):
                 json.dump(CLADE_BASIC_CONFIG, fd, sort_keys=True, indent=4)
             self.clade_conf = os.path.join(os.getcwd(), CLADE_DEFAULT_CONFIG_FILE)
 
-        self.make_command = builder_config.get(TAG_MAKE_COMMAND, "make")
+        self.make_command = builder_config.get(TAG_MAKE_COMMAND, DEFAULT_MAKE)
+        self.make_clean_command = builder_config.get(TAG_MAKE_CLEAN_COMMAND, DEFAULT_MAKE_CLEAN)
         self.fail_if_failure = builder_config.get(TAG_FAIL_IF_FAILURE, True)
         self.clean_sources = builder_config.get(TAG_CLEAN_SOURCES, False)
         self.env = self.component_config.get(TAG_ENVIRON_VARS, {})
@@ -196,7 +199,7 @@ class Builder(Component):
         tmp_path = os.path.join(self.source_dir, CLADE_BASE_FILE)
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
-        if self.runexec_wrapper(DEFAULT_MAKE_CLEAN):
+        if self.command_caller(self.make_clean_command):
             self.logger.warning("Make clean failed")
 
         self.logger.debug("Using Clade tool to build sources with '{}'".format(self.make_command))

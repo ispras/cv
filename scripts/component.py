@@ -150,7 +150,7 @@ class Component:
                 self.error_logs.add(path)
             else:
                 self.temp_logs.add(path)
-        if self.debug and exitcode:
+        if self.debug and exitcode and path:
             with open(path, "r", errors='ignore') as fd:
                 self.logger.info("Command '{}' output".format(cmd))
                 for line in fd.readlines():

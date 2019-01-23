@@ -98,6 +98,7 @@ TAG_SOURCE_DIR = "source dir"
 TAG_SYSTEM_ID = "system"
 TAG_CLADE_CONF = "clade config"
 TAG_MAKE_COMMAND = "make command"
+TAG_MAKE_CLEAN_COMMAND = "make clean command"
 TAG_FAIL_IF_FAILURE = "fail if build fails"
 
 BUSY_WAITING_INTERVAL = 1

@@ -26,6 +26,7 @@
         "repository": "type of sources repository",
         "build config": {
           "make command": "make command for source directory 1",
+          "make clean command": "make clean command for source directory 1",
           "clade config": "absolute path to Clade configuration, under which the building will be performed for source directory 1",
           "fail if build fails": "if true, then Builder will not stop on any error during execution of build command (default is false)",
           "clean sources": "if true, then Builder will clean the source directory before building"
@@ -42,6 +43,7 @@
         "repository": "type of sources repository",
         "build config": {
           "make command": "make command for source directory N",
+          "make clean command": "make clean command for source directory N",
           "clade config": "absolute path to Clade configuration, under which the building will be performed for source directory N",
           "fail if build fails": "if true, then Builder will not stop on any error during execution of build command (default is false)",
           "clean sources": "if true, then Builder will clean the source directory before building"
