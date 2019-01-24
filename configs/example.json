@@ -65,9 +65,12 @@
     "filter black list": ["list of patterns, which should be excluded while processing build commands"],
     "filter white list": ["list of patterns, which should not be excluded while processing build commands"],
     "extra options": ["list of compiler options, which should be added to compilation commands"],
-    "preprocessor": "path to preprocessor (gcc by default)",
+    "preprocessor": "preprocessor command (gcc by default, 'command' - use build command preprocessor)",
     "resolve missed proto": "if true, then functions with missed prototypes in CIL file will be resolved",
     "strategy": "strategy for preparation of verification tasks ('subsystem' - join all commands for specified subdirectory, 'library' - create verification task for each library)",
+    "path": "path to preprocessor (if option preprocessor is not default)",
+    "use cil": "if true, then CIL will be used to merge all obtained build commands (default)",
+    "cil options": ["overwrite default CIL options (if required)"],
     "debug": "true|false - overwrites debug value for script preparation.py"
   },
   "Launcher": {

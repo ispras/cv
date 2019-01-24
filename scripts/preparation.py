@@ -13,6 +13,7 @@ TAG_MODEL = "model"
 TAG_RESOLVE_MISSED_PROTO = "resolve missed proto"
 TAG_STRATEGY = "strategy"
 TAG_PATH = "path"
+TAG_CIL_OPTIONS = "cil options"
 COMMAND_COMPILER = "command"
 
 PREPARATION_STRATEGY_SUBSYSTEM = "subsystem"  # Take all single build commands for specific directory.
@@ -25,6 +26,11 @@ CONF_UNSUPPORTED_OPTIONS = "unsupported compiler options"
 STAGE_NONE = 0
 STAGE_PREPROCESS = 1
 
+DEFAULT_CIL_OPTIONS = [
+    "--printCilAsIs", "--domakeCFG", "--decil", "--noInsertImplicitCasts", "--useLogicalOperators",
+    "--ignore-merge-conflicts", "--no-convert-direct-calls", "--no-convert-field-offsets", "--no-split-structs",
+    "--rmUnusedInlines", "--out"
+]
 
 class Preparator(Component):
     """
@@ -48,14 +54,9 @@ class Preparator(Component):
 
         # Configure CIL.
         self.cil_out = self.component_config.get('cil_out', os.path.join(self.work_dir, output_file))
-
         cil_bin = self.get_tool_path(DEFAULT_TOOL_PATH[CIL], self.component_config.get(TAG_TOOLS, {}).get(CIL))
-        cil_options = [cil_bin, "--printCilAsIs", "--domakeCFG", "--decil",
-                       "--noInsertImplicitCasts", "--useLogicalOperators",
-                       "--ignore-merge-conflicts", "--no-convert-direct-calls",
-                       "--no-convert-field-offsets", "--no-split-structs",
-                       "--rmUnusedInlines", "--out"]
-        self.cil = cil_options
+        cil_options = self.component_config.get(TAG_CIL_OPTIONS, DEFAULT_CIL_OPTIONS)
+        self.cil_command = [cil_bin] + cil_options
 
         self.white_list = self.component_config.get(TAG_FILTER_WHITE_LIST, [])
         self.black_list = self.component_config.get(TAG_FILTER_BLACK_LIST, [])
@@ -111,7 +112,7 @@ class Preparator(Component):
 
     def exec_sed_cmd(self, sed_cmd):
         if self.command_caller(sed_cmd):
-            self.logger.warning("Can not repair cil-file with %s", sed_cmd)
+            self.logger.warning("Can not execute sed command: '%s'", sed_cmd)
 
     def preprocess_model_file(self, file, cif_in, cif_out, cif_args):
         file_out = file + ".i"
@@ -269,8 +270,7 @@ class Preparator(Component):
                 if stage == STAGE_NONE:
                     aux_file_out = self.preprocess_model_file(file, cif_in, cif_out, cif_args)
                     if aux_file_out:
-                        cil_args = self.cil + [self.cil_out, aux_file_out]
-                        if not self.command_caller(cil_args, self.preprocessing_dir):
+                        if not self.__execute_cil(self.cil_out, [aux_file_out]):
                             processed_files.append(aux_file_out)
                             self.aux_files[file] = STAGE_PREPROCESS
         return ret, processed_files
@@ -433,8 +433,7 @@ class Preparator(Component):
             sliced_files = filtered_files[0:]
 
         for file in sliced_files:
-            cil_args = self.cil + [self.cil_out, file]
-            if not self.command_caller(cil_args, self.preprocessing_dir):
+            if not self.__execute_cil(self.cil_out, [file]):
                 checked_files.append(file)
             else:
                 self.logger.warning("Skip file '%s' due to failed check", file)
@@ -446,13 +445,16 @@ class Preparator(Component):
         self.processed_commands = len(checked_files)
         return checked_files
 
-    def __launch_cil(self, cil_out: str, checked_files: list) -> None:
-        cil_args = self.cil + [cil_out] + checked_files
-        if self.command_caller(cil_args, self.preprocessing_dir):
-            self.logger.critical("CIL has failed during merge on {}".format(cil_out))
+    def __execute_cil(self, output_file: str, input_files: list) -> int:
+        cil_args = self.cil_command + [output_file] + input_files
+        return self.command_caller(cil_args, self.preprocessing_dir)
+
+    def __merge_cil(self, output_file: str, input_files: list) -> None:
+        if self.__execute_cil(output_file, input_files):
+            self.logger.critical("CIL has failed during merge on {}".format(output_file))
         else:
-            self.logger.info("CIL has merged {} files successfully {}".format(len(checked_files), cil_out))
-            self.fix_cil_file(cil_out)
+            self.logger.debug("CIL has merged {} files successfully {}".format(len(input_files), output_file))
+            self.fix_cil_file(output_file)
 
     def prepare_task(self, queue=None):
         self.logger.debug("Start processing build commands")
@@ -471,9 +473,9 @@ class Preparator(Component):
                         if self.is_auxiliary(file):
                             selected_files.append(file)
                     cil_out = self.cil_out + "_{}.i".format(num)
-                    self.__launch_cil(cil_out, selected_files)
+                    self.__merge_cil(cil_out, selected_files)
             else:
-                self.__launch_cil(self.cil_out, checked_files)
+                self.__merge_cil(self.cil_out, checked_files)
         else:
             pass
             # TODO: add support for none-CIL launches.
