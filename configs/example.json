@@ -71,6 +71,7 @@
     "path": "path to preprocessor (if option preprocessor is not default)",
     "use cil": "if true, then CIL will be used to merge all obtained build commands (default)",
     "cil options": ["overwrite default CIL options (if required)"],
+    "files suffix": "suffix for build command files, which are passed to CIL (by default is empty)",
     "debug": "true|false - overwrites debug value for script preparation.py"
   },
   "Launcher": {

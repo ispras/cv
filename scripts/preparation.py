@@ -13,6 +13,7 @@ TAG_MODEL = "model"
 TAG_RESOLVE_MISSED_PROTO = "resolve missed proto"
 TAG_STRATEGY = "strategy"
 TAG_PATH = "path"
+TAG_FILES_SUFFIX = "files suffix"
 TAG_CIL_OPTIONS = "cil options"
 COMMAND_COMPILER = "command"
 
@@ -63,6 +64,7 @@ class Preparator(Component):
         self.subdirectory_pattern = subdirectory_pattern
 
         # Auxiliary (optional) arguments.
+        self.files_suffix = self.component_config.get(TAG_FILES_SUFFIX, None)
         self.use_cil = self.component_config.get(TAG_USE_CIL, True)
         self.max_num = self.component_config.get(TAG_MAX_FILES_NUM, sys.maxsize)
         self.compiler = self.component_config.get(TAG_PREPROCESSOR, "gcc")
@@ -433,6 +435,13 @@ class Preparator(Component):
             sliced_files = filtered_files[0:]
 
         for file in sliced_files:
+            if self.files_suffix:
+                file_copy = file + self.files_suffix
+                try:
+                    shutil.copy(file, file_copy)
+                except:
+                    sys.exit("Can not copy file '{}' to '{}'".format(file, file_copy))
+                file = file_copy
             if not self.__execute_cil(self.cil_out, [file]):
                 checked_files.append(file)
             else:
