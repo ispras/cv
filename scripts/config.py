@@ -31,23 +31,23 @@ DEFAULT_TOOL_PATH = {
     UPLOADER: "klever/utils/bin/upload-reports.py",
     BENCHEXEC: "benchexec/bin",
     CPACHECKER: {
-        UNREACHABILITY: "trunk/scripts",
-        MEMSAFETY: "trunk/scripts",
-        COVERAGE: "ldv-bam/scripts",
-        RACES: "CPALockator-combat-mode/scripts",
-        DEADLOCK: "CPALockator-combat-mode/scripts"
+        UNREACHABILITY: "unreach/scripts",
+        MEMSAFETY: "smg/scripts",
+        COVERAGE: "cov/scripts",
+        RACES: "sync/scripts",
+        DEADLOCK: "sync/scripts"
     },
     CIF: "cif/bin",
 }
 DEFAULT_CPACHECKER_CLOUD = {
-    UNREACHABILITY: "trunk",
-    MEMSAFETY: "trunk",
-    COVERAGE: "ldv-bam",
-    RACES: "CPALockator-combat-mode",
-    DEADLOCK_AUX_DISPATCH: "CPALockator-combat-mode",
-    DEADLOCK_AUX_CIRCULAR_KM: "CPALockator-combat-mode",
-    DEADLOCK_AUX_CIRCULAR_KS: "CPALockator-combat-mode",
-    DEADLOCK_AUX_CIRCULAR_MS: "CPALockator-combat-mode",
+    UNREACHABILITY: "unreach",
+    MEMSAFETY: "smg",
+    COVERAGE: "cov",
+    RACES: "sync",
+    DEADLOCK_AUX_DISPATCH: "sync",
+    DEADLOCK_AUX_CIRCULAR_KM: "sync",
+    DEADLOCK_AUX_CIRCULAR_KS: "sync",
+    DEADLOCK_AUX_CIRCULAR_MS: "sync",
 }
 VERIFIER_MODES = [UNREACHABILITY, MEMSAFETY, COVERAGE, RACES, TERMINATION] + DEADLOCK_SUB_PROPERTIES
 

@@ -44,7 +44,7 @@ download-cif:
 	@$(call download_tool,${cif},${cif_dir},${cif_repo})
 	@cd ${cif_dir}; git checkout ca907524; git submodule update
 
-download-cpa := $(addprefix download-cpa-,$(cpa_branches))
+download-cpa := $(addprefix download-cpa-,$(cpa_modes))
 $(download-cpa):
 	@$(call download_cpa,$(patsubst download-cpa-%,%,$@))
 	
@@ -74,7 +74,7 @@ build-astraver-cil:
 	@rm -rf ${astraver_cil_dir}
 	@cd ${install_dir}; tar -xf astraver-cil.xz
 
-build-cpa := $(addprefix build-cpa-,$(cpa_branches))
+build-cpa := $(addprefix build-cpa-,$(cpa_modes))
 $(build-cpa):
 	@make download-cpa-$(patsubst build-cpa-%,%,$@)
 	@$(call build_cpa,$(patsubst build-cpa-%,%,$@))
@@ -82,18 +82,19 @@ $(build-cpa):
 build: build-klever build-benchexec build-cif build-cil $(build-cpa)
 	@echo "*** Building has been completed ***"
 
-clean-cpa := $(addprefix clean-cpa-,$(cpa_branches))
+clean-cpa := $(addprefix clean-cpa-,$(cpa_modes))
 $(clean-cpa):
 	@$(call clean_cpa,$(patsubst clean-cpa-%,%,$@))
 
-rebuild-cpa := $(addprefix rebuild-cpa-,$(cpa_branches))
+rebuild-cpa := $(addprefix rebuild-cpa-,$(cpa_modes))
 $(rebuild-cpa):
 	@make clean-cpa-$(patsubst rebuild-cpa-%,%,$@)
 	@make build-cpa-$(patsubst rebuild-cpa-%,%,$@)
 
 rebuild-cpa: $(rebuild-cpa)
+build-cpa: $(build-cpa)
 
-install-cpa := $(addprefix install-cpa-,$(cpa_branches))
+install-cpa := $(addprefix install-cpa-,$(cpa_modes))
 $(install-cpa):
 	@make build-cpa-$(patsubst install-cpa-%,%,$@)
 	@$(call install_cpa,$(patsubst install-cpa-%,%,$@))
@@ -151,7 +152,7 @@ install-scripts: check-deploy-dir
 	mkdir -p buildbot
 
 
-install: check-deploy-dir install-klever install-benchexec install-cil install-cil $(install-cpa) install-scripts
+install: check-deploy-dir install-klever install-benchexec install-cil $(install-cpa) install-scripts
 	@echo "*** Successfully installed into the directory ${DEPLOY_DIR}' ***"
 
 install-with-cloud: check-deploy-dir install-klever install-benchexec install-cil install-cpa-with-cloud-links install-scripts
@@ -159,7 +160,7 @@ install-with-cloud: check-deploy-dir install-klever install-benchexec install-ci
 
 install-cpa-with-cloud-links: | check-deploy-dir $(install-cpa)
 	@$(call check_dir,${VCLOUD_DIR},"VCLOUD_DIR","is_exist")
-	@for cpa in ${cpa_branches}; do \
+	@for cpa in ${cpa_modes}; do \
 		cd "${DEPLOY_DIR}/${install_dir}/$${cpa}" ; \
 		mkdir -p lib/java-benchmark/ ; \
 		cp ${VCLOUD_DIR}/vcloud.jar lib/java-benchmark/ ; \
@@ -209,20 +210,20 @@ define download_tool
 	cd $2; git fetch
 endef
 
-# $1 - branch, $($1) - revision
+# $1 - directory name, $(word 1,$($1)) - branch, $(word 2,$($1)) - revision
 define download_cpa
 	if [ -d "${install_dir}/$1" ]; then \
-		echo "*** CPAchecker branch $1 is already downloaded in directory ${install_dir}/$1 ***" ; \
+		echo "*** CPAchecker mode $1 is already downloaded in directory ${install_dir}/$1 ***" ; \
 	else \
 		echo "*** Downloading CPAchecker branch $1 into directory ${install_dir}/$1 ***" ; \
-		if [ $1 != 'trunk' ]; then \
-			svn co ${cpa_branches_repo}/$1 ${install_dir}/$1; \
+		if [ $(word 1,$($1)) != 'trunk' ]; then \
+			svn co ${cpa_branches_repo}/$(word 1,$($1)) ${install_dir}/$1; \
 		else \
 			svn co ${cpa_trunk_repo} ${install_dir}/$1; \
 		fi ; \
 	fi
-	cd ${install_dir}/$1; svn up -r $($1); svn revert -R . ; \
-	for patch in ../../patches/tools/cpachecker/$1.patch ../../plugin/*/patches/tools/cpachecker/$1.patch; do  \
+	cd ${install_dir}/$1; svn up -r $(word 2,$($1)); svn revert -R . ; \
+	for patch in ../../patches/tools/cpachecker/$(word 1,$($1)).patch ../../plugin/*/patches/tools/cpachecker/$(word 1,$($1)).patch; do  \
 		if [ -e "$${patch}" ]; then \
 			echo "Applying patch '$${patch}'" ; \
 			svn patch "$${patch}";\
