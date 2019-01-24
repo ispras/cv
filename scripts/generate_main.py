@@ -58,7 +58,15 @@ def generate_main(strategy: str, input_file: str, output_file: str):
             for header in metadata.get("include", []):
                 fp.write("#include \"{}\"\n".format(header))
         if strategy in [THREADED_STRATEGY, THREADED_STRATEGY_NONDET, SIMPLIFIED_THREADED_STRATEGY]:
-            fp.write("#include <pthread.h>\n")
+            fp.write("typedef unsigned long int pthread_t;\n"
+                     "union pthread_attr_t {\n"
+                     "  char __size[56];\n"
+                     "  long int __align;\n"
+                     "};\ntypedef union pthread_attr_t pthread_attr_t;\n\n"
+                     "int ldv_thread_create(pthread_t *thread, pthread_attr_t const *attr, void *(*start_routine)(void *), void *arg);\n\n"
+                     "int ldv_thread_join(pthread_t thread, void **retval);\n\n"
+                     "int ldv_thread_create_N(pthread_t **thread, pthread_attr_t const *attr, void *(*start_routine)(void *), void *arg);\n\n"
+                     "int ldv_thread_join_N(pthread_t **thread, void (*start_routine)(void *));\n\n")
         fp.write("\n/*This is generated main function*/\n\n"
                  "void {}(void);\n\n".format(DEFAULT_CHECK_FINAL_STATE_FUNCTION))
 
