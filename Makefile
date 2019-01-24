@@ -151,10 +151,10 @@ install-scripts: check-deploy-dir
 	mkdir -p buildbot
 
 
-install: check-deploy-dir install-klever install-benchexec install-cil install-cil install-cif $(install-cpa) install-scripts
+install: check-deploy-dir install-klever install-benchexec install-cil install-cil $(install-cpa) install-scripts
 	@echo "*** Successfully installed into the directory ${DEPLOY_DIR}' ***"
 
-install-with-cloud: check-deploy-dir install-klever install-benchexec install-cil install-cif install-cpa-with-cloud-links install-scripts
+install-with-cloud: check-deploy-dir install-klever install-benchexec install-cil install-cpa-with-cloud-links install-scripts
 	@echo "*** Successfully installed into the directory ${DEPLOY_DIR}' with access to verification cloud ***"
 
 install-cpa-with-cloud-links: | check-deploy-dir $(install-cpa)
