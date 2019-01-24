@@ -26,7 +26,7 @@ CLADE_CC = "clade-cc"
 CLADE_CALLGRAPH = "clade-callgraph"
 UPLOADER = "uploader"
 DEFAULT_TOOL_PATH = {
-    CIL: ["cil/obj/x86_LINUX/cilly.asm.exe", "cil/bin/cilly.native"],
+    CIL: ["astraver-cil/bin/toplevel.opt", "cil/obj/x86_LINUX/cilly.asm.exe", "cil/bin/cilly.native"],
     WEB_INTERFACE: "klever/core",
     UPLOADER: "klever/utils/bin/upload-reports.py",
     BENCHEXEC: "benchexec/bin",

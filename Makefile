@@ -5,6 +5,7 @@ cpu_cores=$(shell nproc)
 klever="klever"
 clade="clade"
 cil="cil"
+astraver_cil="astraver-cil"
 benchexec="benchexec"
 cif="cif"
 
@@ -13,6 +14,7 @@ root_dir=$(shell pwd)
 install_dir=tools
 klever_dir=${install_dir}/${klever}
 cil_dir=${install_dir}/${cil}
+astraver_cil_dir=${install_dir}/${astraver_cil}
 benchexec_dir=${install_dir}/${benchexec}
 cif_dir=${install_dir}/${cif}
 plugin_dir="plugin"
@@ -67,6 +69,10 @@ build-cil:
 	@rm -rf ${cil_dir}
 	@cd ${install_dir}; tar -xf cil.xz
 
+build-astraver-cil:
+	@echo "*** Building ${astraver-cil} ***"
+	@rm -rf ${astraver_cil_dir}
+	@cd ${install_dir}; tar -xf astraver-cil.xz
 
 build-cpa := $(addprefix build-cpa-,$(cpa_branches))
 $(build-cpa):
@@ -120,6 +126,12 @@ install-cil: build-cil check-deploy-dir
 	@rm -rf ${DEPLOY_DIR}/${cil_dir}
 	@cp -r ${cil_dir} ${DEPLOY_DIR}/${cil_dir}
 
+install-astraver-cil: build-astraver-cil check-deploy-dir
+	@echo "*** Installing ${astraver-cil} ***"
+	@mkdir -p ${DEPLOY_DIR}/${install_dir}
+	@rm -rf ${DEPLOY_DIR}/${astraver_cil_dir}
+	@cp -r ${astraver_cil_dir} ${DEPLOY_DIR}/${astraver_cil_dir}
+
 install-cif: build-cif check-deploy-dir
 	@echo "*** Installing ${cif} ***"
 	@mkdir -p ${DEPLOY_DIR}/${install_dir}
@@ -139,7 +151,7 @@ install-scripts: check-deploy-dir
 	mkdir -p buildbot
 
 
-install: check-deploy-dir install-klever install-benchexec install-cil install-cif $(install-cpa) install-scripts
+install: check-deploy-dir install-klever install-benchexec install-cil install-cil install-cif $(install-cpa) install-scripts
 	@echo "*** Successfully installed into the directory ${DEPLOY_DIR}' ***"
 
 install-with-cloud: check-deploy-dir install-klever install-benchexec install-cil install-cif install-cpa-with-cloud-links install-scripts
