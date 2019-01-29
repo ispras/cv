@@ -278,11 +278,9 @@ class Preparator(Component):
         return ret, processed_files
 
     def fix_cil_file(self, cil_file):
-        # Remove functions, which are not supported by CPAchecker.
-        sed_cmd = "sed -i 's/void __builtin_va_arg(/\/\//g' " + cil_file
-        self.exec_sed_cmd(sed_cmd)
-
-        sed_cmd = "sed -i 's/__builtin_va_arg(/\/\//g' " + cil_file
+        # Remove functions, which are not supported by CPAchecker,
+        # by adding ldv_ prefix.
+        sed_cmd = "sed -i 's/__builtin_va_arg/ldv__builtin_va_arg/g' " + cil_file
         self.exec_sed_cmd(sed_cmd)
 
         for regexp in self.preparation_config.get(CONF_SED_AFTER_CIL, []):
