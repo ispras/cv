@@ -13,7 +13,7 @@ DEFAULT_THREAD_CREATE_FUNCTION = "ldv_thread_create"
 DEFAULT_CHECK_FINAL_STATE_FUNCTION = "ldv_check_final_state"
 ARGUMENT_PREFIX = "ldv_"
 IGNORE_TYPES = False  # if true, then callers arguments type will be ignored (all arguments will get default type)
-PRINT_PROTOTYPES = False
+PRINT_PROTOTYPES = True
 
 TAG_STRATEGY = "strategy"
 TAG_INPUT_FILE = "input"
@@ -79,6 +79,7 @@ def generate_main(strategy: str, input_file: str, output_file: str):
             arguments = params.get('args', [])
             arg_names = []
             arg_defs = []
+            arg_types = []
             local_var_defs = []
             i = 0
             for arg in arguments:
@@ -102,18 +103,21 @@ def generate_main(strategy: str, input_file: str, output_file: str):
                 global_scope = arg.get('global scope', True)
                 if global_scope:
                     fp.write(var_def + ";\n")
-                    nondet_funcs.add(var_type)
+                    if var_type not in nondet_funcs:
+                        nondet_funcs.add(var_type)
+                        fp.write("extern {} __VERIFIER_nondet_{}();\n".format(var_type, simplify_type(var_type)))
                     var_def = var_name + " = ({})__VERIFIER_nondet_{}();\n".format(var_type, simplify_type(var_type))
                     local_var_defs.append(var_def)
                 else:
                     local_var_defs.append(var_def + ";\n")
                 arg_names.append(var_name)
                 arg_defs.append(var_def)
+                arg_types.append(var_type)
                 i += 1
 
             if PRINT_PROTOTYPES:
-                if arg_defs:
-                    arg_def_str = ", ".join(arg_defs)
+                if arg_types:
+                    arg_def_str = ", ".join(arg_types)
                 else:
                     arg_def_str = "void"
                 fp.write("extern {0} {1}({2});\n".format(ret_type, caller, arg_def_str))
@@ -135,8 +139,6 @@ def generate_main(strategy: str, input_file: str, output_file: str):
             fp.write("}\n\n")
 
         fp.write("extern int __VERIFIER_nondet_int();\n")
-        for var_type in nondet_funcs:
-            fp.write("extern {} __VERIFIER_nondet_{}();\n".format(var_type, simplify_type(var_type)))
 
         if strategy in [SIMPLIFIED_THREADED_STRATEGY]:
             fp.write("void* {0}(void *) {{\n"
