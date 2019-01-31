@@ -760,6 +760,7 @@ class Launcher(Component):
 
                 if patches:
                     for patch in patches:
+                        self.logger.debug("Apply patch {}".format(patch))
                         patch = self.__get_file_for_system(self.patches_dir, patch)
                         builder.patch(patch)
 
