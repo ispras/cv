@@ -178,6 +178,7 @@ class AutoChecker:
         return result
 
     def loop(self):
+        informed_branches = set()
         while True:
             is_empty_run = True
             new_branches = set()
@@ -225,10 +226,12 @@ class AutoChecker:
             if not self.configs:
                 self.logger.error("Stopping script due to previous failures")
                 sys.exit(1)
+            new_branches = new_branches - informed_branches
             if new_branches:
                 self.send_a_message("Found new untracked commits",
                                     "New commits are not tracked for the following branches: {}".
                                     format(", ".join(new_branches)))
+                informed_branches = informed_branches.union(new_branches)
             if is_empty_run:
                 self.logger.debug("Sleep for {} seconds".format(self.poll_interval))
                 time.sleep(self.poll_interval)
