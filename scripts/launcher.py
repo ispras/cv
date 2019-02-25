@@ -44,7 +44,6 @@ TAG_LIMIT_CPU_CORES = "number of cores"
 TAG_OPTIMIZE = "optimize"
 TAG_CACHED = "cached"
 TAG_BRANCH = "branch"
-TAG_SOURCES = "sources"
 TAG_PATCH = "patches"
 TAG_BUILD_PATCH = "build patch"
 TAG_FIND_COVERAGE = "find coverage"
@@ -672,7 +671,7 @@ class Launcher(Component):
         cur_dir = os.getcwd()
 
         self.logger.info("Preparing source directories")
-        sources = self.config.get(COMPONENT_BUILDER, {}).get(TAG_SOURCES, {})
+        sources = self.config.get(COMPONENT_BUILDER, {}).get(TAG_SOURCES, [])
         commits = self.config.get(TAG_COMMITS, None)
 
         if not sources:
@@ -1215,7 +1214,7 @@ class Launcher(Component):
                 main_file_name = os.path.join(DEFAULT_MAIN_DIR, "{0}_{1}.c".format(entry_desc.short_name, strategy))
                 self.logger.debug("Generating main file {0} for entrypoints {1} using strategy {2}".
                                   format(main_file_name, entry_desc.id, strategy))
-                entrypoints = generate_main(strategy, entry_desc.file, main_file_name)
+                entrypoints = generate_main(strategy, entry_desc.file, main_file_name, self)
 
                 model = self.__get_file_for_system(self.rules_dir, "{0}.c".format(rule))
                 if not model:

@@ -139,4 +139,4 @@ CLADE_BASE_FILE = "cmds.txt"
 CLADE_DEFAULT_CONFIG_FILE = "clade_conf.json"
 
 TAG_ADDITIONAL_MODEL_FUNCTIONS = "additional model functions"
-
+TAG_SOURCES = "sources"

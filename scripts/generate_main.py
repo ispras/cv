@@ -1,11 +1,10 @@
 #!/usr/bin/python3
 
-import argparse
 import json
 import os
-import sys
 import re
 
+from component import Component
 from config import *
 
 DEFAULT_TYPE = "int"
@@ -14,10 +13,12 @@ DEFAULT_CHECK_FINAL_STATE_FUNCTION = "ldv_check_final_state"
 ARGUMENT_PREFIX = "ldv_"
 IGNORE_TYPES = False  # if true, then callers arguments type will be ignored (all arguments will get default type)
 PRINT_PROTOTYPES = True
+STATIC_SUFFIX = "_static"
 
 TAG_STRATEGY = "strategy"
 TAG_INPUT_FILE = "input"
 TAG_OUTPUT_FILE = "output"
+TAG_STATIC_PROTOTYPE = "static prototype"
 
 IS_LOCAL = False
 
@@ -33,12 +34,14 @@ def simplify_type(var_type: str):
     return re.sub(r'\*', '_pointer_', res)
 
 
-def generate_main(strategy: str, input_file: str, output_file: str):
+# TODO: create new component for this functionality.
+def generate_main(strategy: str, input_file: str, output_file: str, component: Component):
     """
     This function generates environment model.
     :param strategy: defines strategy for environment model generation.
     :param input_file: contains description of entrypoints.
     :param output_file: model will be generated in this file.
+    :param component: component, which is calling this function.
     :return: list of all generated entrypoints, for which verifier should be launched.
     """
 
@@ -46,10 +49,20 @@ def generate_main(strategy: str, input_file: str, output_file: str):
     with open(input_file, errors='ignore') as data_file:
         data = json.load(data_file)
         entrypoints = data.get("entrypoints")
+        statics = set()
         metadata = data.get("metadata", {})
 
         for caller, params in sorted(entrypoints.items()):
+            if TAG_STATIC_PROTOTYPE in params:
+                if not os.path.exists(output_file):
+                    add_static_prototypes(caller, params, component)
+                statics.add(caller)
+                caller += STATIC_SUFFIX
+                entrypoints[caller] = params
             callers.append(caller + ENTRY_POINT_SUFFIX)
+
+        for static in statics:
+            del entrypoints[static]
 
     with open(output_file, 'w', encoding='utf8') as fp:
 
@@ -63,9 +76,11 @@ def generate_main(strategy: str, input_file: str, output_file: str):
                      "  char __size[56];\n"
                      "  long int __align;\n"
                      "};\ntypedef union pthread_attr_t pthread_attr_t;\n\n"
-                     "int ldv_thread_create(pthread_t *thread, pthread_attr_t const *attr, void *(*start_routine)(void *), void *arg);\n\n"
+                     "int ldv_thread_create(pthread_t *thread, pthread_attr_t const *attr,"
+                     "                      void *(*start_routine)(void *), void *arg);\n\n"
                      "int ldv_thread_join(pthread_t thread, void **retval);\n\n"
-                     "int ldv_thread_create_N(pthread_t **thread, pthread_attr_t const *attr, void *(*start_routine)(void *), void *arg);\n\n"
+                     "int ldv_thread_create_N(pthread_t **thread, pthread_attr_t const *attr,"
+                     "                        void *(*start_routine)(void *), void *arg);\n\n"
                      "int ldv_thread_join_N(pthread_t **thread, void (*start_routine)(void *));\n\n")
         fp.write("\n/*This is generated main function*/\n\n"
                  "void {}(void);\n\n".format(DEFAULT_CHECK_FINAL_STATE_FUNCTION))
@@ -88,14 +103,14 @@ def generate_main(strategy: str, input_file: str, output_file: str):
                 else:
                     var_type = arg.get('type', DEFAULT_TYPE)
                 if re.search(r'\$', var_type):
-                    #Complicated type like function pointer - just replace $ to a caller
+                    # Complicated type like function pointer - just replace $ to a caller
                     var_name = "complicated_type_" + caller + "_" + str(i)
-                    #Do not format type and use it as it is
+                    # Do not format type and use it as it is
                     var_def = re.sub(r'\$', var_name, var_type)
                 else:
                     var_name = get_formatted_type(var_type) + "_" + caller + "_" + str(i)
                     if re.search(r' \*', var_type):
-                        #Already has valuable space
+                        # Already has valuable space
                         var_def = var_type + var_name
                     else:
                         var_def = var_type + " " + var_name
@@ -201,6 +216,34 @@ def generate_main(strategy: str, input_file: str, output_file: str):
     return callers
 
 
+def get_source_directories(component: Component) -> set:
+    source_dirs = set()
+    for sources in component.config.get(COMPONENT_BUILDER, {}).get(TAG_SOURCES, []):
+        if TAG_SOURCE_DIR in sources:
+            source_dirs.add(sources.get(TAG_SOURCE_DIR))
+    return source_dirs
+
+
+def add_static_prototypes(caller: str, params: dict, component: Component) -> None:
+    args = []
+    args_with_types = []
+    counter = 0
+    for arg in params.get('args', []):
+        args.append("arg_{}".format(counter))
+        args_with_types.append("{} arg_{}".format(arg, counter))
+        counter += 1
+    if not args_with_types:
+        args_with_types.append("void")
+    static_declaration = "\nvoid {}({})\n{{\n  {}({});\n}}\n".format(caller + STATIC_SUFFIX, ", ".join(args_with_types),
+                                                                     caller, ", ".join(args))
+    for source_dir in get_source_directories(component):
+        name = os.path.join(source_dir, params.get(TAG_STATIC_PROTOTYPE))
+        if os.path.exists(name):
+            if component.command_caller("echo '{}' >> {}".format(static_declaration, name)):
+                component.logger.warning("Can not append lines '{}' to file: {}".format(static_declaration, name))
+
+
+""" Not supported
 if __name__ == '__main__':
     # Get config, that relates to this component. Since this is not main scenario, fail if something specified wrong.
     parser = argparse.ArgumentParser()
@@ -224,3 +267,4 @@ if __name__ == '__main__':
     print("Generated main file with {0} entrypoints:".format(len(generated_entrypoints)))
     for caller in generated_entrypoints:
         print(caller)
+"""
