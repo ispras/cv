@@ -13,7 +13,6 @@ import tempfile
 import time
 import zipfile
 from filecmp import cmp
-from xml.etree import ElementTree
 
 from common import *
 from component import Component
@@ -23,8 +22,6 @@ ERROR_TRACE_FILE = "error trace.json"
 FINAL_REPORT = "final.json"
 CSV_SEPARATOR = ";"
 UNKNOWN_DESC_FILE = "problem desc.txt"
-
-ARTIFICIAL_SUFFIX = "_caller"
 
 TAG_VERSION = "version"
 TAG_ADD_VERIFIER_LOGS = "add verifier logs"
@@ -266,8 +263,10 @@ class Exporter(Component):
                         if rule == RULE_COVERAGE:
                             continue
                         entrypoint = res.group(3)
-                        if entrypoint.endswith(ARTIFICIAL_SUFFIX):
-                            entrypoint = entrypoint[:-len(ARTIFICIAL_SUFFIX)]
+                        if entrypoint.endswith(ENTRY_POINT_SUFFIX):
+                            entrypoint = entrypoint[:-len(ENTRY_POINT_SUFFIX)]
+                        if entrypoint.endswith(STATIC_SUFFIX):
+                            entrypoint = entrypoint[:-len(STATIC_SUFFIX)]
                         verdict = res.group(4)
                         if verdict == VERDICT_UNSAFE:
                             mea_all_unsafes += 1

@@ -56,10 +56,13 @@
     },
     "debug": "on true will produce more information on Builder component"
   },
-  "Main_generator": {
-    "sync": "strategy for sync rules (default is 'threaded')",
-    "strategy": "name of the strategy (only relevant for launching generate_main.py separately)",
-    "input": "path to file with entrypoints (only relevant for launching generate_main.py separately)"
+  "Generator": {
+    "print prototypes": "boolean - print prototypes for entry point calls in main file (true by default)",
+    "ignore types": "boolean - ignore types of parameters in entry point calls in main file (false by default)",
+    "strategies": {
+      "rule 1": "redefine main generator strategy for rule 1",
+      "rule N": "redefine main generator strategy for rule N"
+    }
   },
   "Preparator": {
     "filter black list": ["list of patterns, which should be excluded while processing build commands"],

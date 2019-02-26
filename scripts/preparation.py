@@ -33,12 +33,13 @@ DEFAULT_CIL_OPTIONS = [
     "--rmUnusedInlines", "--out"
 ]
 
+
 class Preparator(Component):
     """
     This component is used for preparation of a verification task.
     """
 
-    def __init__(self, install_dir, config, subdirectory_pattern=None, model=None, main_file=DEFAULT_MAIN_FILE,
+    def __init__(self, install_dir, config, subdirectory_pattern=None, model=None, main_file=None,
                  common_file=None, output_file=DEFAULT_CIL_FILE, preparation_config=None, build_results=None):
         # Here we suggest 2 scenarios:
         # 1. call from launcher.py (main) - script is inside working directory already;

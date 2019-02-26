@@ -21,7 +21,7 @@ from common import *
 from component import Component
 from config import *
 from export_results import Exporter
-from generate_main import generate_main, PARTIAL_STRATEGY
+from generate_main import MainGenerator
 from mea import MEA
 from preparation import Preparator
 from qualifier import Qualifier
@@ -47,7 +47,6 @@ TAG_BRANCH = "branch"
 TAG_PATCH = "patches"
 TAG_BUILD_PATCH = "build patch"
 TAG_FIND_COVERAGE = "find coverage"
-TAG_SYNC = "sync"
 TAG_CALLERS = "callers"
 TAG_COMMITS = "commits"
 TAG_BACKUP_WRITE = "backup write"
@@ -90,9 +89,6 @@ HARDCODED_RACES_OUTPUT_DIR = "output"
 ROUND_DIGITS = 9  # nanoseconds.
 
 DEFAULT_TIME_FOR_STATISTICS = 0  # By default we do not allocate time for printing statistics.
-
-RULE_COV_AUX_RACES = "cov_races"
-RULE_COV_AUX_OTHER = "cov_other"
 
 VERIFIER_OPTIONS_NOT_OPTIMIZED = [
     "cpa.functionpointer.ignoreUnknownFunctionPointerCalls=false",
@@ -616,26 +612,6 @@ class Launcher(Component):
         else:
             mode = UNREACHABILITY
         return mode
-
-    def __get_entrypoint_strategy(self, rule):
-        # Determine, which main generator strategy should be used for this rule.
-        if rule == RULE_COVERAGE:
-            strategy = COMBINED_STRATEGY
-        elif rule == RULE_COV_AUX_OTHER:
-            strategy = PARTIAL_STRATEGY
-        elif rule == RULE_MEMSAFETY:
-            strategy = PARTIAL_STRATEGY
-        elif rule == RULE_RACES:
-            strategy = self.config.get(COMPONENT_MAIN_GENERATOR, {}).get(TAG_SYNC, THREADED_STRATEGY)
-        elif rule == RULE_DEADLOCK:
-            strategy = self.config.get(COMPONENT_MAIN_GENERATOR, {}).get(TAG_SYNC, THREADED_STRATEGY)
-        elif rule == RULE_TERMINATION:
-            strategy = RULE_COV_AUX_OTHER
-        elif rule == RULE_COV_AUX_RACES:
-            strategy = THREADED_COMBINED_STRATEGY
-        else:
-            strategy = PARTIAL_STRATEGY
-        return strategy
 
     def __get_result_file_prefix(self):
         return self.config_file + "_" + datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H_%M_%S')
@@ -1206,16 +1182,15 @@ class Launcher(Component):
                     self.logger.debug("Skipping subsystem '{}' because it does not relate with the checking commits".
                                       format(entry_desc.subsystem))
                     continue
+            main_generator = MainGenerator(self.config, entry_desc.file)
+            main_generator.add_static_prototypes()
             for rule in rules:
-                strategy = self.__get_entrypoint_strategy(rule)
+                strategy = main_generator.get_strategy(rule)
                 if rule in [RULE_COV_AUX_OTHER, RULE_COV_AUX_RACES]:
                     rule = RULE_COVERAGE
                 mode = self.__get_tool(rule)
                 main_file_name = os.path.join(DEFAULT_MAIN_DIR, "{0}_{1}.c".format(entry_desc.short_name, strategy))
-                self.logger.debug("Generating main file {0} for entrypoints {1} using strategy {2}".
-                                  format(main_file_name, entry_desc.id, strategy))
-                entrypoints = generate_main(strategy, entry_desc.file, main_file_name, self)
-
+                entrypoints = main_generator.generate_main(strategy, main_file_name)
                 model = self.__get_file_for_system(self.rules_dir, "{0}.c".format(rule))
                 if not model:
                     self.logger.debug("There is no model file for rule {}".format(rule))
