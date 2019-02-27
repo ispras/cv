@@ -19,6 +19,7 @@ TAG_INCLUDE = "include"
 TAG_RETURN = "return"
 TAG_ARGS = "args"
 TAG_STATIC_PROTOTYPE = "static prototype"
+TAG_TYPE = "type"
 
 # Config tags.
 TAG_STRATEGIES = "strategies"
@@ -120,7 +121,7 @@ class MainGenerator(Component):
                 counter = 0
                 for arg in params.get(TAG_ARGS, []):
                     args.append("arg_{}".format(counter))
-                    args_with_types.append("{} arg_{}".format(arg, counter))
+                    args_with_types.append("{} arg_{}".format(arg.get(TAG_TYPE, DEFAULT_TYPE), counter))
                     counter += 1
                 if not args_with_types:
                     args_with_types.append(DEFAULT_VOID)
@@ -180,7 +181,7 @@ class MainGenerator(Component):
                     if self.ignore_types:
                         var_type = DEFAULT_TYPE
                     else:
-                        var_type = arg.get('type', DEFAULT_TYPE)
+                        var_type = arg.get(TAG_TYPE, DEFAULT_TYPE)
                     if re.search(r'\$', var_type):
                         # Complicated type like function pointer - just replace $ to a caller
                         var_name = "complicated_type_" + caller + "_" + str(i)
