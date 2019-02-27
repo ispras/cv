@@ -312,12 +312,15 @@ class Exporter(Component):
                             unsafe_element = {}
                             unsafe_element['parent id'] = "/CPAchecker_{}".format(verifier_counter)
                             unsafe_element['type'] = "unsafe"
+                            found_all_traces = not incomplete_result
+                            if rule == RULE_RACES:
+                                found_all_traces = True
                             attrs = [
                                 self.__format_attr("Traces", [
                                     self.__format_attr("Filtered", str(filtered)),
                                     self.__format_attr("Initial", str(et))
                                 ]),
-                                self.__format_attr("Found all traces", str(not incomplete_result)),
+                                self.__format_attr("Found all traces", str(found_all_traces)),
                                 self.__format_attr("Filtering time", str(filter_cpu))
                             ]
                             m = re.search(r'witness\.(.*)\.graphml', witness)
