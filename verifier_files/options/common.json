@@ -3,6 +3,7 @@
   "-setprop": [
     "parser.readLineDirectives=true",
     "output.disable=true",
-    "counterexample.export.file="
+    "counterexample.export.file=",
+    "cpa.predicate.abortOnLargeArrays=false"
   ]
 }
