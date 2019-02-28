@@ -40,7 +40,7 @@ class Preparator(Component):
     """
 
     def __init__(self, install_dir, config, subdirectory_pattern=None, model=None, main_file=None,
-                 common_file=None, output_file=DEFAULT_CIL_FILE, preparation_config=None, build_results=None):
+                 common_file=None, output_file=DEFAULT_CIL_FILE, preparation_config={}, build_results=None):
         # Here we suggest 2 scenarios:
         # 1. call from launcher.py (main) - script is inside working directory already;
         # 2. manual call (aux) - script changes directory to working before creating instance of Preparator.
@@ -96,11 +96,8 @@ class Preparator(Component):
         self.processed_commands = 0
         self.temp_logs = set()
         self.libs = dict()
-        if preparation_config:
-            with open(preparation_config) as fd:
-                self.preparation_config = json.load(fd)
-        else:
-            self.preparation_config = {}
+
+        self.preparation_config = preparation_config
         path_to_compilers = self.component_config.get(TAG_PATH, "")
         if os.path.exists(path_to_compilers):
             os.environ["PATH"] += os.pathsep + path_to_compilers

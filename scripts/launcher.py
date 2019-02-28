@@ -107,7 +107,8 @@ SOURCE_QUEUE_FUNCTIONS = "functions"
 SOURCE_QUEUE_RESULTS = "results"
 
 TAG_ENTRYPOINTS_DESC = "entrypoints desc"
-PREPARATION_CONFIG = "conf.json"
+TAG_PREPARATION_CONFIG = "preparation config"
+DEFAULT_PREPARATION_CONFIG = "conf.json"
 DEFAULT_COVERAGE_FILES = ["coverage.info", "subcoverage.info"]
 DEFAULT_PROPERTY_MEMSAFETY = "properties/memsafety.spc"
 DEFAULT_PROPERTY_UNREACHABILITY = "properties/unreachability.spc"
@@ -1168,8 +1169,14 @@ class Launcher(Component):
         for i in range(preparator_processes):
             process_pool.append(None)
 
-        preparation_config = self.__get_file_for_system(os.path.join(self.root_dir, DEFAULT_PREPARATION_PATCHES_DIR),
-                                                        PREPARATION_CONFIG)
+        preparation_config_file = self.__get_file_for_system(
+            os.path.join(self.root_dir, DEFAULT_PREPARATION_PATCHES_DIR),
+            self.config.get(TAG_PREPARATION_CONFIG, DEFAULT_PREPARATION_CONFIG))
+        if preparation_config_file:
+            with open(preparation_config_file) as fd:
+                preparation_config = json.load(fd)
+        else:
+            preparation_config = {}
 
         for entry_desc in entrypoints_desc:
             if specific_sources:
