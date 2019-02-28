@@ -161,6 +161,11 @@ class Component:
 
         return exitcode
 
+    def exec_sed_cmd(self, regexp, file, args=""):
+        sed_cmd = "sed -i {} '{}' {}".format(args, regexp, file)
+        if self.command_caller(sed_cmd):
+            self.logger.warning("Can not execute sed command: '%s'", sed_cmd)
+
     def get_tool_path(self, default_path, abs_path=None):
         assert self.install_dir
         if abs_path and os.path.isabs(abs_path) and os.path.exists(abs_path):

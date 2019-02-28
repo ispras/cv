@@ -33,6 +33,9 @@ DEFAULT_CIL_OPTIONS = [
     "--rmUnusedInlines", "--out"
 ]
 
+NOT_SUPPORTED_FUNCTIONS = ["__builtin_va_arg"]
+ADDED_PREFIX = "ldv_"
+
 
 class Preparator(Component):
     """
@@ -109,10 +112,6 @@ class Preparator(Component):
         if not os.path.exists(abs_path):
             shutil.copy(file, work_dir)
         return abs_path
-
-    def exec_sed_cmd(self, sed_cmd):
-        if self.command_caller(sed_cmd):
-            self.logger.warning("Can not execute sed command: '%s'", sed_cmd)
 
     def preprocess_model_file(self, file, cif_in, cif_out, cif_args):
         file_out = file + ".i"
@@ -214,8 +213,7 @@ class Preparator(Component):
         processed_files = []
 
         for regexp in self.preparation_config.get(CONF_SED_BEFORE_CIL, []):
-            sed_cmd = "sed -i '{}' {}".format(regexp, cif_in)
-            self.exec_sed_cmd(sed_cmd)
+            self.exec_sed_cmd(regexp, cif_in)
 
         if self.__is_skip_file(cif_out):
             return -1, None
@@ -278,12 +276,11 @@ class Preparator(Component):
     def fix_cil_file(self, cil_file):
         # Remove functions, which are not supported by CPAchecker,
         # by adding ldv_ prefix.
-        sed_cmd = "sed -i 's/__builtin_va_arg/ldv__builtin_va_arg/g' " + cil_file
-        self.exec_sed_cmd(sed_cmd)
+        for func in NOT_SUPPORTED_FUNCTIONS:
+            self.exec_sed_cmd('s/{0}/{1}{0}/g'.format(func, ADDED_PREFIX), cil_file)
 
         for regexp in self.preparation_config.get(CONF_SED_AFTER_CIL, []):
-            sed_cmd = "sed -i '{}' {}".format(regexp, cil_file)
-            self.exec_sed_cmd(sed_cmd)
+            self.exec_sed_cmd(regexp, cil_file)
 
         if self.resolve_missed_proto:
             self.__resolve_missed_proto(cil_file)
@@ -329,8 +326,7 @@ class Preparator(Component):
                             proto_params = "{}, int".format(proto_params)
                     fp.write("extern int {}({});\n".format(func, proto_params))
 
-            sed_cmd = "sed -i -E 's/^(.+)missing proto \*\//\/\//g' " + cil_file
-            self.exec_sed_cmd(sed_cmd)
+            self.exec_sed_cmd('s/^(.+)missing proto \*\//\/\//g', cil_file, args='-E')
 
     def __print_temp_logs(self):
         contexts = set()
