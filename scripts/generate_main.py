@@ -20,6 +20,8 @@ TAG_RETURN = "return"
 TAG_ARGS = "args"
 TAG_STATIC_PROTOTYPE = "static prototype"
 TAG_TYPE = "type"
+TAG_RENAME = "rename"
+TAG_SED_COMMANDS = "sed commands"
 
 # Config tags.
 TAG_STRATEGIES = "strategies"
@@ -113,9 +115,14 @@ class MainGenerator(Component):
                 source_dirs.add(sources.get(TAG_SOURCE_DIR))
         return source_dirs
 
-    def add_static_prototypes(self) -> None:
+    def process_sources(self) -> None:
+        """
+        Apply specific changes to source files before preparing verification tasks for this subsystem.
+        """
+        source_dirs = self.__get_source_directories()
+
         for caller, params in self.entrypoints.items():
-            if TAG_STATIC_PROTOTYPE in params:
+            if TAG_STATIC_PROTOTYPE in params or TAG_RENAME in params:
                 args = []
                 args_with_types = []
                 counter = 0
@@ -125,15 +132,36 @@ class MainGenerator(Component):
                     counter += 1
                 if not args_with_types:
                     args_with_types.append(DEFAULT_VOID)
-                static_declaration = "\nvoid {}({})\n{{\n  {}({});\n}}\n".format(caller, ", ".join(args_with_types),
-                                                                                 caller[:-len(STATIC_SUFFIX)],
-                                                                                 ", ".join(args))
-                for source_dir in self.__get_source_directories():
-                    name = os.path.join(source_dir, params.get(TAG_STATIC_PROTOTYPE))
-                    if os.path.exists(name):
-                        if self.command_caller("echo '{}' >> {}".format(static_declaration, name)):
-                            self.logger.warning("Can not append lines '{}' to file: {}".
-                                                format(static_declaration, name))
+
+                # Add prototype for static function.
+                if TAG_STATIC_PROTOTYPE in params:
+                    prototype = "\nvoid {}({})\n{{\n  {}({});\n}}\n".format(caller, ", ".join(args_with_types),
+                                                                            caller[:-len(STATIC_SUFFIX)],
+                                                                            ", ".join(args))
+                    for source_dir in source_dirs:
+                        file_abs_path = os.path.join(source_dir, params[TAG_STATIC_PROTOTYPE])
+                        if os.path.exists(file_abs_path):
+                            if self.command_caller("echo '{}' >> {}".format(prototype, file_abs_path)):
+                                self.logger.warning("Can not append lines '{}' to file: {}".
+                                                    format(prototype, file_abs_path))
+
+                # Set unique name for function during merge.
+                elif TAG_RENAME in params:
+                    for initial_name, file_rel_path in params.get(TAG_RENAME, {}).items():
+                        for source_dir in source_dirs:
+                            file_abs_path = os.path.join(source_dir, file_rel_path)
+                            if os.path.exists(file_abs_path):
+                                self.exec_sed_cmd('s/\\b{}\\b\\s*(/{}(/g'.format(initial_name, caller), file_abs_path)
+
+        # Apply sed commands for the whole subsystem.
+        for regexp in self.metadata.get(TAG_SED_COMMANDS, []):
+            for source_dir in source_dirs:
+                subsystem_dir = os.path.join(source_dir, self.metadata.get(TAG_SUBSYSTEM, "."))
+                if os.path.isdir(subsystem_dir):
+                    for root, dirs, files_in in os.walk(subsystem_dir):
+                        for name in files_in:
+                            file = os.path.join(root, name)
+                            self.exec_sed_cmd(regexp, file)
 
     def generate_main(self, strategy: str, output_file: str) -> list:
         """

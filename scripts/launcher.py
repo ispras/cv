@@ -1190,7 +1190,7 @@ class Launcher(Component):
                                       format(entry_desc.subsystem))
                     continue
             main_generator = MainGenerator(self.config, entry_desc.file)
-            main_generator.add_static_prototypes()
+            main_generator.process_sources()
             for rule in rules:
                 strategy = main_generator.get_strategy(rule)
                 if rule in [RULE_COV_AUX_OTHER, RULE_COV_AUX_RACES]:
