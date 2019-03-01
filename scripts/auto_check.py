@@ -18,6 +18,7 @@ BUILDBOT_CONFIGS_DIR = os.path.abspath(os.path.join(BUILDBOT_DIR, CONFIGS_DIR))
 TAG_COMMITS = "commits"
 TAG_DEBUG = "debug"
 TAG_SOURCES = "sources"
+TAG_BUILDER = "Builder"
 TAG_USERNAME = "username"
 TAG_PASSWORD = "password"
 TAG_REPOSITORY = "repository"
@@ -75,7 +76,7 @@ class AutoChecker:
                 sys.exit("File {} does not exists".format(launcher_config_file))
             with open(launcher_config_file) as fd:
                 tmp = json.load(fd)
-            branch = tmp[TAG_SOURCES][TAG_BRANCH]
+            branch = tmp[TAG_BUILDER][TAG_SOURCES][0][TAG_BRANCH]
             if branch in self.configs:
                 self.configs.get(branch, []).append(launcher_config_file)
             else:
