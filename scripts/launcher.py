@@ -405,8 +405,8 @@ class Launcher(Component):
         # Map of verifier modes to files with specific options.
         self.verifier_options = {}
 
-    def __perform_filtering(self, result: VerificationResults, queue: multiprocessing.Queue(),
-                            resource_queue_filter: multiprocessing.Queue()):
+    def __perform_filtering(self, result: VerificationResults, queue: multiprocessing.Queue,
+                            resource_queue_filter: multiprocessing.Queue):
         wall_time_start = time.time()
         launch_directory = result.work_dir
         mea_config_rel_path = self.config.get(COMPONENT_MEA, {}).get(result.rule, {}).\
@@ -431,7 +431,7 @@ class Launcher(Component):
             self.mea_memory_usage = max(self.mea_memory_usage, iteration_max_memory)
             self.mea_wall_time += iteration_wall_time
 
-    def __filter_scheduler(self, number_of_processes, output_queue: multiprocessing.Queue()):
+    def __filter_scheduler(self, number_of_processes, output_queue: multiprocessing.Queue):
         process_pool = []
         cpu_start = time.process_time()
         for i in range(number_of_processes):
@@ -629,7 +629,7 @@ class Launcher(Component):
     def __get_none_rule_key(self, verification_result: VerificationResults):
         return "{0}_{1}".format(verification_result.id, verification_result.entrypoint)
 
-    def __prepare_sources(self, sources_queue: multiprocessing.Queue()):
+    def __prepare_sources(self, sources_queue: multiprocessing.Queue):
         """
         For each specified source directory the following actions can be performed:
         1. Clean.
