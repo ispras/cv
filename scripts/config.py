@@ -1,6 +1,6 @@
 # Default location of additional tools.
 CIL = "cil"
-WEB_INTERFACE = "klever"
+ET_LIB = "klever"
 BENCHEXEC = "benchexec"
 CPACHECKER = "cpachecker"
 UNREACHABILITY = "unreachability"
@@ -27,7 +27,7 @@ CLADE_CALLGRAPH = "clade-callgraph"
 UPLOADER = "uploader"
 DEFAULT_TOOL_PATH = {
     CIL: ["astraver-cil/bin/toplevel.opt", "cil/obj/x86_LINUX/cilly.asm.exe", "cil/bin/cilly.native"],
-    WEB_INTERFACE: "klever/core",
+    ET_LIB: "klever/core",
     UPLOADER: "klever/utils/bin/upload-reports.py",
     BENCHEXEC: "benchexec/bin",
     CPACHECKER: {
@@ -121,6 +121,10 @@ ENTRY_POINT_SUFFIX = "_caller"
 STATIC_SUFFIX = "_static"
 
 JSON_EXTENSION = ".json"
+GRAPHML_EXTENSION = ".graphml"
+ARCHIVE_EXTENSION = ".zip"
+
+ERROR_TRACE_SOURCES = "error trace sources.json"
 
 PREPARATOR_LOG_FILE = "log.txt"
 TAG_LOG_FILE = "log"
@@ -132,5 +136,4 @@ CLADE_WORK_DIR = "clade-work-dir"
 CLADE_BASE_FILE = "cmds.txt"
 CLADE_DEFAULT_CONFIG_FILE = "clade_conf.json"
 
-TAG_ADDITIONAL_MODEL_FUNCTIONS = "additional model functions"
 TAG_SOURCES = "sources"

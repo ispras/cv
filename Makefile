@@ -13,6 +13,7 @@ cif="cif"
 root_dir=$(shell pwd)
 install_dir=tools
 klever_dir=${install_dir}/${klever}
+mea_lib=${install_dir}/${klever}/bridge/reports/mea/core.py
 cil_dir=${install_dir}/${cil}
 astraver_cil_dir=${install_dir}/${astraver_cil}
 benchexec_dir=${install_dir}/${benchexec}
@@ -108,6 +109,7 @@ install-klever: build-klever check-deploy-dir
 	@mkdir -p ${DEPLOY_DIR}/${install_dir}
 	@rm -rf ${DEPLOY_DIR}/${klever_dir}
 	@cp -r ${klever_dir} ${DEPLOY_DIR}/${klever_dir}
+	@cp -r ${mea_lib} ${DEPLOY_DIR}/scripts/mea_core.py
 
 install-clade: check-deploy-dir
 	@echo "*** Installing ${clade} into directory ${DEPLOY_DIR} ***"

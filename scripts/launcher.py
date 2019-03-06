@@ -34,7 +34,6 @@ DEFAULT_PREPARATION_PATCHES_DIR = "patches/preparation"
 DEFAULT_ENTRYPOINTS_DIR = "entrypoints"
 DEFAULT_RULES_DIR = "rules"
 DEFAULT_PLUGIN_DIR = "plugin"
-DEFAULT_MEA_CONFIG_DIR = "verifier_files/mea"
 
 DEFAULT_BACKUP_PREFIX = "backup_"
 
@@ -165,6 +164,7 @@ class VerificationResults:
             self.entrypoint = None
         self.cpu = 0
         self.filtering_cpu = 0
+        self.filtering_mem = 0
         self.mem = 0
         self.wall = 0
         self.verdict = VERDICT_UNKNOWN
@@ -183,7 +183,7 @@ class VerificationResults:
                self.rule == verification_task.rule and \
                self.entrypoint == verification_task.entrypoint
 
-    def parse_output_dir(self, launch_dir):
+    def parse_output_dir(self, launch_dir: str, install_dir: str):
         # Process BenchExec log file.
         for file in glob.glob(os.path.join(launch_dir, 'benchmark*.xml')):
             tree = ElementTree.ElementTree()
@@ -243,7 +243,8 @@ class VerificationResults:
         # If there is only one trace, filtering will not be performed and it will not be examined.
         if self.initial_traces == 1:
             # Trace should be checked if it is correct or not.
-            if MEA(self.config, error_traces, self.rule).check_error_traces():
+            mea = MEA(self.config, error_traces, install_dir, self.rule)
+            if mea.process_traces_without_filtering():
                 # Trace is fine, just recheck final verdict.
                 self.verdict = VERDICT_UNSAFE
             else:
@@ -260,19 +261,16 @@ class VerificationResults:
                 else:
                     os.remove(file)
 
-    def filter_traces(self, launch_dir: str, mea_config_file: str):
+    def filter_traces(self, launch_dir: str, install_dir: str):
         # Perform Multiple Error Analysis to filter found error traces (only for several traces).
         start_time_cpu = time.process_time()
         traces = glob.glob("{}/witness*".format(launch_dir))
-        mea = MEA(self.config, traces, self.rule, mea_config_file)
-        traces = mea.filter()
-        self.filtered_traces = len(traces)
-        if traces:
+        mea = MEA(self.config, traces, install_dir, self.rule)
+        self.filtered_traces = len(mea.filter())
+        if self.filtered_traces:
             self.verdict = VERDICT_UNSAFE
-        for file in mea.error_traces:
-            if file not in traces:
-                os.remove(file)
-        self.filtering_cpu = time.process_time() - start_time_cpu
+        self.filtering_cpu = time.process_time() - start_time_cpu + mea.cpu_time
+        self.filtering_mem = mea.memory
 
     def parse_line(self, line: str):
         values = line.split(";")
@@ -381,7 +379,6 @@ class Launcher(Component):
         self.options_dir = os.path.join(self.root_dir, VERIFIER_FILES_DIR, VERIFIER_OPTIONS_DIR)
         self.patches_dir = os.path.join(self.root_dir, DEFAULT_SOURCE_PATCHES_DIR)
         self.plugin_dir = os.path.join(self.root_dir, DEFAULT_PLUGIN_DIR)
-        self.mea_config_dir = os.path.join(self.root_dir, DEFAULT_MEA_CONFIG_DIR)
 
         self.backup = None  # File, in which backup copy will be placed during verification.
         self.cpu_cores = 1
@@ -409,13 +406,9 @@ class Launcher(Component):
                             resource_queue_filter: multiprocessing.Queue):
         wall_time_start = time.time()
         launch_directory = result.work_dir
-        mea_config_rel_path = self.config.get(COMPONENT_MEA, {}).get(result.rule, {}).\
-            get(TAG_ADDITIONAL_MODEL_FUNCTIONS, self.config.get(COMPONENT_MEA, {}).get(TAG_ADDITIONAL_MODEL_FUNCTIONS,
-                                                                                       None))
-        mea_config_abs_path = self.__get_file_for_system(self.mea_config_dir, mea_config_rel_path)
-        result.filter_traces(launch_directory, mea_config_abs_path)
+        result.filter_traces(launch_directory, self.install_dir)
         queue.put(result)
-        resource_queue_filter.put({TAG_MEMORY_USAGE: int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) * 1024,
+        resource_queue_filter.put({TAG_MEMORY_USAGE: result.filtering_mem,
                                    TAG_WALL_TIME: time.time() - wall_time_start})
         sys.exit(0)
 
@@ -509,7 +502,7 @@ class Launcher(Component):
         return launch_directory, benchmark_name
 
     def __process_single_launch_results(self, result, launch_directory, launch, queue):
-        result.parse_output_dir(launch_directory)
+        result.parse_output_dir(launch_directory, self.install_dir)
 
         coverage_file = None
         for file in DEFAULT_COVERAGE_FILES:
@@ -1374,7 +1367,7 @@ class Launcher(Component):
         queue = multiprocessing.Queue()
         self.mea_input_queue = multiprocessing.Queue()
         if self.scheduler == SCHEDULER_CLOUD:
-            mea_processes = self.cpu_cores
+            mea_processes = self.config.get(COMPONENT_MEA, {}).get(TAG_PARALLEL_LAUNCHES, self.cpu_cores)
         else:
             mea_processes = max(1, max_cores - number_of_processes)
         filtering_process = multiprocessing.Process(target=self.__filter_scheduler, name="MEA",

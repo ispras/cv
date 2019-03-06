@@ -1,51 +1,39 @@
 #!/usr/bin/python3
 
 import argparse
+import glob
+import json
+import logging
+import multiprocessing
 import operator
 import re
+import resource
 import time
-import os
-from xml.etree.ElementTree import ElementTree
+import zipfile
 
+from common import *
 from component import Component
+from config import *
 from config import COMPONENT_MEA
 from config import TAG_DEBUG
+# noinspection PyUnresolvedReferences
+from mea_core import DEFAULT_CONVERSION_FUNCTION, CONVERSION_FUNCTION_MODEL_FUNCTIONS, CONVERSION_FUNCTION_CALL_TREE, \
+    CONVERSION_FUNCTION_NOTES, convert_error_trace, compare_error_traces, is_equivalent, DEFAULT_COMPARISON_FUNCTION, \
+    DEFAULT_SIMILARITY_THRESHOLD, TAG_COMPARISON_FUNCTION, TAG_CONVERSION_FUNCTION, TAG_ADDITIONAL_MODEL_FUNCTIONS
 
-_CALL = 'CALL'
-_RET = 'RET'
-_ASSUME_TRUE = 'ASSUME TRUE'
-_ASSUME_FALSE = 'ASSUME FALSE'
+ERROR_TRACE_FILE = "error trace.json"
+CONVERTED_ERROR_TRACES = "converted error traces.json"
 
+TAG_PARALLEL_PROCESSES = "internal parallel processes"
+TAG_CONVERSION_FUNCTION_ARGUMENTS = "conversion function arguments"
+TAG_CLEAN = "clean"
 
-PARSER_GRAHML = "grahml"
-PARSERS = [PARSER_GRAHML]
-DEFAULT_PARSER = PARSER_GRAHML
-
-CONVERSION_FUNCTION_CALL_TREE = "call_tree"
-CONVERSION_FUNCTION_MODEL_FUNCTIONS = "model_functions"
-CONVERSION_FUNCTION_CONDITIONS = "conditions"
-CONVERSION_FULL = "full"
-CONVERSION_FUNCTIONS = [
-    CONVERSION_FUNCTION_CALL_TREE,
+EXPORTING_CONVERTED_FUNCTIONS = {
+    DEFAULT_CONVERSION_FUNCTION,
     CONVERSION_FUNCTION_MODEL_FUNCTIONS,
-    CONVERSION_FUNCTION_CONDITIONS,
-    CONVERSION_FULL
-]
-DEFAULT_CONVERSION_FUNCTION = CONVERSION_FUNCTION_MODEL_FUNCTIONS
-
-COMPARISON_FUNCTION_NO = "no"
-COMPARISON_FUNCTION_EQ = "eq"
-COMPARISON_FUNCTION_IN = "in"
-COMPARISON_FUNCTIONS = [
-    COMPARISON_FUNCTION_NO,
-    COMPARISON_FUNCTION_EQ,
-    COMPARISON_FUNCTION_IN
-]
-DEFAULT_COMPARISON_FUNCTION = COMPARISON_FUNCTION_EQ
-
-TAG_PARSER = "parser"
-TAG_CONVERSION_FUNCTION = "conversion function"
-TAG_COMPARISON_FUNCTION = "comparison function"
+    CONVERSION_FUNCTION_CALL_TREE,
+    CONVERSION_FUNCTION_NOTES
+}
 
 
 class MEA(Component):
@@ -57,76 +45,75 @@ class MEA(Component):
     where parser function parses the given file with error trace and returns its internal representation,
     conversion function transforms its internal representation (for example, by removing some elements) and
     comparison function compares its internal representation.
+    Definitions:
+    - parsed error trace - result of parser(et), et - file name with error trace (xml);
+    - converted error trace - result of conversion(pet), pet - parsed error trace.
     """
-    def __init__(self, general_config: dict, error_traces: list, rule: str, mea_config_file=None):
+    def __init__(self, general_config: dict, error_traces: list, install_dir: str, rule: str = ""):
         super(MEA, self).__init__(COMPONENT_MEA, general_config)
+        self.install_dir = install_dir
+        self.__export_et_parser_lib()
+        self.rule = rule
 
         # List of files with error traces.
         self.error_traces = error_traces
 
         # Config options.
-        self.parser = self.__get_option_for_rule(TAG_PARSER, DEFAULT_PARSER, rule)
-        self.conversion_function = \
-            self.__get_option_for_rule(TAG_CONVERSION_FUNCTION, DEFAULT_CONVERSION_FUNCTION, rule)
-        self.comparison_function = \
-            self.__get_option_for_rule(TAG_COMPARISON_FUNCTION, DEFAULT_COMPARISON_FUNCTION, rule)
+        self.parallel_processes = self.__get_option_for_rule(TAG_PARALLEL_PROCESSES, multiprocessing.cpu_count())
+        self.conversion_function = self.__get_option_for_rule(TAG_CONVERSION_FUNCTION, DEFAULT_CONVERSION_FUNCTION)
+        self.comparison_function = self.__get_option_for_rule(TAG_COMPARISON_FUNCTION, DEFAULT_COMPARISON_FUNCTION)
+        self.conversion_function_args = self.__get_option_for_rule(TAG_CONVERSION_FUNCTION_ARGUMENTS, {})
+        self.clean = self.__get_option_for_rule(TAG_CLEAN, True)
 
-        self.additional_model_functions = set()
-        if mea_config_file and os.path.exists(mea_config_file):
-            with open(mea_config_file, encoding='utf8', errors='ignore') as fd:
-                for line in fd.readlines():
-                    self.additional_model_functions.add(line.strip())
-
-        # Cache of internal representation (i.e. result of comparison(parser(et))) of filtered traces.
-        self.__internal_traces = list()
+        # Cache of filtered converted error traces.
+        self.__cache = dict()
 
         # CPU time of each operation.
-        self.parse_traces_time = 0.0
-        self.conversion_function_time = 0.0
-        self.comparison_function_time = 0.0
-
-    def __get_option_for_rule(self, tag: str, default_value: str, rule: str):
-        default = self.component_config.get(tag, default_value)
-        return self.component_config.get(rule, {}).get(tag, default)
-
-    def check_error_trace(self, error_trace: str) -> bool:
-        """
-        Check if error trace is correct.
-        """
-        root = self.parse(error_trace)
-        if not root:
-            return False
-        prefix = root.tag[:-len("graphml")]
-        if root.findall('./{0}graph/{0}node/{0}data[@key=\'violation\']'.format(prefix)):
-            return True
-        return False
-
-    def check_error_traces(self) -> bool:
-        """
-        Check if there is at least one correct error trace.
-        """
-        for error_trace in self.error_traces:
-            if self.check_error_trace(error_trace):
-                return True
-        return False
+        self.package_processing_time = 0.0
+        self.comparison_time = 0.0
 
     def filter(self) -> list:
         """
         Filter error trace with specified configuration and return filtered traces.
         """
+        self.logger.debug("Processing {} error traces".format(len(self.error_traces)))
 
-        if self.comparison_function == COMPARISON_FUNCTION_NO:
-            self.logger.debug("Skipping filtering of error traces")
-            return self.error_traces
+        start_time = time.time()
+        process_pool = list()
+        queue = multiprocessing.Queue()
+        converted_error_traces = multiprocessing.Manager().dict()
+        for i in range(self.parallel_processes):
+            process_pool.append(None)
+        for error_trace_file in self.error_traces:
+            try:
+                while True:
+                    for i in range(self.parallel_processes):
+                        if process_pool[i] and not process_pool[i].is_alive():
+                            process_pool[i].join()
+                            process_pool[i] = None
+                        if not process_pool[i]:
+                            process_pool[i] = multiprocessing.Process(target=self.__process_trace,
+                                                                      name=error_trace_file,
+                                                                      args=(error_trace_file,
+                                                                            converted_error_traces, queue))
+                            process_pool[i].start()
+                            raise NestedLoop
+                    time.sleep(BUSY_WAITING_INTERVAL)
+            except NestedLoop:
+                pass
+            except:
+                self.logger.error("Could not filter traces:", exc_info=True)
+                kill_launches(process_pool)
 
-        filtered_traces = []
+        wait_for_launches(process_pool)
+        self.__count_resource_usage(queue)
+        self.package_processing_time = time.time() - start_time
 
         # Need to sort traces for deterministic results.
         # Moreover, first traces are usually more "simpler".
         sorted_traces = {}
-        self.logger.debug("Sorting {} error traces".format(len(self.error_traces)))
-        for trace in self.error_traces:
-            identifier = re.search(r'witness\.(.*)\.graphml', trace).group(1)
+        for trace in converted_error_traces.keys():
+            identifier = re.search(r'witness\.(.*){}'.format(GRAPHML_EXTENSION), trace).group(1)
             key = identifier
             if identifier.isdigit():
                 try:
@@ -136,255 +123,249 @@ class MEA(Component):
             sorted_traces[key] = trace
         sorted_traces = sorted(sorted_traces.items(), key=operator.itemgetter(0))
 
+        process_pool = list()
+        for i in range(self.parallel_processes):
+            process_pool.append(None)
+
+        filtered_traces = []
         self.logger.debug("Filtering error traces")
-        for identifier, error_trace_file_name in sorted_traces:
-            internal_trace = self.parse(error_trace_file_name)
-            if not internal_trace:
+
+        start_time = time.time()
+        for identifier, error_trace_file in sorted_traces:
+            converted_trace = converted_error_traces[error_trace_file]
+            if not converted_trace:
                 continue
-            converted_trace = self.converse(internal_trace)
-            self.logger.debug("Converted error trace {} into {}".format(error_trace_file_name, converted_trace))
-            if not self.compare(converted_trace, error_trace_file_name):
-                filtered_traces.append(error_trace_file_name)
+            if not self.__compare(converted_trace, error_trace_file):
+                self.logger.debug("Filtered new error trace '{}'".format(error_trace_file))
+                filtered_traces.append(error_trace_file)
+
+                try:
+                    while True:
+                        for i in range(self.parallel_processes):
+                            if process_pool[i] and not process_pool[i].is_alive():
+                                process_pool[i].join()
+                                process_pool[i] = None
+                            if not process_pool[i]:
+                                process_pool[i] = multiprocessing.Process(target=self.__print_trace_archive,
+                                                                          name=error_trace_file,
+                                                                          args=(error_trace_file, ))
+                                process_pool[i].start()
+                                raise NestedLoop
+                        time.sleep(0.1)
+                except NestedLoop:
+                    pass
+                except:
+                    self.logger.error("Could not print filtered error traces: ", exc_info=True)
+                    kill_launches(process_pool)
+
+        self.comparison_time = time.time() - start_time
+        wait_for_launches(process_pool)
+
+        self.memory += int(resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss) * 1024
 
         self.logger.info("Filtering has been completed: {0} -> {1}".format(len(self.error_traces),
                                                                            len(filtered_traces)))
-        self.logger.debug("Parsing of error traces took {}s".format(round(self.parse_traces_time, 2)))
-        self.logger.debug("Applying conversion function took {}s".format(round(self.conversion_function_time, 2)))
-        self.logger.debug("Applying comparison function took {}s".format(round(self.comparison_function_time, 2)))
+        self.logger.debug("Package processing of error traces took {}s".format(round(self.package_processing_time, 2)))
+        self.logger.debug("Comparing error traces took {}s".format(round(self.comparison_time, 2)))
+        self.clear()
+        self.get_component_stats()
         return filtered_traces
 
-    def parse(self, xml_file: str):
+    def process_traces_without_filtering(self) -> bool:
         """
-        Parses error trace file and returns its internal representation.
-        :param xml_file: file with error trace.
-        :return: parsed xml or None in case of errors.
+        Process all traces (parse, create cache of converted functions, print results to archive) without filtering.
         """
-        functions = {
-            PARSER_GRAHML: self.__parser_graphml
-        }
-        start_time = time.process_time()
-        result = functions[self.parser](xml_file)
-        self.parse_traces_time += (time.process_time() - start_time)
-        return result
+        is_exported = False
+        for error_trace_file in self.error_traces:
+            converted_error_traces = dict()
+            if self.__process_trace(error_trace_file, converted_error_traces):
+                self.__print_trace_archive(error_trace_file)
+                is_exported = True
+        return is_exported
 
-    def __parser_graphml(self, xml_file: str):
-        """
-        Basic xml parser for graphml.
-        """
-        try:
-            tree = ElementTree()
-            tree.parse(xml_file)
-            return tree.getroot()
-        except Exception:
-            # There are a lot of empty traces for MEA, so this should be a debug print.
-            self.logger.debug("Parsing error trace {} has failed due to: ".format(xml_file), exc_info=True)
-            return None
+    def __process_trace(self, error_trace_file: str, converted_error_traces: dict, queue: multiprocessing.Queue = None):
+        parsed_error_trace = self.__parse_trace(error_trace_file)
+        if parsed_error_trace:
+            self.__process_parsed_trace(parsed_error_trace)
+            if self.clean:
+                os.remove(error_trace_file)
+            self.logger.debug("Trace '{0}' has been parsed".format(error_trace_file))
 
-    def converse(self, internal_trace: ElementTree) -> list:
-        """
-        Converse parsed xml representation of error trace into list of elements.
-        """
-        functions = {
-            CONVERSION_FUNCTION_MODEL_FUNCTIONS: self.__converse_model_functions,
-            CONVERSION_FUNCTION_CALL_TREE: self.__converse_call_tree_filter,
-            CONVERSION_FUNCTION_CONDITIONS: self.__converse_conditions,
-            CONVERSION_FULL: self.__converse_full
-        }
-        start_time = time.process_time()
-        result = functions[self.conversion_function](internal_trace)
-        self.conversion_function_time += (time.process_time() - start_time)
-        return result
+            converted_error_trace = convert_error_trace(parsed_error_trace, self.conversion_function,
+                                                        self.conversion_function_args)
+            self.__print_parsed_error_trace(parsed_error_trace, converted_error_trace, error_trace_file)
+            converted_error_traces[error_trace_file] = converted_error_trace
 
-    def __converse_call_tree_filter(self, internal_trace) -> list:
-        """
-        Extract function call tree from error trace.
-        """
-        prefix = internal_trace.tag[:-len("graphml")]
-        call_tree = [{"entry_point": _CALL}]
-        for data in internal_trace.findall('./{0}graph/{0}edge/{0}data'.format(prefix)):
-            key = data.attrib['key']
-            if key == 'enterFunction':
-                function_call = data.text
-                call_tree.append({function_call: _CALL})
-            elif key == 'returnFrom':
-                function_return = data.text
-                call_tree.append({function_return: _RET})
-        return call_tree
+        if queue:
+            user_time, system_time, memory = resource.getrusage(resource.RUSAGE_SELF)[0:3]
+            queue.put({
+                TAG_CPU_TIME: float(user_time + system_time),
+                TAG_MEMORY_USAGE: int(memory) * 1024
+            })
+            sys.exit(0)
+        else:
+            return bool(parsed_error_trace)
 
-    def __converse_full(self, internal_trace) -> list:
+    def __compare(self, converted_trace: list, file_name: str) -> bool:
         """
-        Extract list of all conditions from error trace.
+        Compare converted error traces.
         """
-        prefix = internal_trace.tag[:-len("graphml")]
-        trace = []
-        for edge in internal_trace.findall('./{0}graph/{0}edge'.format(prefix)):
-            assume_type = None
-            source_code = None
-            for data in edge.findall('./{0}data'.format(prefix)):
-                key = data.attrib['key']
-                if key == 'control':
-                    if data.text == "condition-true":
-                        assume_type = _ASSUME_TRUE
-                    elif data.text == "condition-false":
-                        assume_type = _ASSUME_FALSE
-                elif key == 'sourcecode':
-                    source_code = data.text
-                elif key == 'enterFunction':
-                    function_call = data.text
-                    trace.append({function_call: _CALL})
-                elif key == 'returnFrom':
-                    function_return = data.text
-                    trace.append({function_return: _RET})
-            if assume_type:
-                trace.append({source_code: assume_type})
-        return trace
+        equivalent_trace = None
+        for filtered_file_name, filtered_converted_trace in self.__cache.items():
+            compare_result = compare_error_traces(converted_trace, filtered_converted_trace, self.comparison_function)
+            if is_equivalent(compare_result, DEFAULT_SIMILARITY_THRESHOLD):
+                equivalent_trace = filtered_file_name
+                break
 
-    def __converse_conditions(self, internal_trace) -> list:
-        """
-        Extract list of all conditions from error trace.
-        """
-        prefix = internal_trace.tag[:-len("graphml")]
-        assumes = []
-        for edge in internal_trace.findall('./{0}graph/{0}edge'.format(prefix)):
-            assume_type = None
-            source_code = None
-            for data in edge.findall('./{0}data'.format(prefix)):
-                key = data.attrib['key']
-                if key == 'control':
-                    if data.text == "condition-true":
-                        assume_type = _ASSUME_TRUE
-                    elif data.text == "condition-false":
-                        assume_type = _ASSUME_FALSE
-                elif key == 'sourcecode':
-                    source_code = data.text
-            if assume_type:
-                assumes.append({source_code: assume_type})
-        return assumes
-
-    def __converse_model_functions(self, internal_trace) -> list:
-        """
-        Convert error trace into model functions call tree.
-        """
-        prefix = internal_trace.tag[:-len("graphml")]
-
-        model_functions = self.additional_model_functions.union(self.__get_model_functions(internal_trace, prefix))
-
-        call_tree = [{"entry_point": _CALL}]
-        for data in internal_trace.findall('./{0}graph/{0}edge/{0}data'.format(prefix)):
-            key = data.attrib['key']
-            if key == 'enterFunction':
-                function_call = data.text
-                call_tree.append({function_call: _CALL})
-            elif key == 'returnFrom':
-                function_return = data.text
-                if function_return in model_functions:
-                    call_tree.append({function_return: _RET})
-                else:
-                    # Check from the last call of that function.
-                    is_save = False
-                    sublist = []
-                    for elem in reversed(call_tree):
-                        sublist.append(elem)
-                        func_name = list(elem.keys()).__getitem__(0)
-                        for mf in model_functions:
-                            if func_name.__contains__(mf):
-                                is_save = True
-                        if elem == {function_return: _CALL}:
-                            sublist.reverse()
-                            break
-                    if is_save:
-                        call_tree.append({function_return: _RET})
-                    else:
-                        call_tree = call_tree[:-sublist.__len__()]
-        return call_tree
-
-    def __get_model_functions(self, internal_trace, prefix: str) -> set:
-        """
-        Extract model functions from error trace.
-        """
-        stack = list()
-        model_functions = set()
-        for data in internal_trace.findall('./{0}graph/{0}edge/{0}data'.format(prefix)):
-            key = data.attrib['key']
-            if key == 'enterFunction':
-                func = data.text
-                stack.append(func)
-            elif key == 'returnFrom':
-                func = data.text  # check the name of the function?
-                if stack:
-                    stack.pop()
-                else:
-                    self.logger.warning("Return from function '{}' with no function call in error trace".format(func))
-            elif key == 'warning':
-                if len(stack) > 0:
-                    model_functions.add(stack[len(stack) - 1])
-            elif key == 'note':
-                if len(stack) > 0:
-                    model_functions.add(stack[len(stack) - 1])
-        return model_functions
-
-    def compare(self, converted_trace: list, file_name: str) -> bool:
-        """
-        Compare internal representation of error traces.
-        """
-        functions = {
-            COMPARISON_FUNCTION_EQ: self.__compare_eq,
-            COMPARISON_FUNCTION_IN: self.__compare_in
-        }
-        start_time = time.process_time()
-        equivalent_trace = functions[self.comparison_function](converted_trace)
         if equivalent_trace:
-            self.logger.debug("Error trace {} is equivalent to already filtered error trace {}".
+            self.logger.debug("Error trace '{}' is equivalent to already filtered error trace '{}'".
                               format(file_name, equivalent_trace))
             equivalent = True
         else:
-            self.__internal_traces.append((converted_trace, file_name))
+            self.__cache[file_name] = converted_trace
             equivalent = False
-        self.comparison_function_time += (time.process_time() - start_time)
         return equivalent
 
-    def __compare_eq(self, new_converted_trace: list) -> str:
-        """
-        Error traces are equivalent if their internal representation is equal.
-        """
-        for filtered_converted_trace, filtered_file_name in self.__internal_traces:
-            if filtered_converted_trace == new_converted_trace:
-                return filtered_file_name
-        return ""
+    def __print_trace_archive(self, error_trace_file_name: str):
+        json_trace_name, source_files, converted_traces_files = self.__get_aux_file_names(error_trace_file_name)
+        archive_name = error_trace_file_name[:-len(GRAPHML_EXTENSION)] + ARCHIVE_EXTENSION
+        with zipfile.ZipFile(archive_name, mode='w') as zfp:
+            zfp.write(json_trace_name, arcname=ERROR_TRACE_FILE)
+            zfp.write(source_files, arcname=ERROR_TRACE_SOURCES)
+            zfp.write(converted_traces_files, arcname=CONVERTED_ERROR_TRACES)
+        os.remove(json_trace_name)
+        os.remove(source_files)
+        os.remove(converted_traces_files)
 
-    def __compare_in(self, new_converted_trace: list) -> str:
+    def __process_parsed_trace(self, parsed_error_trace: dict):
+        # Normalize source paths.
+        src_files = list()
+        for src_file in parsed_error_trace['files']:
+            src_file = os.path.normpath(src_file)
+            src_files.append(src_file)
+        parsed_error_trace['files'] = src_files
 
-        """
-        Error traces are equivalent if new trace is included in the old trace.
-        """
-        # TODO: not implemented.
-        raise NotImplementedError
+        # Add missing thread numbers and potentially missing warnings.
+        if self.rule not in [RULE_RACES] + DEADLOCK_SUB_PROPERTIES:
+            is_main_process = False
+            is_warn = False
+            edge = None
+            for edge in parsed_error_trace['edges']:
+                if not is_main_process and 'enter' in edge:
+                    is_main_process = True
+                elif not is_warn and 'warn' in edge:
+                    is_warn = True
+                if is_main_process:
+                    edge['thread'] = '1'
+                else:
+                    edge['thread'] = '0'
+            if not is_warn and edge:
+                edge['warn'] = 'Auto generated error message'
+
+    def __parse_trace(self, error_trace_file: str) -> dict:
+        # noinspection PyUnresolvedReferences
+        from core.vrp.et import import_error_trace
+
+        # Those messages are waste of space.
+        logger = logging.getLogger(name="Klever")
+        logger.setLevel(logging.ERROR)
+        try:
+            return import_error_trace(logger, error_trace_file)
+        except:
+            # There are empty (or not fully printed) error traces, for which we do not want this output.
+            self.logger.debug("Trace '{0}' can not by parsed due to: ".format(error_trace_file), exc_info=True)
+            return {}
+
+    def __print_parsed_error_trace(self, parsed_error_trace: dict, converted_error_trace: list, error_trace_file: str):
+        json_trace_name, source_files, converted_traces_files = self.__get_aux_file_names(error_trace_file)
+
+        with open(json_trace_name, 'w', encoding='utf8') as fp:
+            json.dump(parsed_error_trace, fp, ensure_ascii=False, sort_keys=True, indent=4)
+
+        with open(source_files, 'w', encoding='utf8') as fp:
+            json.dump(parsed_error_trace['files'], fp, ensure_ascii=False, sort_keys=True, indent=4)
+
+        converted_traces = dict()
+        for conversion_function in EXPORTING_CONVERTED_FUNCTIONS:
+            if conversion_function == self.conversion_function and not self.conversion_function_args:
+                converted_traces[conversion_function] = converted_error_trace
+            else:
+                # Important note: here we create converted error trace without params.
+                converted_traces[conversion_function] = \
+                    convert_error_trace(parsed_error_trace, conversion_function, {})
+        with open(converted_traces_files, 'w', encoding='utf8') as fp:
+            json.dump(converted_traces, fp, ensure_ascii=False, sort_keys=True, indent=4)
+
+    def __get_aux_file_names(self, error_trace_file: str) -> tuple:
+        # Returns the following files: json_trace, source_files, converted_traces
+        common_part = error_trace_file[:-len(GRAPHML_EXTENSION)] + "_"
+        json_trace_name = common_part + JSON_EXTENSION
+        source_files = common_part + ERROR_TRACE_SOURCES
+        converted_traces_files = common_part + CONVERTED_ERROR_TRACES
+        return json_trace_name, source_files, converted_traces_files
+
+    def __count_resource_usage(self, queue: multiprocessing.Queue):
+        memory_usage_all = []
+        children_memory = 0
+        while not queue.empty():
+            resources = queue.get()
+            memory_usage_all.append(resources.get(TAG_MEMORY_USAGE, 0))
+            self.cpu_time += resources.get(TAG_CPU_TIME, 0.0)
+        for memory_usage in sorted(memory_usage_all)[:self.parallel_processes]:
+            children_memory += memory_usage
+        process_memory = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) * 1024
+        self.memory = max(process_memory + children_memory, self.memory)
+
+    def __get_option_for_rule(self, tag: str, default_value):
+        default = self.component_config.get(tag, default_value)
+        return self.component_config.get(self.rule, {}).get(tag, default)
+
+    def __export_et_parser_lib(self):
+        et_parser_lib = self.get_tool_path(DEFAULT_TOOL_PATH[ET_LIB], self.config.get(TAG_TOOLS, {}).get(ET_LIB))
+        sys.path.append(et_parser_lib)
+
+    def clear(self):
+        if self.error_traces:
+            work_dir = os.path.dirname(self.error_traces[0])
+            for file in glob.glob(os.path.join(work_dir, "*{}".format(JSON_EXTENSION))):
+                os.remove(file)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--conversion", help="conversion function", required=False, default=DEFAULT_CONVERSION_FUNCTION)
     parser.add_argument("--comparison", help="comparison function", required=False, default=DEFAULT_COMPARISON_FUNCTION)
-    parser.add_argument("--parser", help="parser", required=False, default=DEFAULT_PARSER)
-    parser.add_argument("--model-functions-file", dest='mf', help="file with additional model functions",
-                        required=False)
-    parser.add_argument("--directory", help="directory with error traces", required=True)
-    parser.add_argument('--debug', '-d', action='store_true')
+    parser.add_argument("--additional-model-functions", dest='mf', nargs='+',
+                        help="add model functions, separated by whitespace", required=False)
+    parser.add_argument("--directory", "-d", help="directory with error traces", required=True)
+    parser.add_argument("--rule", "-r", help="rule specification, which is violated by traces", default="")
+    parser.add_argument('--debug', action='store_true')
 
     options = parser.parse_args()
+
+    args = dict()
+    if options.mf:
+        args[TAG_ADDITIONAL_MODEL_FUNCTIONS] = options.mf
 
     config = {
         COMPONENT_MEA: {
             TAG_COMPARISON_FUNCTION: options.comparison,
             TAG_CONVERSION_FUNCTION: options.conversion,
-            TAG_PARSER: options.parser,
-            TAG_DEBUG: options.debug
+            TAG_CONVERSION_FUNCTION_ARGUMENTS: args,
+            TAG_DEBUG: options.debug,
+            TAG_CLEAN: False
         }
     }
 
-    import glob
-    traces = glob.glob(os.path.join(options.directory, "witness*"))
-    mea = MEA(config, traces, "", options.mf)
+    traces = glob.glob(os.path.join(options.directory, "witness.*{}".format(GRAPHML_EXTENSION)))
+
+    install_dir = os.path.abspath(DEFAULT_INSTALL_DIR)
+    if not os.path.exists(install_dir):
+        install_dir = os.path.abspath(os.path.join(os.pardir, DEFAULT_INSTALL_DIR))
+
+    mea = MEA(config, traces, install_dir, options.rule)
+    mea.clear()
+
     traces = mea.filter()
     mea.logger.info("Filtered traces:")
     for filtered_trace in traces:

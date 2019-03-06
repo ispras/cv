@@ -3,7 +3,6 @@
 import argparse
 import glob
 import json
-import logging
 import multiprocessing
 import re
 import resource
@@ -28,7 +27,6 @@ TAG_ADD_VERIFIER_LOGS = "add verifier logs"
 TAG_SOURCE_FILES = "source files"
 
 DEFAULT_SOURCES_ARCH = "sources.zip"
-SRC_FILES = "src.files"
 
 
 class Exporter(Component):
@@ -36,13 +34,6 @@ class Exporter(Component):
         super(Exporter, self).__init__(COMPONENT_EXPORTER, config)
         self.work_dir = work_dir
         self.install_dir = install_dir
-
-        klever_core_path = self.get_tool_path(DEFAULT_TOOL_PATH[WEB_INTERFACE],
-                                              config.get(TAG_TOOLS, {}).get(WEB_INTERFACE))
-        sys.path.append(klever_core_path)
-        benchexec_path = self.get_tool_path(DEFAULT_TOOL_PATH[BENCHEXEC], config.get(TAG_TOOLS, {}).get(BENCHEXEC))
-        sys.path.append(os.path.join(benchexec_path, os.pardir))
-
         self.version = self.component_config.get(TAG_VERSION)
         self.add_logs = self.component_config.get(TAG_ADD_VERIFIER_LOGS, True)
         self.lock = multiprocessing.Lock()
@@ -71,88 +62,7 @@ class Exporter(Component):
         component['attrs'] = []
         return component
 
-    def __export_single_trace(self, witness, identifier, rule, report_files_archive_abs, queue: multiprocessing.Queue):
-
-        # noinspection PyUnresolvedReferences
-        from core.vrp.et import import_error_trace
-
-        cur_dir = os.getcwd()
-        tmp_dir = os.path.abspath(tempfile.mkdtemp(dir=cur_dir))
-        os.chdir(tmp_dir)
-        witness_processed = 'witness.{}.graphml'.format(identifier)
-
-        # Those messages are waste of space.
-        logger = logging.getLogger(name="Klever")
-        logger.setLevel(logging.ERROR)
-        src = set()
-
-        try:
-            shutil.copy(witness, witness_processed)
-            trace_json = import_error_trace(logger, witness_processed)
-            if not self.debug:
-                os.remove(witness_processed)
-            src_files = list()
-            for src_file in trace_json['files']:
-                src_file = os.path.normpath(src_file)
-                src_files.append(src_file)
-                if os.path.exists(src_file):
-                    src.add(src_file)
-            trace_json['files'] = src_files
-
-            if rule not in [RULE_RACES] + DEADLOCK_SUB_PROPERTIES:
-                self.__process_single_trace(trace_json)
-            with open(ERROR_TRACE_FILE, 'w', encoding='utf8') as fp:
-                json.dump(trace_json, fp, ensure_ascii=False, sort_keys=True, indent=4)
-            with zipfile.ZipFile(report_files_archive_abs, mode='w') as zfp:
-                zfp.write(ERROR_TRACE_FILE, arcname="error trace.json")
-            if os.path.exists(ERROR_TRACE_FILE) and not self.debug:
-                os.remove(ERROR_TRACE_FILE)
-
-            self.logger.debug("Trace {0} has been processed".format(witness))
-        except:
-            self.logger.warning("Trace {0} is incorrect, skipping it".format(witness), exc_info=True)
-
-        os.chdir(cur_dir)
-        if not self.debug:
-            shutil.rmtree(tmp_dir, ignore_errors=True)
-        utime, stime, memory = resource.getrusage(resource.RUSAGE_SELF)[0:3]
-        self.lock.acquire()
-        with open(SRC_FILES, "a") as fd:
-            for file in src:
-                fd.write(file + "\n")
-        self.lock.release()
-        queue.put({
-            TAG_CPU_TIME: float(utime + stime),
-            TAG_MEMORY_USAGE: int(memory) * 1024
-        })
-        sys.exit(0)
-
-    # Add warnings and thread number
-    def __process_single_trace(self, parsed_trace: dict):
-        is_main_process = False
-        is_warn = False
-        edge = None
-        for edge in parsed_trace['edges']:
-            if not is_main_process and 'enter' in edge:
-                is_main_process = True
-            elif not is_warn and 'warn' in edge:
-                    is_warn = True
-            if is_main_process:
-                edge['thread'] = '1'
-            else:
-                edge['thread'] = '0'
-        if not is_warn and edge:
-            edge['warn'] = 'Auto generated error message'
-
-    def __count_resource_usage(self, queue: multiprocessing.Queue):
-        iteration_memory = 0
-        while not queue.empty():
-            resources = queue.get()
-            iteration_memory += resources[TAG_MEMORY_USAGE]
-            self.cpu_time += round(float(resources[TAG_CPU_TIME]) * 1000)
-        self.memory = max(self.memory, iteration_memory)
-
-    def export_traces(self, report_launches: str, report_components: str, archive_name: str, logs=dict()):
+    def export_traces(self, report_launches: str, report_components: str, archive_name: str, logs: dict = dict):
         start_wall_time = time.time()
         overall_wall = 0  # Launcher + Exporter.
         overall_cpu = 0  # Sum of all components.
@@ -242,13 +152,10 @@ class Exporter(Component):
             verifier_counter = 0
 
             unknowns = {}  # cache of unknowns to prevent duplicating reports.
-            unsafes = []  # archives with error traces.
+            unsafes = {}  # archives with error traces.
 
             # Process several error traces in parallel.
-            process_pool = []
-            queue = multiprocessing.Queue()
-            for i in range(max_cores):
-                process_pool.append(None)
+            source_files = set()
             with open(report_launches, encoding='utf8', errors='ignore') as fp:
                 for line in fp.readlines():
                     # <subsystem>;<rule id>;<entrypoint>;<verdict>;<termination reason>;<CPU (s)>;<wall (s)>;
@@ -307,7 +214,7 @@ class Exporter(Component):
                         overall_cpu += cpu
                         max_memory = max(max_memory, mem)
                         reports.append(verification_element)
-                        witnesses = glob.glob("{}/*.graphml".format(work_dir))
+                        witnesses = glob.glob("{}/witness.*{}".format(work_dir, ARCHIVE_EXTENSION))
                         for witness in witnesses:
                             unsafe_element = {}
                             unsafe_element['parent id'] = "/CPAchecker_{}".format(verifier_counter)
@@ -323,42 +230,23 @@ class Exporter(Component):
                                 self.__format_attr("Found all traces", str(found_all_traces)),
                                 self.__format_attr("Filtering time", str(filter_cpu))
                             ]
-                            m = re.search(r'witness\.(.*)\.graphml', witness)
-                            identifier = m.group(1)
 
                             archive_id = "unsafe_{}".format(trace_counter)
                             trace_counter += 1
                             report_files_archive = archive_id + ".zip"
-                            report_files_archive_abs = os.path.abspath(report_files_archive)
-
-                            try:
-                                while True:
-                                    for i in range(max_cores):
-                                        if process_pool[i] and not process_pool[i].is_alive():
-                                            process_pool[i].join()
-                                            process_pool[i] = None
-                                        if not process_pool[i]:
-                                            process_pool[i] = multiprocessing.Process(target=self.__export_single_trace,
-                                                                                      name=witness,
-                                                                                      args=(witness, identifier, rule,
-                                                                                            report_files_archive_abs,
-                                                                                            queue))
-                                            process_pool[i].start()
-                                            raise NestedLoop
-                                    time.sleep(BUSY_WAITING_INTERVAL)
-                                    self.__count_resource_usage(queue)
-                            except NestedLoop:
-                                pass
-                            except:
-                                self.logger.error("Could not export results:", exc_info=True)
-                                kill_launches(process_pool)
 
                             unsafe_element['id'] = "/CPAchecker/" + archive_id
                             unsafe_element['attrs'] = attrs
                             unsafe_element['error traces'] = [report_files_archive]
                             unsafe_element['sources'] = DEFAULT_SOURCES_ARCH
                             reports.append(unsafe_element)
-                            unsafes.append(report_files_archive_abs)
+                            unsafes[report_files_archive] = witness
+
+                            try:
+                                src = json.loads(zipfile.ZipFile(witness, 'r').read(ERROR_TRACE_SOURCES).decode())
+                                source_files.update(src)
+                            except:
+                                self.logger.warning("Cannot process sources: ", exc_info=True)
 
                         if not witnesses or incomplete_result:
                             other_element = dict()
@@ -421,14 +309,11 @@ class Exporter(Component):
 
                         verifier_counter += 1
 
-                wait_for_launches(process_pool)
-
                 failed_reports = 0
-                for unsafe in unsafes:
-                    base_name = os.path.basename(unsafe)
-                    if os.path.exists(unsafe):
-                        final_zip.write(unsafe, arcname=base_name)
-                        os.remove(unsafe)
+                for base_name, abs_path in unsafes.items():
+                    if os.path.exists(abs_path):
+                        final_zip.write(abs_path, arcname=base_name)
+                        os.remove(abs_path)
                     else:
                         # delete corresponding record.
                         for report in reports:
@@ -450,7 +335,6 @@ class Exporter(Component):
                         report["attrs"].append(self.__format_attr("Filtered traces", str(mea_overall_filtered_traces)))
                         break
 
-                self.__count_resource_usage(queue)
                 if failed_reports:
                     self.logger.warning("Failed error traces: {0} of {1}".format(failed_reports, len(unsafes)))
                 self.memory += int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) * 1024
@@ -468,16 +352,11 @@ class Exporter(Component):
                     "wall time": overall_wall
                 }
                 reports.append(root_element)
-                src = set()
-                if os.path.exists(SRC_FILES):
-                    with open(SRC_FILES, "r") as fd:
-                        for line in fd.readlines():
-                            line = line.rstrip()
-                            src.add(os.path.normpath(line))
-                    with zipfile.ZipFile(DEFAULT_SOURCES_ARCH, mode='w') as zfp:
-                        for src_file in src:
-                            zfp.write(src_file)
-                    final_zip.write(DEFAULT_SOURCES_ARCH)
+                with zipfile.ZipFile(DEFAULT_SOURCES_ARCH, mode='w') as zfp:
+                    for src_file in source_files:
+                        zfp.write(src_file)
+                final_zip.write(DEFAULT_SOURCES_ARCH)
+                os.remove(DEFAULT_SOURCES_ARCH)
 
                 with open(FINAL_REPORT, 'w', encoding='utf8') as f_results:
                     json.dump(reports, f_results, ensure_ascii=False, sort_keys=True, indent=4)
