@@ -35,7 +35,7 @@ include $(root_dir)/cpa.config
 
 download-klever:
 	@$(call download_tool,${klever},${klever_dir},${klever_repo})
-	@cd ${klever_dir}; git checkout cv-v2.0
+	@cd ${klever_dir}; git checkout cv-v2.0; git pull
 
 download-benchexec:
 	@$(call download_tool,${benchexec},${benchexec_dir},${benchexec_repo})
