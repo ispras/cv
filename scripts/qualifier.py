@@ -1,12 +1,11 @@
 import json
 import os
-import shutil
 import sys
+import traceback
 
 from builder import Builder
 from component import Component
-from config import COMPONENT_QUALIFIER, DEFAULT_TOOL_PATH, CIF, TAG_CLADE_CONF, CLADE_BASE_FILE, \
-    CLADE_DEFAULT_CONFIG_FILE, CLADE_WORK_DIR, CLADE_CALLGRAPH, JSON_EXTENSION
+from config import COMPONENT_QUALIFIER, DEFAULT_TOOL_PATH, CIF, CLADE_BASE_FILE, CLADE_WORK_DIR, JSON_EXTENSION
 
 DEFAULT_CALLGRAPH_FILE = "callgraph.json"
 TAG_CACHE = "cached call graph"
@@ -19,13 +18,6 @@ class Qualifier(Component):
         self.source_dir = builder.source_dir
         self.builder = builder
 
-        self.clade_conf = self.component_config.get(TAG_CLADE_CONF, None)
-        if self.clade_conf:
-            if not os.path.exists(self.clade_conf):
-                sys.exit("Specified clade config file '{}' does not exist".format(self.clade_conf))
-        else:
-            self.clade_conf = os.path.join(os.getcwd(), CLADE_DEFAULT_CONFIG_FILE)
-
         os.chdir(self.source_dir)
 
         path_cif = self.get_tool_path(DEFAULT_TOOL_PATH[CIF])
@@ -35,21 +27,19 @@ class Qualifier(Component):
         cached_result = self.component_config.get(TAG_CACHE, None)
         if cached_result and os.path.exists(cached_result):
             self.result = cached_result
+            with open(self.result, "r", errors='ignore') as fh:
+                self.content = json.load(fh)
         else:
             self.logger.debug("Using Clade tool to obtain function call tree")
-            clade_cc_cmd = "{} -w {} -c {} {}".format(CLADE_CALLGRAPH, CLADE_WORK_DIR, self.clade_conf, CLADE_BASE_FILE)
-            log_file = os.path.join(self.work_dir, "qualifier.log")
-            if self.runexec_wrapper(clade_cc_cmd, output_file=log_file):
-                sys.exit("Clade-callgraph has failed. See details in '{}'".format(log_file))
-            callgraph_file = os.path.abspath(os.path.join(CLADE_WORK_DIR, "Callgraph", DEFAULT_CALLGRAPH_FILE))
-            self.result = os.path.join(self.work_dir, DEFAULT_CALLGRAPH_FILE)
-            if not os.path.exists(callgraph_file):
-                sys.exit("Result of clade-callgraph does not exist '{}'".format(callgraph_file))
-            shutil.copy(callgraph_file, self.result)
-            self.logger.info("Clade successfully obtained call graph in file '{}'".format(self.result))
-
-        with open(self.result, "r", errors='ignore') as fh:
-            self.content = json.load(fh)
+            try:
+                from clade import Clade
+                c = Clade(CLADE_WORK_DIR, CLADE_BASE_FILE)
+                c.parse_all()
+                self.content = c.get_callgraph()
+            except Exception:
+                error_msg = "Clade has failed: {}".format(traceback.format_exc())
+                sys.exit(error_msg)
+            self.logger.info("Clade successfully obtained call graph")
 
         self.logger.debug("Reading files with description of entry points")
         self.entrypoints = set()
@@ -106,4 +96,4 @@ class Qualifier(Component):
 
     def stop(self):
         del self.content
-        return self.get_component_stats()
+        return self.get_component_full_stats()

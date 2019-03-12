@@ -21,7 +21,6 @@ DEADLOCK = "deadlocks"
 TERMINATION = "termination"
 CIF = "cif"
 CLADE = "clade"
-CLADE_CALLGRAPH = "clade-callgraph"
 UPLOADER = "uploader"
 DEFAULT_TOOL_PATH = {
     CIL: ["astraver-cil/bin/toplevel.opt", "cil/obj/x86_LINUX/cilly.asm.exe", "cil/bin/cilly.native"],
@@ -132,6 +131,5 @@ TAG_SUBSYSTEM = "subsystem"
 
 CLADE_WORK_DIR = "clade-work-dir"
 CLADE_BASE_FILE = "cmds.txt"
-CLADE_DEFAULT_CONFIG_FILE = "clade_conf.json"
 
 TAG_SOURCES = "sources"
