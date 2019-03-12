@@ -71,6 +71,7 @@ class Preparator(Component):
         self.use_cil = self.component_config.get(TAG_USE_CIL, True)
         self.max_num = self.component_config.get(TAG_MAX_FILES_NUM, sys.maxsize)
         self.compiler = self.component_config.get(TAG_PREPROCESSOR, "gcc")
+        self.use_cif = bool(re.search(CIF, self.compiler))
         self.aspect = self.component_config.get(TAG_ASPECT, None)
         self.extra_opts = set(self.component_config.get(TAG_EXTRA_OPTIONS, []))
         self.unsupported_opts_regex = re.compile(r"unrecognized command line option [‘«\"](.*?)[’»\"]")
@@ -224,7 +225,7 @@ class Preparator(Component):
 
         os.makedirs(os.path.dirname(cif_out), exist_ok=True)
 
-        if re.search('cif', self.compiler):
+        if self.use_cif:
             # Use CIF as a compiler.
             cif_args = [self.compiler,
                         "--in", cif_in,
@@ -248,6 +249,9 @@ class Preparator(Component):
         opts = [re.sub(r'\"', r'\\"', opt) for opt in opts]
         cif_unsupported_opts = preprocessor_deps_opts + self.preparation_config.get(CONF_UNSUPPORTED_OPTIONS, [])
         opts = filter_opts(opts, cif_unsupported_opts)
+        if self.use_cif:
+            from clade.extensions.opts import filter_opts as cif_filter_opts
+            opts = cif_filter_opts(opts)
         cif_args.extend(opts)
 
         self.logger.debug(" ".join(cif_args))
