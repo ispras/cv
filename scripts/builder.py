@@ -3,14 +3,14 @@
 import json
 import os
 import re
-import subprocess
 import shutil
+import subprocess
 import sys
+import traceback
 
 from component import Component
-from config import CLADE_CC, CLADE_INTERCEPT, COMPONENT_BUILDER, TAG_CLADE_CONF, \
-    TAG_MAKE_COMMAND, TAG_FAIL_IF_FAILURE, CLADE_BASE_FILE, CLADE_DEFAULT_CONFIG_FILE, CLADE_WORK_DIR, \
-    TAG_MAKE_CLEAN_COMMAND
+from config import COMPONENT_BUILDER, TAG_CLADE_CONF, TAG_MAKE_COMMAND, TAG_FAIL_IF_FAILURE, CLADE_BASE_FILE, \
+    CLADE_WORK_DIR, TAG_MAKE_CLEAN_COMMAND
 
 REPOSITORY_GIT = "git"
 REPOSITORY_SVN = "svn"
@@ -50,14 +50,7 @@ class Builder(Component):
         else:
             self.is_build = True
 
-        self.clade_conf = builder_config.get(TAG_CLADE_CONF, None)
-        if self.clade_conf:
-            if not os.path.exists(self.clade_conf):
-                sys.exit("Specified clade config file '{}' does not exist".format(self.clade_conf))
-        else:
-            with open(CLADE_DEFAULT_CONFIG_FILE, "w") as fd:
-                json.dump(CLADE_BASIC_CONFIG, fd, sort_keys=True, indent=4)
-            self.clade_conf = os.path.join(os.getcwd(), CLADE_DEFAULT_CONFIG_FILE)
+        self.clade_conf = builder_config.get(TAG_CLADE_CONF, CLADE_BASIC_CONFIG)
 
         self.make_command = builder_config.get(TAG_MAKE_COMMAND, DEFAULT_MAKE)
         self.make_clean_command = builder_config.get(TAG_MAKE_CLEAN_COMMAND, DEFAULT_MAKE_CLEAN)
@@ -203,21 +196,25 @@ class Builder(Component):
             self.logger.warning("Make clean failed")
 
         self.logger.debug("Using Clade tool to build sources with '{}'".format(self.make_command))
-        log_file = os.path.join(self.work_dir, "builder.log")
-        for var, value in self.env.items():
-            os.environ[var] = value
-        if self.runexec_wrapper("{} {}".format(CLADE_INTERCEPT, self.make_command), output_file=log_file):
-            error_msg = "Building has failed. See details in '{}'".format(log_file)
+        try:
+            from clade import Clade
+            c = Clade(CLADE_WORK_DIR, CLADE_BASE_FILE, conf=self.clade_conf)
+            c.intercept(str(self.make_command).split())
+            c.parse("SrcGraph")
+            cmds = c.compilation_cmds
+            for cmd in cmds:
+                identifier = cmd['id']
+                cmd['command'] = c.get_cmd_raw(identifier)[0]
+                cmd['opts'] = c.get_cmd_opts(identifier)
+            with open(build_commands_file, "w") as fd:
+                json.dump(cmds, fd, sort_keys=True, indent=4)
+        except Exception:
+            error_msg = "Building has failed due to: {}".format(traceback.format_exc())
             if self.fail_if_failure:
                 sys.exit(error_msg)
             else:
                 self.logger.warning(error_msg)
 
-        log_file = os.path.join(self.work_dir, "clade.log")
-        clade_cc_cmd = "{} -w {} -c {} {}".format(CLADE_CC, CLADE_WORK_DIR, self.clade_conf, CLADE_BASE_FILE)
-        if self.runexec_wrapper(clade_cc_cmd, output_file=log_file):
-            sys.exit("Clade has failed. See details in '{}'".format(log_file))
-        shutil.copy(os.path.join(CLADE_WORK_DIR, "CC", "cmds.json"), build_commands_file)
         os.chdir(self.work_dir)
         self.logger.info("Sources has been successfully built")
 
