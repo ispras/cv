@@ -340,28 +340,36 @@ class Preparator(Component):
         self.logger.debug("Start parsing build commands")
         prev_cwd = os.getcwd()
         for source_dir, build_commands in self.build_results.items():
-            with open(build_commands, "r", errors='ignore') as bc_fh:
-                bc_json = json.load(bc_fh)
+            if build_commands and os.path.exists(build_commands):
+                with open(build_commands, "r", errors='ignore') as bc_fh:
+                    bc_json = json.load(bc_fh)
+            else:
+                from clade import Clade
+                cur_dir = os.getcwd()
+                os.chdir(source_dir)
+                c = Clade(CLADE_WORK_DIR, CLADE_BASE_FILE)
+                bc_json = c.get_compilation_cmds(with_opts=True, with_raw=True)
+                os.chdir(cur_dir)
 
-                number_of_commands = len(bc_json)
-                if number_of_commands == 0:
-                    sys.exit("Specified json file doesn't contain valid cc or ld commands")
-                self.logger.debug("Found {} build commands".format(number_of_commands))
+            number_of_commands = len(bc_json)
+            if number_of_commands == 0:
+                sys.exit("Specified json file doesn't contain valid cc or ld commands")
+            self.logger.debug("Found {} build commands".format(number_of_commands))
 
-                # TODO: Need to prevent none-deterministic issues.
-                for command in bc_json:
-                    if "command" not in command:
-                        sys.exit("Can't find 'command' field in the next build command: {}".format(command))
-                    elif "in" not in command:
-                        sys.exit("Can't find 'in' field in build command: {}".format(command))
-                    elif "out" not in command:
-                        sys.exit("Can't find 'out' field in build command: {}".format(command))
+            # TODO: Need to prevent none-deterministic issues.
+            for command in bc_json:
+                if "command" not in command:
+                    sys.exit("Can't find 'command' field in the next build command: {}".format(command))
+                elif "in" not in command:
+                    sys.exit("Can't find 'in' field in build command: {}".format(command))
+                elif "out" not in command:
+                    sys.exit("Can't find 'out' field in build command: {}".format(command))
 
-                    ret, files = self.process_cc_command(command, source_dir)
-                    if not ret:
-                        processed_files.extend(files)
-                    elif files:
-                        failed_files.extend(files)
+                ret, files = self.process_cc_command(command, source_dir)
+                if not ret:
+                    processed_files.extend(files)
+                elif files:
+                    failed_files.extend(files)
 
         for aux_file, stage in self.aux_files.items():
             if stage != STAGE_PREPROCESS:
