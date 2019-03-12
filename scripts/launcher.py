@@ -712,7 +712,7 @@ class Launcher(Component):
                 build_commands = builders[builder]
                 if build_commands:
                     builder.build(build_commands)
-                builder_resources = self.add_resources(builder.get_component_stats(), builder_resources)
+                builder_resources = self.add_resources(builder.get_component_full_stats(), builder_resources)
 
                 if commits:
                     if not builder.repository:
