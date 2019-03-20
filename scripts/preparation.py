@@ -174,10 +174,12 @@ class Preparator(Component):
 
         cif_in = self.get_first_target(command, "in")
         if cif_in is None:
+            self.logger.debug("Skip command due to absent in: %s", str(command))
             return -1, None
         cif_out = self.get_first_target(command, "out")
         if cif_out is None:
             if self.strategy in [PREPARATION_STRATEGY_SUBSYSTEM]:
+                self.logger.debug("Skip command due subsystem filter: %s", str(command))
                 return -1, None
             counter = len(self.libs) + 1
             self.libs[counter] = []
@@ -213,6 +215,7 @@ class Preparator(Component):
         processed_files = []
 
         if self.__is_skip_file(cif_out):
+            self.logger.debug("Skip file due to filter settings: %s", cif_out)
             return -1, None
         self.extracted_commands += 1
 
