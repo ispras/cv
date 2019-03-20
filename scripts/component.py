@@ -158,6 +158,9 @@ class Component:
                 self.logger.info("Command '{}' output".format(cmd))
                 for line in fd.readlines():
                     print(line)
+        if exitcode and path:
+            with open(path, "a") as fd:
+                fd.write("\nCommand '{}'".format(cmd))
 
         return exitcode
 
