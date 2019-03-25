@@ -153,14 +153,18 @@ class Component:
                 self.error_logs.add(path)
             else:
                 self.temp_logs.add(path)
+            with open(path, "a") as fd:
+                if type(cmd) is list:
+                    cmd_str = " ".join(cmd)
+                else:
+                    cmd_str = cmd
+                fd.write("\nCommand: '{}'".format(cmd_str))
+
         if self.debug and exitcode and path:
             with open(path, "r", errors='ignore') as fd:
                 self.logger.info("Command '{}' output".format(cmd))
                 for line in fd.readlines():
                     print(line)
-        if exitcode and path:
-            with open(path, "a") as fd:
-                fd.write("\nCommand '{}'".format(cmd))
 
         return exitcode
 
