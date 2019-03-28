@@ -21,12 +21,14 @@ cif_dir=${install_dir}/${cif}
 plugin_dir="plugin"
 
 cpa_arch="build.tar.bz2"
+compiled_cif_arch="cif.xz"
 
 # Repositories
 klever_repo="https://github.com/mutilin/klever.git"
 clade_repo="https://github.com/mutilin/clade.git"
 benchexec_repo="https://github.com/sosy-lab/benchexec.git"
 cif_repo="https://forge.ispras.ru/git/cif.git"
+cif_compiled_link="https://github.com/17451k/cif/releases/download/2019-03-12/cif-20190312-linux-x64.tar.xz"
 cpa_trunk_repo="https://svn.sosy-lab.org/software/cpachecker/trunk"
 cpa_branches_repo="https://svn.sosy-lab.org/software/cpachecker/branches"
 
@@ -44,6 +46,10 @@ download-benchexec:
 download-cif:
 	@$(call download_tool,${cif},${cif_dir},${cif_repo})
 	@cd ${cif_dir}; git checkout ca907524; git submodule update
+
+download-cif-compiled:
+	@rm -f ${compiled_cif_arch}
+	@cd ${install_dir}; wget ${cif_compiled_link} -O ${compiled_cif_arch}
 
 download-cpa := $(addprefix download-cpa-,$(cpa_modes))
 $(download-cpa):
@@ -64,6 +70,11 @@ build-benchexec: download-benchexec
 build-cif: download-cif
 	@echo "*** Building ${cif} ***"
 	@cd ${cif_dir}; make -j ${cpu_cores}
+
+build-cif-compiled: download-cif-compiled
+	@echo "*** Building compiled ${cif} ***"
+	@rm -rf ${cif_dir}
+	@cd ${install_dir}; tar -xf ${compiled_cif_arch}
 
 build-cil:
 	@echo "*** Building ${cil} ***"
@@ -140,6 +151,12 @@ install-cif: build-cif check-deploy-dir
 	@mkdir -p ${DEPLOY_DIR}/${install_dir}
 	@rm -rf ${DEPLOY_DIR}/${cif_dir}
 	@cd ${cif_dir}; prefix=${DEPLOY_DIR}/${cif_dir} make install
+
+install-cif-compiled: build-cif-compiled check-deploy-dir
+	@echo "*** Installing compiled ${cif} ***"
+	@mkdir -p ${DEPLOY_DIR}/${install_dir}
+	@rm -rf ${DEPLOY_DIR}/${cif_dir}
+	@cp -r ${cif_dir} ${DEPLOY_DIR}/${cif_dir}
 
 install-scripts: check-deploy-dir
 	@mkdir -p ${DEPLOY_DIR}
