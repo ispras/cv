@@ -34,7 +34,7 @@ DEFAULT_TOOL_PATH = {
     CPACHECKER: {
         UNREACHABILITY: "unreach/scripts",
         MEMSAFETY: "smg/scripts",
-        COVERAGE: "cov/scripts",
+        COVERAGE: "unreach/scripts",
         RACES: "sync/scripts",
         DEADLOCK: "sync/scripts"
     },
@@ -43,7 +43,7 @@ DEFAULT_TOOL_PATH = {
 DEFAULT_CPACHECKER_CLOUD = {
     UNREACHABILITY: "unreach",
     MEMSAFETY: "smg",
-    COVERAGE: "cov",
+    COVERAGE: "unreach",
     RACES: "sync",
     DEADLOCK_AUX_DISPATCH_MUTEX: "sync",
     DEADLOCK_AUX_DISPATCH_SPIN: "sync",
