@@ -168,3 +168,16 @@ Index: src/org/sosy_lab/cpachecker/cfa/postprocessing/function/ThreadCreateTrans
 +    return ((CIdExpression) var).getName();
    }
  }
+
+Index: config/includes/lockator/lockStatistics-core.properties
+===================================================================
+--- config/includes/lockator/lockStatistics-core.properties	(revision 30645)
++++ config/includes/lockator/lockStatistics-core.properties	(working copy)
+@@ -6,7 +6,6 @@
+ cpa.bam.aggressiveCaching = false
+
+ cpa.lock.reduceLockCounters = ALL
+-cpa.lock.reduceUselessLocks = true
+
+ usage.processCoveredUsages = false
+ # cpa.lock.stopMode = emptylockset
