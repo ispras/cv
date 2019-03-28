@@ -1,5 +1,6 @@
 {
   "-skipRecursion": [],
+  "-stack": ["10m"],
   "-setprop": [
     "parser.readLineDirectives=true",
     "output.disable=true",
