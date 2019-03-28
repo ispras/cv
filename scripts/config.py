@@ -7,12 +7,16 @@ UNREACHABILITY = "unreachability"
 MEMSAFETY = "memsafety"
 COVERAGE = "coverage"
 RACES = "races"
-DEADLOCK_AUX_DISPATCH = "sync:deadlocks:dispatch"
+DEADLOCK_AUX_DISPATCH_SPIN = "sync:deadlocks:dispatch:spin"
+DEADLOCK_AUX_DISPATCH_MUTEX = "sync:deadlocks:dispatch:mutex"
+DEADLOCK_AUX_DISPATCH_KERN = "sync:deadlocks:dispatch:kern"
 DEADLOCK_AUX_CIRCULAR_KM = "sync:deadlocks:circular:kern&mutex"
 DEADLOCK_AUX_CIRCULAR_KS = "sync:deadlocks:circular:kern&spin"
 DEADLOCK_AUX_CIRCULAR_MS = "sync:deadlocks:circular:mutex&spin"
 DEADLOCK_SUB_PROPERTIES = [
-    DEADLOCK_AUX_DISPATCH,
+    DEADLOCK_AUX_DISPATCH_KERN,
+    DEADLOCK_AUX_DISPATCH_MUTEX,
+    DEADLOCK_AUX_DISPATCH_SPIN,
     DEADLOCK_AUX_CIRCULAR_KM,
     DEADLOCK_AUX_CIRCULAR_KS,
     DEADLOCK_AUX_CIRCULAR_MS
@@ -41,7 +45,9 @@ DEFAULT_CPACHECKER_CLOUD = {
     MEMSAFETY: "smg",
     COVERAGE: "cov",
     RACES: "sync",
-    DEADLOCK_AUX_DISPATCH: "sync",
+    DEADLOCK_AUX_DISPATCH_MUTEX: "sync",
+    DEADLOCK_AUX_DISPATCH_SPIN: "sync",
+    DEADLOCK_AUX_DISPATCH_KERN: "sync",
     DEADLOCK_AUX_CIRCULAR_KM: "sync",
     DEADLOCK_AUX_CIRCULAR_KS: "sync",
     DEADLOCK_AUX_CIRCULAR_MS: "sync",
