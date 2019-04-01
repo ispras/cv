@@ -210,12 +210,10 @@ class AutoChecker:
                     self.logger.debug("Starting launcher via command: '{}'".format(command))
                     exitcode = subprocess.call(command, stderr=fd, stdout=fd, shell=True)
                     fd.close()
-                    with open(log_file) as fd:
-                        log = "".join(fd.readlines())
                     if exitcode:
                         self.send_a_message("Failure on verification of new commits",
                                             self.__get_text(branch, last_checked_commit, last_commit, configs,
-                                                            "Launcher log:\n\n{}".format(log)))
+                                                            "Launcher log: {}".format(log_file)))
                         self.logger.error("Stopping verification of branch {} due to failure".format(branch))
                         self.configs.pop(branch, None)
                         break
@@ -223,7 +221,7 @@ class AutoChecker:
                         self.set_last_commit(last_commit, branch)
                         self.send_a_message("Successful verification of new commits",
                                             self.__get_text(branch, last_checked_commit, last_commit, configs,
-                                                            "Launcher log:\n\n{}".format(log)))
+                                                            "Launcher log: {}".format(log_file)))
             if not self.configs:
                 self.logger.error("Stopping script due to previous failures")
                 sys.exit(1)
