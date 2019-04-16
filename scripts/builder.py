@@ -57,6 +57,8 @@ class Builder(Component):
         self.fail_if_failure = builder_config.get(TAG_FAIL_IF_FAILURE, True)
         self.clean_sources = builder_config.get(TAG_CLEAN_SOURCES, False)
         self.env = self.component_config.get(TAG_ENVIRON_VARS, {})
+        for name, value in self.env.items():
+            os.environ[name] = value
 
         # Commits range, which should be checked.
         self.start_commit = None
