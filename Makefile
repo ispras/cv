@@ -126,7 +126,7 @@ install-clade: check-deploy-dir
 	@echo "*** Installing ${clade} into directory ${DEPLOY_DIR} ***"
 	@$(call download_tool,${clade},${DEPLOY_DIR},${clade_repo})
 	@rm -f ~/.local/lib/python*/site-packages/clade.egg-link
-	@cd ${DEPLOY_DIR}; git checkout master; sudo pip3 install -e .
+	@cd ${DEPLOY_DIR}; git checkout master; sudo python3 -m pip install -e .
 
 install-benchexec: build-benchexec check-deploy-dir
 	@echo "*** Installing ${benchexec} ***"
