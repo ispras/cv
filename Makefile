@@ -263,7 +263,7 @@ endef
 # $1 - branch
 define clean_cpa
 	echo "*** Cleaning CPAchecker branch $1 ***"
-	cd ${install_dir}/$1; ant clean; rm -f ${cpa_arch}; rm -rf *; svn revert -R .
+	rm -rf ${install_dir}/$1/*; cd ${install_dir}/$1; svn revert -R .
 endef
 
 # $1 - branch
