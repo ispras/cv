@@ -5,8 +5,6 @@
     "counterexample.export.compressWitness=false",
     "cpa.arg.witness.removeInsufficientEdges=false",
     "cpa.arg.witness.exportSourcecode=true",
-    "cpa.predicate.bam.usePrecisionReduction=false",
-    "cpa.predicate.refinement.predicateBasisStrategy=all",
     "coverage.enabled=true",
     "coverage.file=coverage.info"
   ]
