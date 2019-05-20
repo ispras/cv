@@ -62,6 +62,7 @@ download: download-klever download-benchexec download-cif $(download-cpa)
 build-klever: download-klever
 	@echo "*** Building ${klever} ***"
 	@echo "from bridge.development import *" > ${klever_dir}/bridge/bridge/settings.py
+	@echo "{}" > ${klever_dir}/bridge/bridge/db.json
 
 build-benchexec: download-benchexec
 	@echo "*** Building ${benchexec} ***"
