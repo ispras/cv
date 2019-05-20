@@ -10,6 +10,7 @@ import re
 import resource
 import time
 import zipfile
+import uuid
 
 from common import *
 from component import Component
@@ -49,9 +50,15 @@ class MEA(Component):
     - parsed error trace - result of parser(et), et - file name with error trace (xml);
     - converted error trace - result of conversion(pet), pet - parsed error trace.
     """
-    def __init__(self, general_config: dict, error_traces: list, install_dir: str, rule: str = ""):
+    def __init__(self, general_config: dict, error_traces: list, install_dir: str, rule: str = "", result_dir: str = ""):
         super(MEA, self).__init__(COMPONENT_MEA, general_config)
         self.install_dir = install_dir
+        if result_dir:
+            self.result_dir = os.path.join(result_dir, rule)
+            if not os.path.exists(self.result_dir):
+                os.makedirs(self.result_dir, exist_ok=True)
+        else:
+            self.result_dir = None
         self.__export_et_parser_lib()
         self.rule = rule
 
@@ -233,6 +240,17 @@ class MEA(Component):
             zfp.write(json_trace_name, arcname=ERROR_TRACE_FILE)
             zfp.write(source_files, arcname=ERROR_TRACE_SOURCES)
             zfp.write(converted_traces_files, arcname=CONVERTED_ERROR_TRACES)
+        if self.result_dir:
+            os.environ.setdefault("DJANGO_SETTINGS_MODULE", "bridge.settings")
+            import django
+            django.setup()
+            # noinspection PyUnresolvedReferences
+            from reports.etv import convert_json_trace_to_html
+            with open(json_trace_name) as fd:
+                content = fd.read()
+            name = os.path.join(self.result_dir, "{}_{}".format(uuid.uuid4().hex, os.path.basename(archive_name)))
+            self.logger.info("Exporting html error trace '{}'".format(name))
+            convert_json_trace_to_html(content, name)
         os.remove(json_trace_name)
         os.remove(source_files)
         os.remove(converted_traces_files)
@@ -323,6 +341,9 @@ class MEA(Component):
     def __export_et_parser_lib(self):
         et_parser_lib = self.get_tool_path(DEFAULT_TOOL_PATH[ET_LIB], self.config.get(TAG_TOOLS, {}).get(ET_LIB))
         sys.path.append(et_parser_lib)
+        et_html_lib = self.get_tool_path(DEFAULT_TOOL_PATH[ET_HTML_LIB], self.config.get(TAG_TOOLS, {}).
+                                         get(ET_HTML_LIB))
+        sys.path.append(et_html_lib)
 
     def clear(self):
         if self.error_traces:
@@ -339,6 +360,8 @@ if __name__ == "__main__":
                         help="add model functions, separated by whitespace", required=False)
     parser.add_argument("--directory", "-d", help="directory with error traces", required=True)
     parser.add_argument("--rule", "-r", help="rule specification, which is violated by traces", default="")
+    parser.add_argument("--result-dir", dest="result_dir",
+                        help="directory for saving processed html error traces", default="")
     parser.add_argument('--debug', action='store_true')
 
     options = parser.parse_args()
@@ -363,7 +386,7 @@ if __name__ == "__main__":
     if not os.path.exists(install_dir):
         install_dir = os.path.abspath(os.path.join(os.pardir, DEFAULT_INSTALL_DIR))
 
-    mea = MEA(config, traces, install_dir, options.rule)
+    mea = MEA(config, traces, install_dir, options.rule, options.result_dir)
     mea.clear()
 
     traces = mea.filter()

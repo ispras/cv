@@ -71,6 +71,7 @@ TAG_ID = "id"
 TAG_REPOSITORY = "repository"
 TAG_NAME = "name"
 TAG_VERIFIER_OPTIONS = "verifier options"
+TAG_EXPORT_HTML_ERROR_TRACES = "standalone error traces"
 
 TIMESTAMP_PATTERN = "<timestamp>"
 COMMIT_PATTERN = "<commit>"
@@ -183,7 +184,7 @@ class VerificationResults:
                self.rule == verification_task.rule and \
                self.entrypoint == verification_task.entrypoint
 
-    def parse_output_dir(self, launch_dir: str, install_dir: str):
+    def parse_output_dir(self, launch_dir: str, install_dir: str, result_dir: str):
         # Process BenchExec log file.
         for file in glob.glob(os.path.join(launch_dir, 'benchmark*.xml')):
             tree = ElementTree.ElementTree()
@@ -243,7 +244,7 @@ class VerificationResults:
         # If there is only one trace, filtering will not be performed and it will not be examined.
         if self.initial_traces == 1:
             # Trace should be checked if it is correct or not.
-            mea = MEA(self.config, error_traces, install_dir, self.rule)
+            mea = MEA(self.config, error_traces, install_dir, self.rule, result_dir)
             if mea.process_traces_without_filtering():
                 # Trace is fine, just recheck final verdict.
                 self.verdict = VERDICT_UNSAFE
@@ -261,11 +262,11 @@ class VerificationResults:
                 else:
                     os.remove(file)
 
-    def filter_traces(self, launch_dir: str, install_dir: str):
+    def filter_traces(self, launch_dir: str, install_dir: str, result_dir: str):
         # Perform Multiple Error Analysis to filter found error traces (only for several traces).
         start_time_cpu = time.process_time()
         traces = glob.glob("{}/witness*".format(launch_dir))
-        mea = MEA(self.config, traces, install_dir, self.rule)
+        mea = MEA(self.config, traces, install_dir, self.rule, result_dir)
         self.filtered_traces = len(mea.filter())
         if self.filtered_traces:
             self.verdict = VERDICT_UNSAFE
@@ -373,6 +374,12 @@ class Launcher(Component):
         # Remember some useful directories.
         self.root_dir = os.getcwd()  # By default tool-set is run from this directory.
         self.work_dir = os.path.abspath(self.config[TAG_DIRS][TAG_DIRS_WORK])
+
+        if self.config.get(TAG_EXPORT_HTML_ERROR_TRACES, False):
+            self.result_dir_et = os.path.abspath(os.path.join(self.config[TAG_DIRS][TAG_DIRS_RESULTS],
+                                                              self.__get_result_file_prefix()))
+        else:
+            self.result_dir_et = None
         self.install_dir = os.path.join(self.root_dir, DEFAULT_INSTALL_DIR)
         self.entrypoints_dir = os.path.join(self.root_dir, DEFAULT_ENTRYPOINTS_DIR)
         self.rules_dir = os.path.join(self.root_dir, DEFAULT_RULES_DIR)
@@ -406,7 +413,7 @@ class Launcher(Component):
                             resource_queue_filter: multiprocessing.Queue):
         wall_time_start = time.time()
         launch_directory = result.work_dir
-        result.filter_traces(launch_directory, self.install_dir)
+        result.filter_traces(launch_directory, self.install_dir, self.result_dir_et)
         queue.put(result)
         resource_queue_filter.put({TAG_MEMORY_USAGE: result.filtering_mem,
                                    TAG_WALL_TIME: time.time() - wall_time_start})
@@ -502,7 +509,7 @@ class Launcher(Component):
         return launch_directory, benchmark_name
 
     def __process_single_launch_results(self, result, launch_directory, launch, queue):
-        result.parse_output_dir(launch_directory, self.install_dir)
+        result.parse_output_dir(launch_directory, self.install_dir, self.result_dir_et)
 
         coverage_file = None
         for file in DEFAULT_COVERAGE_FILES:

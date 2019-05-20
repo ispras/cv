@@ -1,6 +1,7 @@
 # Default location of additional tools.
 CIL = "cil"
 ET_LIB = "klever"
+ET_HTML_LIB = "et html"
 BENCHEXEC = "benchexec"
 CPACHECKER = "cpachecker"
 UNREACHABILITY = "unreachability"
@@ -23,6 +24,7 @@ UPLOADER = "uploader"
 DEFAULT_TOOL_PATH = {
     CIL: ["astraver-cil/bin/toplevel.opt", "cil/obj/x86_LINUX/cilly.asm.exe", "cil/bin/cilly.native"],
     ET_LIB: "klever/core",
+    ET_HTML_LIB: "klever/bridge",
     UPLOADER: "klever/utils/bin/upload-reports.py",
     BENCHEXEC: "benchexec/bin",
     CPACHECKER: {
