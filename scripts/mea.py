@@ -15,8 +15,6 @@ import uuid
 from common import *
 from component import Component
 from config import *
-from config import COMPONENT_MEA
-from config import TAG_DEBUG
 # noinspection PyUnresolvedReferences
 from mea_core import DEFAULT_CONVERSION_FUNCTION, CONVERSION_FUNCTION_MODEL_FUNCTIONS, CONVERSION_FUNCTION_CALL_TREE, \
     CONVERSION_FUNCTION_NOTES, convert_error_trace, compare_error_traces, is_equivalent, DEFAULT_COMPARISON_FUNCTION, \
