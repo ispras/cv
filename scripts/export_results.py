@@ -228,7 +228,11 @@ class Exporter(Component):
                                     self.__format_attr("Initial", str(et))
                                 ]),
                                 self.__format_attr("Found all traces", str(found_all_traces)),
-                                self.__format_attr("Filtering time", str(filter_cpu))
+                                self.__format_attr("Filtering time", str(filter_cpu)),
+                                self.__format_attr("Coverage", [
+                                    self.__format_attr("Lines", "{0}".format(cov_lines)),
+                                    self.__format_attr("Functions", "{0}".format(cov_funcs))
+                                ])
                             ]
 
                             archive_id = "unsafe_{}".format(trace_counter)
@@ -254,8 +258,8 @@ class Exporter(Component):
                                 verdict = "safe"
                                 attrs = [
                                     self.__format_attr("Coverage", [
-                                        self.__format_attr("Lines", "{0}%".format(cov_lines)),
-                                        self.__format_attr("Functions", "{0}%".format(cov_funcs))
+                                        self.__format_attr("Lines", "{0}".format(cov_lines)),
+                                        self.__format_attr("Functions", "{0}".format(cov_funcs))
                                     ])
                                 ]
                                 # TODO: how to determine relevancy there?
@@ -266,7 +270,12 @@ class Exporter(Component):
                                     text = "Program never terminates"
                                 else:
                                     text = termination_reason
-                                attrs = []
+                                attrs = [
+                                    self.__format_attr("Coverage", [
+                                        self.__format_attr("Lines", "{0}".format(cov_lines)),
+                                        self.__format_attr("Functions", "{0}".format(cov_funcs))
+                                    ])
+                                ]
                                 verdict = "unknown"
 
                                 if self.add_logs:
