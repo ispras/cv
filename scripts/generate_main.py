@@ -22,6 +22,7 @@ TAG_STATIC_PROTOTYPE = "static prototype"
 TAG_TYPE = "type"
 TAG_RENAME = "rename"
 TAG_SED_COMMANDS = "sed commands"
+TAG_CAST = "cast"
 
 # Config tags.
 TAG_STRATEGIES = "strategies"
@@ -224,13 +225,17 @@ class MainGenerator(Component):
                             var_def = var_type + " " + var_name
 
                     global_scope = arg.get('global scope', True)
+                    is_cast = arg.get(TAG_CAST, True)
                     if global_scope:
                         fp.write(var_def + ";\n")
                         if var_type not in nondet_funcs:
                             nondet_funcs.add(var_type)
                             fp.write("extern {} __VERIFIER_nondet_{}();\n".format(var_type, simplify_type(var_type)))
-                        var_def = var_name + " = ({})__VERIFIER_nondet_{}();\n".format(var_type,
-                                                                                       simplify_type(var_type))
+                        if is_cast:
+                            var_def = var_name + " = ({})__VERIFIER_nondet_{}();\n".format(var_type,
+                                                                                           simplify_type(var_type))
+                        else:
+                            var_def = var_name + " = __VERIFIER_nondet_{}();\n".format(simplify_type(var_type))
                         local_var_defs.append(var_def)
                     else:
                         local_var_defs.append(var_def + ";\n")
