@@ -105,6 +105,13 @@ class Preparator(Component):
         if os.path.exists(path_to_compilers):
             os.environ["PATH"] += os.pathsep + path_to_compilers
 
+        # Counters for statistics.
+        self.overall_build_commands = 0
+        self.incorrect_build_commands = 0
+        self.special_regexp_filter_build_commands = 0
+        self.subsystem_filter_build_commands = 0
+        self.black_list_filter_build_commands = 0
+
     def __get_file_for_preprocess(self, file, work_dir):
         if not file:
             return None
@@ -127,6 +134,7 @@ class Preparator(Component):
 
     def get_first_target(self, command, tag):
         if command[tag] == [] or command[tag] is None:
+            self.incorrect_build_commands += 1
             return None
 
         command_file = command[tag][0]
@@ -138,12 +146,15 @@ class Preparator(Component):
             command_file = command["in"][1]
 
         if command_file == "-" or command_file == "/dev/null" or command_file is None:
+            self.incorrect_build_commands += 1
             return None
         elif tag == "in" and (re.search(r'\.[sS]$', command_file) or
                               re.search(r'\.o$', command_file)):
+            self.incorrect_build_commands += 1
             return None
         for regexp in self.preparation_config.get(CONF_FILTERS, []):
             if re.search(regexp, command_file):
+                self.special_regexp_filter_build_commands += 1
                 return None
 
         return command_file
@@ -160,11 +171,13 @@ class Preparator(Component):
         if self.subdirectory_pattern:
             if not re.search(self.subdirectory_pattern, file):
                 # Exclude files for none-specified subdir.
+                self.subsystem_filter_build_commands += 1
                 return True
         if self.black_list:
             for elem in self.black_list:
                 if re.search(elem, file):
                     # Exclude black-listed files.
+                    self.black_list_filter_build_commands += 1
                     return True
         # If no regexp was applied then do not skip the file.
         return False
@@ -359,6 +372,7 @@ class Preparator(Component):
                 os.chdir(cur_dir)
 
             number_of_commands = len(bc_json)
+            self.overall_build_commands = number_of_commands
             if number_of_commands == 0:
                 sys.exit("Specified json file doesn't contain valid cc or ld commands")
             self.logger.debug("Found {} build commands".format(number_of_commands))
@@ -498,6 +512,11 @@ class Preparator(Component):
             for file in glob.glob("{0}/*".format(self.preprocessing_dir)):
                 if os.path.isdir(file):
                     shutil.rmtree(file, ignore_errors=True)
+        self.logger.debug("Overall build commands: {}, incorrect: {}, filtered by special regexp: {}, "
+                          "filtered by black filter: {}, filtered by subsystem: {}, processed: {}".format(
+            self.overall_build_commands, self.incorrect_build_commands, self.special_regexp_filter_build_commands,
+            self.black_list_filter_build_commands, self.subsystem_filter_build_commands, self.extracted_commands
+        ))
         self.logger.info("Successfully finished task preparation {} "
                          "(extracted commands: {}, compiled commands: {}, processed commands: {})".
                          format(self.cil_out, self.extracted_commands, self.complied_commands, self.processed_commands))
