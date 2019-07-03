@@ -62,7 +62,7 @@ class Exporter(Component):
         component['attrs'] = []
         return component
 
-    def export_traces(self, report_launches: str, report_components: str, archive_name: str, logs: dict = dict):
+    def export_traces(self, report_launches: str, report_components: str, archive_name: str, unknown_desc: dict = dict):
         start_wall_time = time.time()
         overall_wall = 0  # Launcher + Exporter.
         overall_cpu = 0  # Sum of all components.
@@ -118,18 +118,10 @@ class Exporter(Component):
                         wall = int(float(res.group(3)) * 1000)
                         mem = int(float(res.group(4)))
                         new_report = self.__create_component_report(name, cpu, wall, mem)
-                        if name in logs:
-                            stored_logs = []
+                        if name in unknown_desc:
                             counter = 0
-                            for log in logs[name]:
-                                is_cached = False
-                                for stored_log in stored_logs:
-                                    if cmp(stored_log, log):
-                                        is_cached = True
-                                if is_cached:
-                                    continue
-                                else:
-                                    stored_logs.append(log)
+                            for u_desc in unknown_desc[name]:
+                                log = u_desc[TAG_LOG_FILE]
                                 unknown_report = dict()
                                 unknown_report['id'] = "{}/unknown/{}".format(new_report['id'], counter)
                                 unknown_report['parent id'] = "{}".format(new_report['id'])
@@ -140,6 +132,12 @@ class Exporter(Component):
                                     zfp.write(log, arcname=UNKNOWN_DESC_FILE)
                                 final_zip.write(unknown_archive, arcname=unknown_archive)
                                 unknown_report["problem desc"] = unknown_archive
+                                unknown_report['attrs'] = u_desc.get(TAG_ATTRS)
+                                unknown_report['resources'] = {
+                                    "CPU time": u_desc[TAG_CPU_TIME],
+                                    "memory size": u_desc[TAG_MEMORY_USAGE],
+                                    "wall time": u_desc[TAG_WALL_TIME]
+                                }
                                 reports.append(unknown_report)
                         reports.append(new_report)
                         if name == COMPONENT_LAUNCHER:

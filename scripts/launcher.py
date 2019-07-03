@@ -1284,14 +1284,35 @@ class Launcher(Component):
         preparation_memory_usage = 0
         preparation_cpu_time = time.process_time() - self.start_cpu_time
         preparation_memory_usage_all = []
-        preparator_logs = []
+        preparator_unknowns = []
         while not resource_queue.empty():
             resources = resource_queue.get()
-            preparation_memory_usage_all.append(resources.get(TAG_MEMORY_USAGE, 0))
-            preparation_cpu_time += resources.get(TAG_CPU_TIME, 0.0)
+            preparator_wall_time = resources.get(TAG_WALL_TIME, 0.0)
+            preparator_cpu_time = resources.get(TAG_CPU_TIME, 0.0)
+            preparator_memory = resources.get(TAG_MEMORY_USAGE, 0)
+            preparation_memory_usage_all.append(preparator_memory)
+            preparation_cpu_time += preparator_cpu_time
             if TAG_LOG_FILE in resources:
+                cil_file = resources.get(TAG_CIL_FILE, "")
+                attrs = list()
+                if cil_file:
+                    res = re.search(r"(\w+)_([^_]+)_(\w+)\.i", os.path.basename(cil_file))
+                    if res:
+                        attrs = [
+                            {"name": "Subsystem", "value": res.group(1)},
+                            {"name": "Rule specification", "value": res.group(2)},
+                            {"name": "Strategy", "value": res.group(3)},
+                        ]
+
                 for log in resources.get(TAG_LOG_FILE):
-                    preparator_logs.append(log)
+                    preparator_unknowns.append({
+                        TAG_LOG_FILE: log,
+                        TAG_CPU_TIME: round(preparator_cpu_time * 1000),
+                        TAG_WALL_TIME: round(preparator_wall_time * 1000),
+                        TAG_MEMORY_USAGE: preparator_memory,
+                        TAG_ATTRS: attrs
+                    })
+
         for memory_usage in sorted(preparation_memory_usage_all):
             preparation_memory_usage += memory_usage
             counter += 1
@@ -1557,7 +1578,7 @@ class Launcher(Component):
 
         exporter = Exporter(self.config, DEFAULT_EXPORT_DIR, self.install_dir)
         exporter.export_traces(report_launches, report_components, result_archive,
-                               {COMPONENT_PREPARATOR: preparator_logs})
+                               {COMPONENT_PREPARATOR: preparator_unknowns})
 
         uploader_config = self.config.get(UPLOADER, {})
         if uploader_config and uploader_config.get(TAG_UPLOADER_UPLOAD_RESULTS, False):

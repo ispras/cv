@@ -520,7 +520,9 @@ class Preparator(Component):
                          "(extracted commands: {}, compiled commands: {}, processed commands: {})".
                          format(self.cil_out, self.extracted_commands, self.complied_commands, self.processed_commands))
         if queue:
-            queue.put(self.get_component_full_stats())
+            results_data = self.get_component_full_stats()
+            results_data[TAG_CIL_FILE] = self.cil_out
+            queue.put(results_data)
 
 
 if __name__ == "__main__":

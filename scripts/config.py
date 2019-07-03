@@ -77,6 +77,8 @@ TAG_CPU_TIME = "cpu"
 TAG_WALL_TIME = "wall"
 TAG_MEMORY_USAGE = "memory"
 TAG_EXITCODE = "exit code"
+TAG_CIL_FILE = "cil file"
+TAG_ATTRS = "attrs"
 
 TAG_CACHED_COMMANDS = "cached commands"
 TAG_DEBUG = "debug"
