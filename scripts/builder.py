@@ -10,7 +10,7 @@ import traceback
 
 from component import Component
 from config import COMPONENT_BUILDER, TAG_CLADE_CONF, TAG_MAKE_COMMAND, TAG_FAIL_IF_FAILURE, CLADE_BASE_FILE, \
-    CLADE_WORK_DIR, TAG_MAKE_CLEAN_COMMAND
+    CLADE_WORK_DIR, TAG_MAKE_CLEAN_COMMAND, TAG_PATH
 
 REPOSITORY_GIT = "git"
 REPOSITORY_SVN = "svn"
@@ -57,6 +57,7 @@ class Builder(Component):
         self.fail_if_failure = builder_config.get(TAG_FAIL_IF_FAILURE, True)
         self.clean_sources = builder_config.get(TAG_CLEAN_SOURCES, False)
         self.env = self.component_config.get(TAG_ENVIRON_VARS, {})
+        self.env_path = builder_config.get(TAG_PATH, "")
         for name, value in self.env.items():
             os.environ[name] = value
 
@@ -196,6 +197,9 @@ class Builder(Component):
             os.remove(tmp_path)
         if self.command_caller(self.make_clean_command):
             self.logger.warning("Make clean failed")
+
+        if os.path.exists(self.env_path):
+            os.environ["PATH"] += os.pathsep + self.env_path
 
         self.logger.debug("Using Clade tool to build sources with '{}'".format(self.make_command))
         try:

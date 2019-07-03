@@ -82,6 +82,7 @@ TAG_CACHED_COMMANDS = "cached commands"
 TAG_DEBUG = "debug"
 TAG_TOOLS = "tools"
 TAG_FILTERS = "filters"
+TAG_PATH = "path"
 
 TAG_SOURCE_DIR = "source dir"
 TAG_SYSTEM_ID = "system"

@@ -12,7 +12,6 @@ from opts import *
 TAG_MODEL = "model"
 TAG_RESOLVE_MISSED_PROTO = "resolve missed proto"
 TAG_STRATEGY = "strategy"
-TAG_PATH = "path"
 TAG_FILES_SUFFIX = "files suffix"
 TAG_CIL_OPTIONS = "cil options"
 COMMAND_COMPILER = "command"
