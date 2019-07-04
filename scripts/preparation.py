@@ -456,6 +456,7 @@ class Preparator(Component):
                 try:
                     shutil.copy(file, file_copy)
                 except:
+                    self.__on_exit()
                     sys.exit("Can not copy file '{}' to '{}'".format(file, file_copy))
                 file = file_copy
             if not self.__execute_cil(self.cil_out, [file]):
@@ -463,6 +464,7 @@ class Preparator(Component):
             else:
                 self.logger.warning("Skip file '%s' due to failed check", file)
                 if self.is_auxiliary(file):
+                    self.__on_exit()
                     sys.exit("Stop preparation due to failed check on auxiliary file")
 
         self.logger.debug("%d files were successfully checked", len(checked_files))
@@ -523,6 +525,11 @@ class Preparator(Component):
             results_data = self.get_component_full_stats()
             results_data[TAG_CIL_FILE] = self.cil_out
             queue.put(results_data)
+
+    def __on_exit(self):
+        # Clean aux files.
+        if os.path.exists(self.cil_out):
+            os.remove(self.cil_out)
 
 
 if __name__ == "__main__":
