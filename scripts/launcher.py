@@ -1065,7 +1065,7 @@ class Launcher(Component):
                               "whereas only {1} are available.".format(core_limit, max_cores))
             exit(1)
 
-        specific_functions = self.config.get(TAG_CALLERS, set())
+        specific_functions = set(self.config.get(TAG_CALLERS, set()))
         specific_sources = set()
         qualifier_resources = {}
         builder_resources = {}
@@ -1141,6 +1141,12 @@ class Launcher(Component):
         else:
             self.logger.error("Source directories were not prepared")
             exit(sources_process.exitcode)
+
+        if specific_functions:
+            static_callers = set()
+            for func in specific_functions:
+                static_callers.add(func + STATIC_SUFFIX)
+            specific_functions.update(static_callers)
 
         self.logger.info("Preparing verification tasks based on the given configuration")
         preparator_processes = self.config.get(COMPONENT_PREPARATOR, {}).get(TAG_PROCESSES, max_cores)
