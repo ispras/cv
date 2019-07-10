@@ -132,6 +132,10 @@
     "parser": "parser name (for none-specified rules)",
     "debug": "true|false - overwrites debug value for MEA"
   },
+  "Coverage": {
+    "mode": "none - do not compute coverage, percent - only upload coverage percent, full - upload full coverage",
+    "debug": "true|false - overwrites debug value for Coverage component"
+  },
   "system": "identifier of a system under verification (subdirectories with this id must present)",
   "entrypoints desc": ["list of paths to the files with description of entry points (files are searched in the entrypoints directory)"],
   "rules": ["list of rules"],

@@ -55,6 +55,7 @@ COMPONENT_EXPORTER = "Exporter"
 COMPONENT_MEA = "MEA"
 COMPONENT_QUALIFIER = "Qualifier"
 COMPONENT_BUILDER = "Builder"
+COMPONENT_COVERAGE = "Coverage"
 
 # Preset rules
 RULE_COVERAGE = "cov"
@@ -86,6 +87,9 @@ TAG_TOOLS = "tools"
 TAG_FILTERS = "filters"
 TAG_PATH = "path"
 
+TAG_COVERAGE_LINES = "lines"
+TAG_COVERAGE_FUNCS = "funcs"
+
 TAG_SOURCE_DIR = "source dir"
 TAG_SYSTEM_ID = "system"
 TAG_CLADE_CONF = "clade config"
@@ -105,6 +109,7 @@ TAG_ASPECT = "aspect"
 TAG_EXTRA_OPTIONS = "extra options"
 DEFAULT_EXPORT_DIR = "export"
 DEFAULT_INSTALL_DIR = "tools"
+DEFAULT_COVERAGE_ARCH = "coverage.zip"
 
 
 COMMON_HEADER_FOR_RULES = "common.h"

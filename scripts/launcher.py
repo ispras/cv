@@ -25,6 +25,7 @@ from generate_main import MainGenerator
 from mea import MEA
 from preparation import Preparator
 from qualifier import Qualifier
+from coverage import Coverage
 
 DEFAULT_CIL_DIR = "cil"
 DEFAULT_MAIN_DIR = "main"
@@ -109,7 +110,6 @@ SOURCE_QUEUE_RESULTS = "results"
 TAG_ENTRYPOINTS_DESC = "entrypoints desc"
 TAG_PREPARATION_CONFIG = "preparation config"
 DEFAULT_PREPARATION_CONFIG = "conf.json"
-DEFAULT_COVERAGE_FILES = ["coverage.info", "subcoverage.info"]
 DEFAULT_PROPERTY_MEMSAFETY = "properties/memsafety.spc"
 DEFAULT_PROPERTY_UNREACHABILITY = "properties/unreachability.spc"
 
@@ -178,6 +178,7 @@ class VerificationResults:
         self.filtered_traces = 0
         self.debug = config.get(TAG_DEBUG, False)
         self.config = config
+        self.coverage_resources = dict()
 
     def is_equal(self, verification_task: VerificationTask):
         return self.id == verification_task.entry_desc.subsystem and \
@@ -511,32 +512,24 @@ class Launcher(Component):
     def __process_single_launch_results(self, result, launch_directory, launch, queue):
         result.parse_output_dir(launch_directory, self.install_dir, self.result_dir_et)
 
-        coverage_file = None
-        for file in DEFAULT_COVERAGE_FILES:
-            if os.path.exists(os.path.join(launch_directory, file)):
-                coverage_file = file
-                break
-        if coverage_file:
-            cov_lines = 0.0
-            cov_funcs = 0.0
-            os.chdir(launch_directory)
-            try:
-                process_out = subprocess.check_output("genhtml {} --ignore-errors source".format(coverage_file),
-                                                      shell=True, stderr=subprocess.STDOUT)
-                for line in process_out.splitlines():
-                    line = line.decode("utf-8", errors="ignore")
-                    res = re.search(r'lines......: (.+)% ', line)
-                    if res:
-                        cov_lines = float(res.group(1))
-                    res = re.search(r'functions..: (.+)% ', line)
-                    if res:
-                        cov_funcs = float(res.group(1))
-            except Exception:
-                self.logger.warning("Coverage was not computed for subsystem {} and entrypoint {}".
-                                    format(launch.entry_desc.subsystem, launch.entrypoint), exc_info=True)
-            os.chdir(self.root_dir)
-            result.cov_lines = cov_lines
-            result.cov_funcs = cov_funcs
+        cov = Coverage(self)
+
+        cov_queue = multiprocessing.Queue()
+        cov_process = multiprocessing.Process(target=cov.compute_coverage, name="coverage_{}".format(launch.name),
+                                              args=(self.build_results.keys(), launch_directory, cov_queue))
+        cov_process.start()
+        cov_process.join()  # Wait since we are already in parallel threads for each launch.
+        if not cov_process.exitcode:
+            if cov_queue.qsize():
+                data = cov_queue.get()
+                result.cov_funcs = data.get(TAG_COVERAGE_FUNCS, 0.0)
+                result.cov_lines = data.get(TAG_COVERAGE_LINES, 0.0)
+                result.coverage_resources[TAG_CPU_TIME] = data.get(TAG_CPU_TIME, 0.0)
+                result.coverage_resources[TAG_WALL_TIME] = data.get(TAG_WALL_TIME, 0.0)
+                result.coverage_resources[TAG_MEMORY_USAGE] = data.get(TAG_MEMORY_USAGE, 0)
+        else:
+            self.logger.warning("Coverage was not computed for subsystem {} and entrypoint {}".
+                                format(launch.entry_desc.subsystem, launch.entrypoint))
 
         if result.initial_traces > 1:
             self.mea_input_queue.put(result)
@@ -1128,7 +1121,7 @@ class Launcher(Component):
                                                   args=(sources_queue, ))
         sources_process.start()
         sources_process.join()  # Wait here since this information may reduce future preparation work.
-        build_results = {}
+
         if not sources_process.exitcode:
             if sources_queue.qsize():
                 data = sources_queue.get()
@@ -1137,7 +1130,7 @@ class Launcher(Component):
                 specific_sources = data.get(SOURCE_QUEUE_FILES)
                 qualifier_resources = data.get(SOURCE_QUEUE_QUALIFIER_RESOURCES)
                 builder_resources = data.get(SOURCE_QUEUE_BUILDER_RESOURCES)
-                build_results = data.get(SOURCE_QUEUE_RESULTS)
+                self.build_results = data.get(SOURCE_QUEUE_RESULTS)
         else:
             self.logger.error("Source directories were not prepared")
             exit(sources_process.exitcode)
@@ -1226,7 +1219,7 @@ class Launcher(Component):
                                                             subdirectory_pattern=entry_desc.subsystem, model=model,
                                                             main_file=main_file_name, output_file=cil_file,
                                                             preparation_config=preparation_config,
-                                                            common_file=common_file, build_results=build_results)
+                                                            common_file=common_file, build_results=self.build_results)
                                     process_pool[i] = multiprocessing.Process(target=preparator.prepare_task,
                                                                               name=cil_file, args=(resource_queue,))
                                     process_pool[i].start()
@@ -1514,6 +1507,9 @@ class Launcher(Component):
         cov_lines = {}
         cov_funcs = {}
         stats_by_rules = {}
+        cov_cpu = 0
+        wall_cov = 0
+        cov_mem_array = list()
         for rule in rules:
             if rule == RULE_COVERAGE:
                 continue
@@ -1531,6 +1527,16 @@ class Launcher(Component):
                 stats_by_rules[rule].add_result(result)
                 if result.filtering_cpu:
                     mea_cpu += result.filtering_cpu
+                cov_cpu += result.coverage_resources[TAG_CPU_TIME]
+                wall_cov += result.coverage_resources[TAG_WALL_TIME]
+                cov_mem_array.append(result.coverage_resources[TAG_MEMORY_USAGE])
+        if cov_mem_array:
+            cov_mem = sum(cov_mem_array)/len(cov_mem_array)
+        else:
+            cov_mem = 0
+
+        # Yes, this is a rough approximation, but nothing better is available.
+        wall_cov /= min(number_of_processes, self.cpu_cores)
 
         self.logger.info("Preparing report on launches into file: '{}'".format(report_launches))
         with open(report_launches, "w") as f_report:
@@ -1558,6 +1564,8 @@ class Launcher(Component):
                                                       int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) * 1024))
             f_report.write("{0};{1};{2};{3}\n".format(COMPONENT_MEA, round(mea_cpu, ROUND_DIGITS),
                                                       round(mea_wall, ROUND_DIGITS), mea_memory))
+            f_report.write("{0};{1};{2};{3}\n".format(COMPONENT_COVERAGE, round(cov_cpu, ROUND_DIGITS),
+                                                      round(wall_cov, ROUND_DIGITS), cov_mem))
             if qualifier_resources:
                 f_report.write("{0};{1};{2};{3}\n".format(COMPONENT_QUALIFIER,
                                                           round(qualifier_resources[TAG_CPU_TIME], ROUND_DIGITS),

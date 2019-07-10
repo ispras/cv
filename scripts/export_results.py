@@ -209,6 +209,15 @@ class Exporter(Component):
                             "memory size": mem,
                             "wall time": wall
                         }
+                        coverages = glob.glob(os.path.join(work_dir, DEFAULT_COVERAGE_ARCH))
+                        if coverages:
+                            if len(coverages) == 1:
+                                # Good.
+                                cov_name = "coverage_{}.zip".format(verifier_counter)
+                                verification_element['coverage'] = cov_name
+                                final_zip.write(coverages[0], arcname=cov_name)
+                            else:
+                                self.logger.warning("Cannot process more than one coverage files: {}".format(coverages))
                         overall_cpu += cpu
                         max_memory = max(max_memory, mem)
                         reports.append(verification_element)
