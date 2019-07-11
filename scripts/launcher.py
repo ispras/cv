@@ -1536,7 +1536,10 @@ class Launcher(Component):
             cov_mem = 0
 
         # Yes, this is a rough approximation, but nothing better is available.
-        wall_cov /= min(number_of_processes, self.cpu_cores)
+        if self.scheduler == SCHEDULER_CLOUD:
+            wall_cov /= self.cpu_cores
+        else:
+            wall_cov /= min(number_of_processes, self.cpu_cores)
 
         self.logger.info("Preparing report on launches into file: '{}'".format(report_launches))
         with open(report_launches, "w") as f_report:
