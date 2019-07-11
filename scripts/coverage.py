@@ -27,6 +27,7 @@ COVERAGE_MODES = [
     COVERAGE_MODE_FULL
 ]
 
+DEFAULT_COVERAGE_MODE = COVERAGE_MODE_FULL
 DEFAULT_COVERAGE_FILE = "coverage.json"
 DEFAULT_COVERAGE_FILES = ["coverage.info", "subcoverage.info"]
 DEFAULT_WORK_DIRECTORY = "coverage"
@@ -46,7 +47,7 @@ class Coverage(Component):
         else:
             self.install_dir = install_dir
             self.launcher_dir = work_dir
-        self.mode = self.component_config.get(TAG_COVERAGE_MODE, COVERAGE_MODE_PERCENT)
+        self.mode = self.component_config.get(TAG_COVERAGE_MODE, DEFAULT_COVERAGE_MODE)
         self.full_mode = self.component_config.get(TAG_FULL_COVERAGE_MODE, "full")
         self.internal_logger = logging.getLogger(name=COMPONENT_COVERAGE)
         self.internal_logger.setLevel(self.logger.level)
