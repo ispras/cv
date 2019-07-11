@@ -104,6 +104,8 @@ class Exporter(Component):
         root_element['attrs'] = [self.__format_attr(TAG_VERSION, self.version)]
 
         launcher_id = "/"
+        if_coverage_sources_written = False
+        coverage_sources = dict()
         with zipfile.ZipFile(archive_name, mode='w') as final_zip:
             # Components reports.
             with open(report_components, encoding='utf8', errors='ignore') as fp:
@@ -209,15 +211,23 @@ class Exporter(Component):
                             "memory size": mem,
                             "wall time": wall
                         }
-                        coverages = glob.glob(os.path.join(work_dir, DEFAULT_COVERAGE_ARCH))
-                        if coverages:
-                            if len(coverages) == 1:
-                                # Good.
-                                cov_name = "coverage_{}.zip".format(verifier_counter)
-                                verification_element['coverage'] = cov_name
-                                final_zip.write(coverages[0], arcname=cov_name)
-                            else:
-                                self.logger.warning("Cannot process more than one coverage files: {}".format(coverages))
+                        coverage = os.path.join(os.path.join(work_dir, DEFAULT_COVERAGE_ARCH))
+                        if os.path.exists(coverage):
+                            coverage_src = os.path.join(os.path.join(work_dir, DEFAULT_COVERAGE_SOURCE_FILES))
+                            if os.path.exists(coverage_src):
+                                with open(coverage_src) as f_s:
+                                    for line_src in f_s.readlines():
+                                        res = re.search(r'^(.+){0}(.+)$'.format(CSV_SEPARATOR), line_src)
+                                        if res:
+                                            coverage_sources[res.group(1)] = res.group(2)
+
+                            cov_name = "coverage_{}.zip".format(verifier_counter)
+                            verification_element['coverage'] = cov_name
+                            if not if_coverage_sources_written:
+                                verification_element['coverage sources'] = DEFAULT_COVERAGE_SOURCES_ARCH
+                                if_coverage_sources_written = True
+                            final_zip.write(coverage, arcname=cov_name)
+
                         overall_cpu += cpu
                         max_memory = max(max_memory, mem)
                         reports.append(verification_element)
@@ -373,6 +383,13 @@ class Exporter(Component):
                         zfp.write(src_file)
                 final_zip.write(DEFAULT_SOURCES_ARCH)
                 os.remove(DEFAULT_SOURCES_ARCH)
+
+                # TODO: those sources may be duplicated.
+                with zipfile.ZipFile(DEFAULT_COVERAGE_SOURCES_ARCH, mode='w') as zfp:
+                    for src_file, arch_path in coverage_sources.items():
+                        zfp.write(src_file, arcname=arch_path)
+                final_zip.write(DEFAULT_COVERAGE_SOURCES_ARCH)
+                os.remove(DEFAULT_COVERAGE_SOURCES_ARCH)
 
                 with open(FINAL_REPORT, 'w', encoding='utf8') as f_results:
                     json.dump(reports, f_results, ensure_ascii=False, sort_keys=True, indent=4)

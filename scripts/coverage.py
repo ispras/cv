@@ -12,7 +12,8 @@ import shutil
 
 from component import Component
 from config import COMPONENT_COVERAGE, TAG_COVERAGE_LINES, TAG_COVERAGE_FUNCS, CLADE_WORK_DIR, DEFAULT_TOOL_PATH, \
-    ET_LIB, TAG_TOOLS, COMMON_HEADER_FOR_RULES, DEFAULT_COVERAGE_ARCH, DEFAULT_INSTALL_DIR, TAG_DEBUG
+    ET_LIB, TAG_TOOLS, COMMON_HEADER_FOR_RULES, DEFAULT_COVERAGE_ARCH, DEFAULT_INSTALL_DIR, TAG_DEBUG, \
+    DEFAULT_COVERAGE_SOURCE_FILES
 
 TAG_COVERAGE_MODE = "mode"
 TAG_FULL_COVERAGE_MODE = "full mode"
@@ -102,9 +103,13 @@ class Coverage(Component):
         files = [DEFAULT_COVERAGE_FILE] + list(lcov.arcnames.keys())
         with open(archive, mode='w+b', buffering=0) as f:
             with zipfile.ZipFile(f, mode='w', compression=zipfile.ZIP_DEFLATED) as zfp:
-                for file in files:
-                    arch_name = lcov.arcnames.get(file, os.path.basename(file))
-                    zfp.write(file, arcname=arch_name)
+                with open(DEFAULT_COVERAGE_SOURCE_FILES, mode="w") as f_s:
+                    for file in files:
+                        arch_name = lcov.arcnames.get(file, os.path.basename(file))
+                        if file == DEFAULT_COVERAGE_FILE:
+                            zfp.write(file, arcname=arch_name)
+                        else:
+                            f_s.write("{};{}\n".format(file, arch_name))
                 os.fsync(zfp.fp)
 
 

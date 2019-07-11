@@ -110,6 +110,7 @@ TAG_EXTRA_OPTIONS = "extra options"
 DEFAULT_EXPORT_DIR = "export"
 DEFAULT_INSTALL_DIR = "tools"
 DEFAULT_COVERAGE_ARCH = "coverage.zip"
+DEFAULT_COVERAGE_SOURCES_ARCH = "coverage_sources.zip"
 
 
 COMMON_HEADER_FOR_RULES = "common.h"
@@ -140,3 +141,5 @@ CLADE_WORK_DIR = "clade-work-dir"
 CLADE_BASE_FILE = "cmds.txt"
 
 TAG_SOURCES = "sources"
+
+DEFAULT_COVERAGE_SOURCE_FILES = "coverage.src"
