@@ -11,11 +11,11 @@ import subprocess
 import tempfile
 import time
 import zipfile
-from filecmp import cmp
 
 from common import *
 from component import Component
 from config import *
+from coverage import extract_internal_coverage, write_coverage, merge_coverages, count_percent
 
 ERROR_TRACE_FILE = "error trace.json"
 FINAL_REPORT = "final.json"
@@ -28,6 +28,9 @@ TAG_SOURCE_FILES = "source files"
 
 DEFAULT_SOURCES_ARCH = "sources.zip"
 
+GLOBAL_COVERAGE_MAX = "max"
+GLOBAL_COVERAGE_REAL = "real"
+
 
 class Exporter(Component):
     def __init__(self, config, work_dir: str, install_dir: str):
@@ -37,6 +40,7 @@ class Exporter(Component):
         self.version = self.component_config.get(TAG_VERSION)
         self.add_logs = self.component_config.get(TAG_ADD_VERIFIER_LOGS, True)
         self.lock = multiprocessing.Lock()
+        self.global_coverage_element = dict()
 
     def __format_attr(self, name: str, value, compare=False):
         res = {
@@ -61,6 +65,84 @@ class Exporter(Component):
         }
         component['attrs'] = []
         return component
+
+    def __process_coverage(self, final_zip: zipfile.ZipFile, verifier_counter: int, work_dir: str,
+                           coverage_sources: dict, ignore=False) -> str:
+        cov_name = None
+        coverage = os.path.join(os.path.join(work_dir, DEFAULT_COVERAGE_ARCH))
+        if os.path.exists(coverage):
+            if not ignore:
+                cov_name = "coverage_{}.zip".format(verifier_counter)
+                final_zip.write(coverage, arcname=cov_name)
+
+            coverage_src = os.path.join(os.path.join(work_dir, DEFAULT_COVERAGE_SOURCE_FILES))
+            if os.path.exists(coverage_src):
+                with open(coverage_src) as f_s:
+                    for line_src in f_s.readlines():
+                        res = re.search(r'^(.+){0}(.+)$'.format(CSV_SEPARATOR), line_src)
+                        if res:
+                            coverage_sources[res.group(1)] = res.group(2)
+        return cov_name
+
+    def __print_coverage(self, final_zip: zipfile.ZipFile, counter: int, function_coverage: dict, line_coverage: dict,
+                         stats: dict, cov_type: str):
+        cov_name = "gc_{}.zip".format(counter)
+        if not function_coverage or not line_coverage:
+            return
+        final_zip.write(write_coverage(counter, function_coverage, line_coverage, stats), arcname=cov_name)
+        if not self.global_coverage_element:
+            self.global_coverage_element = {
+                "id": "/",
+                "parent id": None,
+                "type": "job coverage",
+                "name": "Global coverage",
+                "coverage": dict()
+            }
+        self.global_coverage_element["coverage"][cov_type] = cov_name
+
+    def __process_specific_coverage(self, work_dirs: list, cov_type: str, final_zip: zipfile.ZipFile, counter: int,
+                                    is_rule=False):
+        function_coverage = dict()
+        line_coverage = dict()
+        stats = dict()
+        for work_dir in work_dirs:
+            coverage = os.path.join(os.path.join(work_dir, DEFAULT_COVERAGE_ARCH))
+            if os.path.exists(coverage):
+                with zipfile.ZipFile(coverage) as tmp_arch:
+                    data = json.loads(tmp_arch.read(DEFAULT_COVERAGE_FILE).decode('utf8', errors='ignore'))
+                    extract_internal_coverage(data, function_coverage, line_coverage, stats)
+        if is_rule:
+            for merge_type, results in self.coverage_by_rule.items():
+                if not results[TAG_STATISTICS]:
+                    results[TAG_STATISTICS] = stats
+                merge_coverages(function_coverage, results[TAG_FUNCTION_COVERAGE],
+                                line_coverage, results[TAG_LINE_COVERAGE], merge_type)
+        self.__print_coverage(final_zip, counter, function_coverage, line_coverage, stats, cov_type)
+        return counter + 1
+
+    def __process_global_coverage(self, global_cov_files: dict, final_zip: zipfile.ZipFile):
+        counter = 0
+        self.coverage_by_rule = {
+            COVERAGE_MERGE_TYPE_UNION: dict(),
+            COVERAGE_MERGE_TYPE_INTERSECTION: dict()
+        }
+        for merge_type in self.coverage_by_rule:
+            self.coverage_by_rule[merge_type][TAG_FUNCTION_COVERAGE] = dict()
+            self.coverage_by_rule[merge_type][TAG_LINE_COVERAGE] = dict()
+            self.coverage_by_rule[merge_type][TAG_STATISTICS] = dict()
+        for cov_type, work_dirs in global_cov_files.items():
+            if not work_dirs:
+                continue
+            if cov_type == GLOBAL_COVERAGE_REAL:
+                for rule, work_dirs_by_rule in work_dirs.items():
+                    counter = self.__process_specific_coverage(work_dirs_by_rule, rule, final_zip, counter, True)
+
+            else:
+                counter = self.__process_specific_coverage(work_dirs, cov_type, final_zip, counter)
+        for merge_type, results in self.coverage_by_rule.items():
+            self.__print_coverage(final_zip, counter, results[TAG_FUNCTION_COVERAGE], results[TAG_LINE_COVERAGE],
+                                  results[TAG_STATISTICS], merge_type)
+            counter += 1
 
     def export_traces(self, report_launches: str, report_components: str, archive_name: str, unknown_desc: dict = dict):
         start_wall_time = time.time()
@@ -106,6 +188,10 @@ class Exporter(Component):
         launcher_id = "/"
         if_coverage_sources_written = False
         coverage_sources = dict()
+        global_cov_files = {
+            GLOBAL_COVERAGE_MAX: set(),
+            GLOBAL_COVERAGE_REAL: dict()
+        }
         with zipfile.ZipFile(archive_name, mode='w') as final_zip:
             # Components reports.
             with open(report_components, encoding='utf8', errors='ignore') as fp:
@@ -167,8 +253,6 @@ class Exporter(Component):
                     if res:
                         subsystem = res.group(1)
                         rule = res.group(2)
-                        if rule == RULE_COVERAGE:
-                            continue
                         entrypoint = res.group(3)
                         if entrypoint.endswith(ENTRY_POINT_SUFFIX):
                             entrypoint = entrypoint[:-len(ENTRY_POINT_SUFFIX)]
@@ -211,22 +295,24 @@ class Exporter(Component):
                             "memory size": mem,
                             "wall time": wall
                         }
-                        coverage = os.path.join(os.path.join(work_dir, DEFAULT_COVERAGE_ARCH))
-                        if os.path.exists(coverage):
-                            coverage_src = os.path.join(os.path.join(work_dir, DEFAULT_COVERAGE_SOURCE_FILES))
-                            if os.path.exists(coverage_src):
-                                with open(coverage_src) as f_s:
-                                    for line_src in f_s.readlines():
-                                        res = re.search(r'^(.+){0}(.+)$'.format(CSV_SEPARATOR), line_src)
-                                        if res:
-                                            coverage_sources[res.group(1)] = res.group(2)
-
-                            cov_name = "coverage_{}.zip".format(verifier_counter)
+                        if rule == RULE_COVERAGE:
+                            global_cov_files[GLOBAL_COVERAGE_MAX].add(work_dir)
+                            self.__process_coverage(final_zip, verifier_counter, work_dir, coverage_sources, True)
+                            if not if_coverage_sources_written:
+                                verification_element['coverage sources'] = DEFAULT_COVERAGE_SOURCES_ARCH
+                                if_coverage_sources_written = True
+                            reports.append(verification_element)
+                            verifier_counter += 1
+                            continue
+                        cov_name = self.__process_coverage(final_zip, verifier_counter, work_dir, coverage_sources)
+                        if cov_name:
+                            if rule not in global_cov_files[GLOBAL_COVERAGE_REAL]:
+                                global_cov_files[GLOBAL_COVERAGE_REAL][rule] = set()
+                            global_cov_files[GLOBAL_COVERAGE_REAL][rule].add(work_dir)
                             verification_element['coverage'] = cov_name
                             if not if_coverage_sources_written:
                                 verification_element['coverage sources'] = DEFAULT_COVERAGE_SOURCES_ARCH
                                 if_coverage_sources_written = True
-                            final_zip.write(coverage, arcname=cov_name)
 
                         overall_cpu += cpu
                         max_memory = max(max_memory, mem)
@@ -390,6 +476,10 @@ class Exporter(Component):
                         zfp.write(src_file, arcname=arch_path)
                 final_zip.write(DEFAULT_COVERAGE_SOURCES_ARCH)
                 os.remove(DEFAULT_COVERAGE_SOURCES_ARCH)
+
+                self.__process_global_coverage(global_cov_files, final_zip)
+                if self.global_coverage_element:
+                    reports.append(self.global_coverage_element)
 
                 with open(FINAL_REPORT, 'w', encoding='utf8') as f_results:
                     json.dump(reports, f_results, ensure_ascii=False, sort_keys=True, indent=4)

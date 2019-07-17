@@ -111,7 +111,13 @@ DEFAULT_EXPORT_DIR = "export"
 DEFAULT_INSTALL_DIR = "tools"
 DEFAULT_COVERAGE_ARCH = "coverage.zip"
 DEFAULT_COVERAGE_SOURCES_ARCH = "coverage_sources.zip"
+DEFAULT_COVERAGE_FILE = "coverage.json"
+COVERAGE_MERGE_TYPE_UNION = "union"
+COVERAGE_MERGE_TYPE_INTERSECTION = "intersection"
 
+TAG_FUNCTION_COVERAGE = "function coverage"
+TAG_LINE_COVERAGE = "line coverage"
+TAG_STATISTICS = "statistics"
 
 COMMON_HEADER_FOR_RULES = "common.h"
 
