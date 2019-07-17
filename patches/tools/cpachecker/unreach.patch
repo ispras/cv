@@ -184,3 +184,18 @@ Index: src/org/sosy_lab/cpachecker/cpa/automaton/AutomatonExpressionArguments.ja
            }
            return new CIntegerLiteralExpression(
                pNode.getFileLocation(),
+Index: src/org/sosy_lab/cpachecker/cmdline/ForceTerminationOnShutdown.java
+===================================================================
+--- src/org/sosy_lab/cpachecker/cmdline/ForceTerminationOnShutdown.java	(revision 31463)
++++ src/org/sosy_lab/cpachecker/cmdline/ForceTerminationOnShutdown.java	(working copy)
+@@ -46,8 +46,8 @@
+   private static final AtomicReference<Thread> forceTerminationOnShutdownThread = new AtomicReference<>();
+
+   // Time that a shutdown may last before we kill the program.
+-  private static final int SHUTDOWN_GRACE_PERIOD = 10; // seconds
+-  private static final int SHUTDOWN_GRACE_PERIOD_2 = 1; // seconds
++  private static final int SHUTDOWN_GRACE_PERIOD = 100; // seconds
++  private static final int SHUTDOWN_GRACE_PERIOD_2 = 10; // seconds
+
+   private final LogManager logger;
+   private final Thread mainThread;

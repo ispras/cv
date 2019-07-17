@@ -38,19 +38,19 @@ Index: config/includes/lockator/lockStatistics-predicate.properties
  useArraysForHeap = false
 Index: scripts/benchmark/vcloud.py
 ===================================================================
---- scripts/benchmark/vcloud.py	(revision 29939)
+--- scripts/benchmark/vcloud.py	(revision 31463)
 +++ scripts/benchmark/vcloud.py	(working copy)
-@@ -94,6 +94,10 @@
-         else:
+@@ -112,6 +112,10 @@
              logLevel = "INFO"
-         heapSize = benchmark.config.cloudClientHeap + numberOfRuns//10 # 100 MB and 100 kB per run
+         # heuristic for heap size: 100 MB and 100 kB per run
+         heapSize = benchmark.config.cloudClientHeap + numberOfRuns // 10
 +        if heapSize < 256:
 +            heapSize = 256
 +        if heapSize > 1024:
 +            heapSize = 1024
          lib = os.path.join(_ROOT_DIR, "lib", "java-benchmark", "vcloud.jar")
-         cmdLine = ["java", "-Xmx"+str(heapSize)+"m", "-jar", lib, "benchmark", "--loglevel", logLevel, \
-                    "--run-collection-meta-information", meta_information, \
+         cmdLine = [
+             "java",
 Index: src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java
 ===================================================================
 --- src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java	(revision 29939)
@@ -169,15 +169,18 @@ Index: src/org/sosy_lab/cpachecker/cfa/postprocessing/function/ThreadCreateTrans
    }
  }
 
-Index: config/includes/lockator/lockStatistics-core.properties
+Index: src/org/sosy_lab/cpachecker/cmdline/ForceTerminationOnShutdown.java
 ===================================================================
---- config/includes/lockator/lockStatistics-core.properties	(revision 30645)
-+++ config/includes/lockator/lockStatistics-core.properties	(working copy)
-@@ -6,7 +6,6 @@
- cpa.bam.aggressiveCaching = false
+--- src/org/sosy_lab/cpachecker/cmdline/ForceTerminationOnShutdown.java	(revision 29939)
++++ src/org/sosy_lab/cpachecker/cmdline/ForceTerminationOnShutdown.java	(working copy)
+@@ -46,8 +46,8 @@
+   private static final AtomicReference<Thread> forceTerminationOnShutdownThread = new AtomicReference<>();
 
- cpa.lock.reduceLockCounters = ALL
--cpa.lock.reduceUselessLocks = true
+   // Time that a shutdown may last before we kill the program.
+-  private static final int SHUTDOWN_GRACE_PERIOD = 10; // seconds
+-  private static final int SHUTDOWN_GRACE_PERIOD_2 = 1; // seconds
++  private static final int SHUTDOWN_GRACE_PERIOD = 100; // seconds
++  private static final int SHUTDOWN_GRACE_PERIOD_2 = 10; // seconds
 
- usage.processCoveredUsages = false
- # cpa.lock.stopMode = emptylockset
+   private final LogManager logger;
+   private final Thread mainThread;
