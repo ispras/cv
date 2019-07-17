@@ -1161,6 +1161,7 @@ class Launcher(Component):
                 if RULE_RACES in rules or RULE_DEADLOCK in rules:
                     rules.append(RULE_COV_AUX_RACES)
 
+        rules = sorted(set(rules))
         preparator_start_wall = time.time()
         resource_queue = multiprocessing.Queue()
         launches = deque()
