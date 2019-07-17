@@ -1,8 +1,6 @@
 {
   "-ldv-bam": [],
   "-setprop": [
-    "cpa.predicate.bam.usePrecisionReduction=false",
-    "cpa.predicate.refinement.predicateBasisStrategy=all",
     "coverage.enabled=true",
     "coverage.file=coverage.info"
   ]
