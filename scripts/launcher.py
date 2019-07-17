@@ -20,12 +20,12 @@ from builder import Builder
 from common import *
 from component import Component
 from config import *
+from coverage import Coverage
 from export_results import Exporter
 from generate_main import MainGenerator
 from mea import MEA
 from preparation import Preparator
 from qualifier import Qualifier
-from coverage import Coverage
 
 DEFAULT_CIL_DIR = "cil"
 DEFAULT_MAIN_DIR = "main"
@@ -1527,9 +1527,9 @@ class Launcher(Component):
                 stats_by_rules[rule].add_result(result)
                 if result.filtering_cpu:
                     mea_cpu += result.filtering_cpu
-                cov_cpu += result.coverage_resources[TAG_CPU_TIME]
-                wall_cov += result.coverage_resources[TAG_WALL_TIME]
-                cov_mem_array.append(result.coverage_resources[TAG_MEMORY_USAGE])
+                cov_cpu += result.coverage_resources.get(TAG_CPU_TIME, 0)
+                wall_cov += result.coverage_resources.get(TAG_WALL_TIME, 0)
+                cov_mem_array.append(result.coverage_resources.get(TAG_MEMORY_USAGE, 0))
         if cov_mem_array:
             cov_mem = sum(cov_mem_array)/len(cov_mem_array)
         else:
