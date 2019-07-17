@@ -46,7 +46,7 @@ TAG_CACHED = "cached"
 TAG_BRANCH = "branch"
 TAG_PATCH = "patches"
 TAG_BUILD_PATCH = "build patch"
-TAG_FIND_COVERAGE = "find coverage"
+TAG_MAX_COVERAGE = "max"
 TAG_CALLERS = "callers"
 TAG_COMMITS = "commits"
 TAG_BACKUP_WRITE = "backup write"
@@ -1146,7 +1146,7 @@ class Launcher(Component):
         self.logger.debug("Starting scheduler for verification tasks preparation with {} processes".
                           format(preparator_processes))
 
-        find_coverage = self.config.get(TAG_FIND_COVERAGE, True)
+        find_coverage = self.config.get(COMPONENT_COVERAGE, {}).get(TAG_MAX_COVERAGE, False)
         if find_coverage:
             if RULE_COVERAGE in rules and len(rules) > 1:
                 rules.remove(RULE_COVERAGE)

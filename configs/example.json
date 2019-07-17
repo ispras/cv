@@ -134,7 +134,8 @@
   },
   "Coverage": {
     "mode": "none - do not compute coverage, percent - only upload coverage percent, full - upload full coverage",
-    "debug": "true|false - overwrites debug value for Coverage component"
+    "debug": "true|false - overwrites debug value for Coverage component",
+    "max": "if true, then maximal potential coverage will be calculated for each entrypoint"
   },
   "system": "identifier of a system under verification (subdirectories with this id must present)",
   "entrypoints desc": ["list of paths to the files with description of entry points (files are searched in the entrypoints directory)"],
@@ -143,7 +144,6 @@
   "callers": ["list of callers, which should be checked (all other callers in the specified subsystems will be ignored), does not work with 'commits' tag"],
   "debug": "true|false - print debug messages and do not remove auxiliary files in the main script on not",
   "cached": "true|false - use obtained before CIL-files (is aimed at debug)",
-  "find coverage": "if true (default), then coverage will be calculated as well for each entrypoint",
   "runexec": "true|false - do not use RunExec as a command wrapper in case of false (default is true)",
   "preparation config": "redefine file name with preparation config (by default is conf.json)"
 }
