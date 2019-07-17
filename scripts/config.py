@@ -131,7 +131,7 @@ ARCHIVE_EXTENSION = ".zip"
 
 ERROR_TRACE_SOURCES = "error trace sources.json"
 
-PREPARATOR_LOG_FILE = "log.txt"
+LOG_FILE = "log.txt"
 TAG_LOG_FILE = "log"
 
 TAG_METADATA = "metadata"

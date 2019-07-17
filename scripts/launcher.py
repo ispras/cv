@@ -220,7 +220,7 @@ class VerificationResults:
             if usual_log_files:
                 log_file = usual_log_files[0]
             else:
-                log_file = glob.glob(os.path.join(launch_dir, 'log.txt'))[0]
+                log_file = glob.glob(os.path.join(launch_dir, LOG_FILE))[0]
             with open(log_file, errors='ignore') as f_res:
                 for line in f_res.readlines():
                     res = re.search(r'Number of refinements:(\s+)(\d+)', line)
@@ -230,7 +230,7 @@ class VerificationResults:
                     if self.rule == TERMINATION:
                         if re.search(r'The program will never terminate\.', line):
                             self.verdict = VERDICT_UNSAFE
-            shutil.move(log_file, "{0}/log.txt".format(launch_dir))
+            shutil.move(log_file, "{}/{}".format(launch_dir, LOG_FILE))
         except IndexError:
             print("WARNING: log file was not found for entry point '{}'".format(self.entrypoint))
             pass
@@ -875,7 +875,7 @@ class Launcher(Component):
                             file = os.path.join(root, name)
                             shutil.move(file, launch_dir)
                 if file.endswith(".log"):
-                    shutil.move(file, os.path.join(launch_dir, "log.txt"))
+                    shutil.move(file, os.path.join(launch_dir, LOG_FILE))
             xml_files = glob.glob(os.path.join(group_directory, 'benchmark*results.{}_{}_{}.xml'.format(
                 launch.entrypoint, launch.rule, os.path.basename(launch.cil_file)
             )))
