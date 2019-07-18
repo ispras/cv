@@ -34,6 +34,8 @@ DEFAULT_CIL_OPTIONS = [
 NOT_SUPPORTED_FUNCTIONS = ["__builtin_va_arg"]
 ADDED_PREFIX = "ldv_"
 
+DEFAULT_PREP_RESULT = "build_commands.json"
+
 
 class Preparator(Component):
     """
@@ -110,6 +112,7 @@ class Preparator(Component):
         self.special_regexp_filter_build_commands = 0
         self.subsystem_filter_build_commands = 0
         self.black_list_filter_build_commands = 0
+        self.build_commands = {}
 
     def __get_file_for_preprocess(self, file, work_dir):
         if not file:
@@ -167,17 +170,21 @@ class Preparator(Component):
                 if re.search(elem, file):
                     # Do not touch white-listed files (overrides other excludes).
                     return False
-        if self.subdirectory_pattern:
-            if not re.search(self.subdirectory_pattern, file):
-                # Exclude files for none-specified subdir.
-                self.subsystem_filter_build_commands += 1
-                return True
         if self.black_list:
             for elem in self.black_list:
                 if re.search(elem, file):
                     # Exclude black-listed files.
                     self.black_list_filter_build_commands += 1
                     return True
+        if file in self.build_commands:
+            self.build_commands[file][0] = True
+        if self.subdirectory_pattern:
+            if not re.search(self.subdirectory_pattern, file):
+                # Exclude files for none-specified subdir.
+                self.subsystem_filter_build_commands += 1
+                return True
+        if file in self.build_commands:
+            self.build_commands[file][1] = True
         # If no regexp was applied then do not skip the file.
         return False
 
@@ -191,7 +198,7 @@ class Preparator(Component):
         cif_out = self.get_first_target(command, "out")
         if cif_out is None:
             if self.strategy in [PREPARATION_STRATEGY_SUBSYSTEM]:
-                self.logger.debug("Skip command due subsystem filter: %s", str(command))
+                self.logger.debug("Skip command due to subsystem filter: %s", str(command))
                 return -1, None
             counter = len(self.libs) + 1
             self.libs[counter] = []
@@ -226,6 +233,7 @@ class Preparator(Component):
     def __process_single_cc_command(self, command, cif_out, cif_in, source_dir):
         processed_files = []
 
+        cif_out = os.path.normpath(os.path.relpath(cif_out, start=source_dir))
         if self.__is_skip_file(cif_out):
             self.logger.debug("Skip file due to filter settings: %s", cif_out)
             return -1, None
@@ -236,7 +244,7 @@ class Preparator(Component):
         else:
             os.chdir(source_dir)
 
-        cif_out = os.path.normpath(os.path.join(self.preprocessing_dir, os.path.relpath(cif_out, start=source_dir)))
+        cif_out = os.path.normpath(os.path.join(self.preprocessing_dir, cif_out))
 
         os.makedirs(os.path.dirname(cif_out), exist_ok=True)
 
@@ -385,9 +393,20 @@ class Preparator(Component):
                 elif "out" not in command:
                     sys.exit("Can't find 'out' field in build command: {}".format(command))
 
+                if command['out']:
+                    cmd_name = command['out'][0]
+                    if not os.path.isabs(cmd_name):
+                        cmd_name = os.path.normpath(os.path.join(command["cwd"], cmd_name))
+                    cmd_name = os.path.normpath(os.path.relpath(cmd_name, source_dir))
+                    self.build_commands[cmd_name] = [False, False, False, False]
+
                 ret, files = self.process_cc_command(command, source_dir)
                 if not ret:
                     processed_files.extend(files)
+                    for file in files:
+                        file = os.path.normpath(os.path.relpath(file, self.preprocessing_dir))
+                        if file in self.build_commands:
+                            self.build_commands[file][2] = True
                 elif files:
                     failed_files.extend(files)
 
@@ -461,6 +480,9 @@ class Preparator(Component):
                 file = file_copy
             if not self.__execute_cil(self.cil_out, [file]):
                 checked_files.append(file)
+                file_cmd = os.path.normpath(os.path.relpath(file, self.preprocessing_dir))
+                if file_cmd in self.build_commands:
+                    self.build_commands[file_cmd][3] = True
             else:
                 self.logger.warning("Skip file '%s' due to failed check", file)
                 if self.is_auxiliary(file):
@@ -509,10 +531,6 @@ class Preparator(Component):
 
         os.chdir(self.work_dir)
 
-        if not self.debug:
-            for file in glob.glob("{0}/*".format(self.preprocessing_dir)):
-                if os.path.isdir(file):
-                    shutil.rmtree(file, ignore_errors=True)
         self.logger.debug("Overall build commands: {}, incorrect: {}, filtered by special regexp: {}, "
                           "filtered by black filter: {}, filtered by subsystem: {}, processed: {}".format(
             self.overall_build_commands, self.incorrect_build_commands, self.special_regexp_filter_build_commands,
@@ -524,6 +542,10 @@ class Preparator(Component):
         if queue:
             results_data = self.get_component_full_stats()
             results_data[TAG_CIL_FILE] = self.cil_out
+            results_file = os.path.join(self.preprocessing_dir, DEFAULT_PREP_RESULT)
+            with open(results_file, 'w', encoding='utf8') as fd:
+                json.dump(self.build_commands, fd, ensure_ascii=False, sort_keys=True, indent="\t")
+            results_data[TAG_PREP_RESULTS] = results_file
             queue.put(results_data)
 
     def __on_exit(self):

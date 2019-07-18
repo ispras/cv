@@ -43,6 +43,8 @@ class Exporter(Component):
         self.global_coverage_element = dict()
 
     def __format_attr(self, name: str, value, compare=False):
+        if isinstance(value, int):
+            value = str(value)
         res = {
             "name": name,
             "value": value
@@ -144,7 +146,8 @@ class Exporter(Component):
                                   results[TAG_STATISTICS], merge_type)
             counter += 1
 
-    def export_traces(self, report_launches: str, report_components: str, archive_name: str, unknown_desc: dict = dict):
+    def export(self, report_launches: str, report_components: str, archive_name: str, unknown_desc: dict = dict,
+               component_attrs: dict = dict):
         start_wall_time = time.time()
         overall_wall = 0  # Launcher + Exporter.
         overall_cpu = 0  # Sum of all components.
@@ -227,6 +230,8 @@ class Exporter(Component):
                                     "wall time": u_desc[TAG_WALL_TIME]
                                 }
                                 reports.append(unknown_report)
+                        if name in component_attrs:
+                            new_report['attrs'] = component_attrs[name]
                         reports.append(new_report)
                         if name == COMPONENT_LAUNCHER:
                             launcher_id += name
@@ -511,4 +516,4 @@ if __name__ == '__main__':
     report_launches = os.path.join(results_dir, "report_launches_{}.csv".format(timestamp))
     report_components = os.path.join(results_dir, "report_components_{}.csv".format(timestamp))
     archive = os.path.join(results_dir, "results_{}.zip".format(timestamp))
-    exporter.export_traces(report_launches, report_components, archive)
+    exporter.export(report_launches, report_components, archive)

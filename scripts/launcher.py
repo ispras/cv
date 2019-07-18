@@ -1285,15 +1285,17 @@ class Launcher(Component):
         preparation_cpu_time = time.process_time() - self.start_cpu_time
         preparation_memory_usage_all = []
         preparator_unknowns = []
+        component_attrs = {COMPONENT_PREPARATOR: dict()}
+        build_commands = dict()
         while not resource_queue.empty():
-            resources = resource_queue.get()
-            preparator_wall_time = resources.get(TAG_WALL_TIME, 0.0)
-            preparator_cpu_time = resources.get(TAG_CPU_TIME, 0.0)
-            preparator_memory = resources.get(TAG_MEMORY_USAGE, 0)
+            prep_data = resource_queue.get()
+            preparator_wall_time = prep_data.get(TAG_WALL_TIME, 0.0)
+            preparator_cpu_time = prep_data.get(TAG_CPU_TIME, 0.0)
+            preparator_memory = prep_data.get(TAG_MEMORY_USAGE, 0)
             preparation_memory_usage_all.append(preparator_memory)
             preparation_cpu_time += preparator_cpu_time
-            if TAG_LOG_FILE in resources:
-                cil_file = resources.get(TAG_CIL_FILE, "")
+            if TAG_LOG_FILE in prep_data:
+                cil_file = prep_data.get(TAG_CIL_FILE, "")
                 attrs = list()
                 if cil_file:
                     res = re.search(r"(\w+)_([^_]+)_(\w+)\.i", os.path.basename(cil_file))
@@ -1304,7 +1306,7 @@ class Launcher(Component):
                             {"name": "Strategy", "value": res.group(3)},
                         ]
 
-                for log in resources.get(TAG_LOG_FILE):
+                for log in prep_data.get(TAG_LOG_FILE):
                     preparator_unknowns.append({
                         TAG_LOG_FILE: log,
                         TAG_CPU_TIME: round(preparator_cpu_time * 1000),
@@ -1312,6 +1314,48 @@ class Launcher(Component):
                         TAG_MEMORY_USAGE: preparator_memory,
                         TAG_ATTRS: attrs
                     })
+            if TAG_PREP_RESULTS in prep_data:
+                with open(prep_data[TAG_PREP_RESULTS]) as fd:
+                    data = json.load(fd)
+                    for cmd, args in data.items():
+                        if cmd not in build_commands:
+                            build_commands[cmd] = args
+                        else:
+                            for i in range(0, len(args)):
+                                build_commands[cmd][i] = build_commands[cmd][i] or args[i]
+
+        if build_commands:
+            overall_build_commands = len(build_commands)
+            potential_build_commands = 0
+            filtered_build_commands = 0
+            compiled_build_commands = 0
+            processed_build_commands = 0
+            for cmd, args in build_commands.items():
+                if args[0]:
+                    potential_build_commands += 1
+                if args[1]:
+                    filtered_build_commands += 1
+                if args[2]:
+                    compiled_build_commands += 1
+                if args[3]:
+                    processed_build_commands += 1
+            component_attrs[COMPONENT_PREPARATOR] = [
+                {
+                    "name": "Build commands", "value": [
+                        {"name": "overall", "value": str(overall_build_commands)},
+                        {"name": "potential", "value": str(potential_build_commands)},
+                        {"name": "filtered", "value": str(filtered_build_commands)},
+                        {"name": "compiled", "value": str(compiled_build_commands)},
+                        {"name": "processed", "value": str(processed_build_commands)}
+                    ]
+                }
+            ]
+            self.logger.info("Number of build commands: {}; potentially can be used (not ignored): {}; "
+                              "filtered for checked subsystems: {}; compiled: {}; processed: {}".format(
+                overall_build_commands, potential_build_commands, filtered_build_commands, compiled_build_commands,
+                processed_build_commands
+            ))
+            # TODO: upload those unused build commands for common coverage data
 
         for memory_usage in sorted(preparation_memory_usage_all):
             preparation_memory_usage += memory_usage
@@ -1595,8 +1639,8 @@ class Launcher(Component):
         self.logger.info("Exporting results into archive: '{}'".format(result_archive))
 
         exporter = Exporter(self.config, DEFAULT_EXPORT_DIR, self.install_dir)
-        exporter.export_traces(report_launches, report_components, result_archive,
-                               {COMPONENT_PREPARATOR: preparator_unknowns})
+        exporter.export(report_launches, report_components, result_archive,
+                        unknown_desc={COMPONENT_PREPARATOR: preparator_unknowns}, component_attrs=component_attrs)
 
         uploader_config = self.config.get(UPLOADER, {})
         if uploader_config and uploader_config.get(TAG_UPLOADER_UPLOAD_RESULTS, False):
@@ -1613,6 +1657,7 @@ class Launcher(Component):
             if self.backup and os.path.exists(self.backup):
                 os.remove(self.backup)
             shutil.rmtree(DEFAULT_LAUNCHES_DIR, ignore_errors=True)
+            shutil.rmtree(DEFAULT_PREPROCESS_DIR, ignore_errors=True)
         self.logger.info("Finishing verification of '{}' configuration".format(self.config_file))
         os.chdir(self.root_dir)
 

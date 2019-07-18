@@ -79,6 +79,7 @@ TAG_WALL_TIME = "wall"
 TAG_MEMORY_USAGE = "memory"
 TAG_EXITCODE = "exit code"
 TAG_CIL_FILE = "cil file"
+TAG_PREP_RESULTS = "prep results"
 TAG_ATTRS = "attrs"
 
 TAG_CACHED_COMMANDS = "cached commands"
