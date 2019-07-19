@@ -195,7 +195,7 @@ class Exporter(Component):
             GLOBAL_COVERAGE_MAX: set(),
             GLOBAL_COVERAGE_REAL: dict()
         }
-        with zipfile.ZipFile(archive_name, mode='w') as final_zip:
+        with zipfile.ZipFile(archive_name, mode='w', compression=zipfile.ZIP_DEFLATED) as final_zip:
             # Components reports.
             with open(report_components, encoding='utf8', errors='ignore') as fp:
                 for line in fp.readlines():
@@ -219,7 +219,7 @@ class Exporter(Component):
                                 unknown_report['type'] = "unknown"
                                 unknown_archive = "unknown_{}_{}.zip".format(name, counter)
                                 counter += 1
-                                with zipfile.ZipFile(unknown_archive, mode='w') as zfp:
+                                with zipfile.ZipFile(unknown_archive, mode='w', compression=zipfile.ZIP_DEFLATED) as zfp:
                                     zfp.write(log, arcname=UNKNOWN_DESC_FILE)
                                 final_zip.write(unknown_archive, arcname=unknown_archive)
                                 unknown_report["problem desc"] = unknown_archive
@@ -402,7 +402,8 @@ class Exporter(Component):
                                 other_element["problem desc"] = unknown_archive
 
                                 if not is_cached:
-                                    with zipfile.ZipFile(unknown_archive, mode='w') as zfp:
+                                    with zipfile.ZipFile(unknown_archive, mode='w', compression=zipfile.ZIP_DEFLATED) \
+                                            as zfp:
                                         with open(UNKNOWN_DESC_FILE, 'w') as fp, \
                                                 open(os.path.join(work_dir, "log.txt")) as f_log:
                                             fp.write("Termination reason: {}\n".format(text))
@@ -469,14 +470,14 @@ class Exporter(Component):
                     "wall time": overall_wall
                 }
                 reports.append(root_element)
-                with zipfile.ZipFile(DEFAULT_SOURCES_ARCH, mode='w') as zfp:
+                with zipfile.ZipFile(DEFAULT_SOURCES_ARCH, mode='w', compression=zipfile.ZIP_DEFLATED) as zfp:
                     for src_file in source_files:
                         zfp.write(src_file)
                 final_zip.write(DEFAULT_SOURCES_ARCH)
                 os.remove(DEFAULT_SOURCES_ARCH)
 
                 # TODO: those sources may be duplicated.
-                with zipfile.ZipFile(DEFAULT_COVERAGE_SOURCES_ARCH, mode='w') as zfp:
+                with zipfile.ZipFile(DEFAULT_COVERAGE_SOURCES_ARCH, mode='w', compression=zipfile.ZIP_DEFLATED) as zfp:
                     for src_file, arch_path in coverage_sources.items():
                         zfp.write(src_file, arcname=arch_path)
                 final_zip.write(DEFAULT_COVERAGE_SOURCES_ARCH)
@@ -487,7 +488,7 @@ class Exporter(Component):
                     reports.append(self.global_coverage_element)
 
                 with open(FINAL_REPORT, 'w', encoding='utf8') as f_results:
-                    json.dump(reports, f_results, ensure_ascii=False, sort_keys=True, indent=4)
+                    json.dump(reports, f_results, ensure_ascii=False, sort_keys=True, indent="\t")
                 final_zip.write(FINAL_REPORT, arcname="reports.json")
                 os.remove(FINAL_REPORT)
 

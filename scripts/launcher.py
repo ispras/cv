@@ -505,7 +505,7 @@ class Launcher(Component):
         # Create benchmark file.
         benchmark_name = "{0}/benchmark_{1}.xml".format(DEFAULT_LAUNCHES_DIR, os.path.basename(launch_directory))
         with open(benchmark_name, "w", encoding="ascii") as fp:
-            fp.write(minidom.parseString(ElementTree.tostring(benchmark)).toprettyxml(indent="    "))
+            fp.write(minidom.parseString(ElementTree.tostring(benchmark)).toprettyxml(indent="\t"))
 
         return launch_directory, benchmark_name
 
@@ -820,7 +820,7 @@ class Launcher(Component):
                                    "include").text = os.path.relpath(launch.cil_file)
         benchmark_name = "{0}/benchmark_{1}.xml".format(DEFAULT_LAUNCHES_DIR, mode)
         with open(benchmark_name, "w", encoding="ascii") as fp:
-            fp.write(minidom.parseString(ElementTree.tostring(benchmark_cur)).toprettyxml(indent="    "))
+            fp.write(minidom.parseString(ElementTree.tostring(benchmark_cur)).toprettyxml(indent="\t"))
 
         # Create temp directory for group.
         group_directory = os.path.abspath(tempfile.mkdtemp(dir=DEFAULT_LAUNCHES_DIR))

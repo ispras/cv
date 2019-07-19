@@ -116,7 +116,7 @@ def write_coverage(counter: int, function_coverage: dict, line_coverage: dict, s
     data[TAG_PERCENT][TAG_LINE_COVERAGE] = lines_percent
     data[TAG_PERCENT][TAG_STATISTICS] = dict()
     data[TAG_PERCENT][TAG_VALUES] = list()
-    with zipfile.ZipFile(generated_arch, mode='w') as zfd:
+    with zipfile.ZipFile(generated_arch, mode='w', compression=zipfile.ZIP_DEFLATED) as zfd:
         with open(generated_cov, "w") as fd:
             json.dump(data, fd, ensure_ascii=False, sort_keys=True, indent="\t")
         zfd.write(generated_cov, arcname=DEFAULT_COVERAGE_FILE)

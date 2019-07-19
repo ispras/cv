@@ -213,7 +213,7 @@ class Builder(Component):
                 cmd['command'] = c.get_cmd_raw(identifier)[0]
                 cmd['opts'] = c.get_cmd_opts(identifier)
             with open(build_commands_file, "w") as fd:
-                json.dump(cmds, fd, sort_keys=True, indent=4)
+                json.dump(cmds, fd, sort_keys=True, indent="\t")
         except Exception:
             error_msg = "Building has failed due to: {}".format(traceback.format_exc())
             if self.fail_if_failure:

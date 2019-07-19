@@ -234,7 +234,7 @@ class MEA(Component):
     def __print_trace_archive(self, error_trace_file_name: str):
         json_trace_name, source_files, converted_traces_files = self.__get_aux_file_names(error_trace_file_name)
         archive_name = error_trace_file_name[:-len(GRAPHML_EXTENSION)] + ARCHIVE_EXTENSION
-        with zipfile.ZipFile(archive_name, mode='w') as zfp:
+        with zipfile.ZipFile(archive_name, mode='w', compression=zipfile.ZIP_DEFLATED) as zfp:
             zfp.write(json_trace_name, arcname=ERROR_TRACE_FILE)
             zfp.write(source_files, arcname=ERROR_TRACE_SOURCES)
             zfp.write(converted_traces_files, arcname=CONVERTED_ERROR_TRACES)
@@ -296,10 +296,10 @@ class MEA(Component):
         json_trace_name, source_files, converted_traces_files = self.__get_aux_file_names(error_trace_file)
 
         with open(json_trace_name, 'w', encoding='utf8') as fp:
-            json.dump(parsed_error_trace, fp, ensure_ascii=False, sort_keys=True, indent=4)
+            json.dump(parsed_error_trace, fp, ensure_ascii=False, sort_keys=True, indent="\t")
 
         with open(source_files, 'w', encoding='utf8') as fp:
-            json.dump(parsed_error_trace['files'], fp, ensure_ascii=False, sort_keys=True, indent=4)
+            json.dump(parsed_error_trace['files'], fp, ensure_ascii=False, sort_keys=True, indent="\t")
 
         converted_traces = dict()
         for conversion_function in EXPORTING_CONVERTED_FUNCTIONS:
@@ -310,7 +310,7 @@ class MEA(Component):
                 converted_traces[conversion_function] = \
                     convert_error_trace(parsed_error_trace, conversion_function, {})
         with open(converted_traces_files, 'w', encoding='utf8') as fp:
-            json.dump(converted_traces, fp, ensure_ascii=False, sort_keys=True, indent=4)
+            json.dump(converted_traces, fp, ensure_ascii=False, sort_keys=True, indent="\t")
 
     def __get_aux_file_names(self, error_trace_file: str) -> tuple:
         # Returns the following files: json_trace, source_files, converted_traces
