@@ -714,7 +714,7 @@ class Launcher(Component):
                     builder.build(build_commands)
                 builder_resources = self.add_resources(builder.get_component_full_stats(), builder_resources)
 
-                if commits:
+                if commits and commits[0]:
                     if not builder.repository:
                         self.logger.error("Cannot check commits without repository")
                         exit(1)
