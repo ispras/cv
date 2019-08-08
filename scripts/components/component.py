@@ -7,11 +7,12 @@ import sys
 import tempfile
 import time
 
-from config import TAG_DIRS, TAG_DEBUG, TAG_TOOLS, DEFAULT_TOOL_PATH, BENCHEXEC, TAG_MEMORY_USAGE, TAG_CPU_TIME, \
+from components import TAG_DIRS, TAG_DEBUG, TAG_TOOLS, DEFAULT_TOOL_PATH, BENCHEXEC, TAG_MEMORY_USAGE, TAG_CPU_TIME, \
     TAG_WALL_TIME, TAG_LOG_FILE
 
 DEFAULT_MEMORY_LIMIT = "3GB"
 TAG_RUNEXEC = "runexec"
+
 
 class Component:
     def __init__(self, name: str, config: dict):

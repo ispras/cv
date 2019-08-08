@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# These are options like "-include header.h" with space betwen option and value
+# These are options like "-include header.h" with space between option and value
 # Options with values that are not separated by space should not be included here
 
 import re

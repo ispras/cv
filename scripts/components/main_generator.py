@@ -4,8 +4,8 @@ import json
 import os
 import re
 
-from component import Component
-from config import *
+from components import *
+from components.component import Component
 
 DEFAULT_TYPE = "int"
 DEFAULT_VOID = "void"

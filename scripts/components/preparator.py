@@ -1,13 +1,11 @@
-import argparse
-import glob
 import json
 import shutil
 import sys
 import tempfile
 
-from component import Component
-from config import *
-from opts import *
+from aux.opts import *
+from components import *
+from components.component import Component
 
 TAG_MODEL = "model"
 TAG_RESOLVE_MISSED_PROTO = "resolve missed proto"
@@ -273,6 +271,7 @@ class Preparator(Component):
         cif_unsupported_opts = preprocessor_deps_opts + self.preparation_config.get(CONF_UNSUPPORTED_OPTIONS, [])
         opts = filter_opts(opts, cif_unsupported_opts)
         if self.use_cif:
+            # noinspection PyUnresolvedReferences
             from clade.extensions.opts import filter_opts as cif_filter_opts
             opts = cif_filter_opts(opts)
         cif_args.extend(opts)
@@ -371,6 +370,7 @@ class Preparator(Component):
                 with open(build_commands, "r", errors='ignore') as bc_fh:
                     bc_json = json.load(bc_fh)
             else:
+                # noinspection PyUnresolvedReferences
                 from clade import Clade
                 cur_dir = os.getcwd()
                 os.chdir(source_dir)
@@ -553,23 +553,3 @@ class Preparator(Component):
         if os.path.exists(self.cil_out):
             os.remove(self.cil_out)
 
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--config", "-c", metavar="PATH", help="set PATH to configuration", required=True)
-    parser.add_argument("--main", "-m", metavar="PATH", help="path to a main file", required=True)
-    options = parser.parse_args()
-
-    if not options.config:
-        sys.exit("Configuration not found. Please use --config parameter to specify path to it")
-
-    with open(options.config) as data_file:
-        config = json.load(data_file)
-
-    work_dir = config[TAG_DIRS][TAG_DIRS_WORK]
-    model = config.get(TAG_MODEL)
-    install_dir = os.path.abspath(DEFAULT_INSTALL_DIR)
-    os.chdir(work_dir)
-
-    p_bce = Preparator(install_dir, config, model=model, main_file=options.main)
-    p_bce.prepare_task()

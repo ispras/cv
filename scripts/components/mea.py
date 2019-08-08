@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 
-import argparse
 import glob
 import json
 import logging
@@ -9,16 +8,17 @@ import operator
 import re
 import resource
 import time
-import zipfile
 import uuid
+import zipfile
 
-from common import *
-from component import Component
-from config import *
 # noinspection PyUnresolvedReferences
-from mea_core import DEFAULT_CONVERSION_FUNCTION, CONVERSION_FUNCTION_MODEL_FUNCTIONS, CONVERSION_FUNCTION_CALL_TREE, \
+from aux.mea import DEFAULT_CONVERSION_FUNCTION, CONVERSION_FUNCTION_MODEL_FUNCTIONS, CONVERSION_FUNCTION_CALL_TREE, \
     CONVERSION_FUNCTION_NOTES, convert_error_trace, compare_error_traces, is_equivalent, DEFAULT_COMPARISON_FUNCTION, \
     DEFAULT_SIMILARITY_THRESHOLD, TAG_COMPARISON_FUNCTION, TAG_CONVERSION_FUNCTION, TAG_ADDITIONAL_MODEL_FUNCTIONS
+
+from aux.common import *
+from components import *
+from components.component import Component
 
 ERROR_TRACE_FILE = "error trace.json"
 CONVERTED_ERROR_TRACES = "converted error traces.json"
@@ -33,6 +33,8 @@ EXPORTING_CONVERTED_FUNCTIONS = {
     CONVERSION_FUNCTION_CALL_TREE,
     CONVERSION_FUNCTION_NOTES
 }
+
+DO_NOT_FILTER = "do not filter"
 
 
 class MEA(Component):
@@ -215,6 +217,8 @@ class MEA(Component):
         """
         Compare converted error traces.
         """
+        if self.comparison_function == DO_NOT_FILTER:
+            return False
         equivalent_trace = None
         for filtered_file_name, filtered_converted_trace in self.__cache.items():
             compare_result = compare_error_traces(converted_trace, filtered_converted_trace, self.comparison_function)
@@ -348,46 +352,3 @@ class MEA(Component):
             work_dir = os.path.dirname(self.error_traces[0])
             for file in glob.glob(os.path.join(work_dir, "*{}".format(JSON_EXTENSION))):
                 os.remove(file)
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--conversion", help="conversion function", required=False, default=DEFAULT_CONVERSION_FUNCTION)
-    parser.add_argument("--comparison", help="comparison function", required=False, default=DEFAULT_COMPARISON_FUNCTION)
-    parser.add_argument("--additional-model-functions", dest='mf', nargs='+',
-                        help="add model functions, separated by whitespace", required=False)
-    parser.add_argument("--directory", "-d", help="directory with error traces", required=True)
-    parser.add_argument("--rule", "-r", help="rule specification, which is violated by traces", default="")
-    parser.add_argument("--result-dir", dest="result_dir",
-                        help="directory for saving processed html error traces", default="")
-    parser.add_argument('--debug', action='store_true')
-
-    options = parser.parse_args()
-
-    args = dict()
-    if options.mf:
-        args[TAG_ADDITIONAL_MODEL_FUNCTIONS] = options.mf
-
-    config = {
-        COMPONENT_MEA: {
-            TAG_COMPARISON_FUNCTION: options.comparison,
-            TAG_CONVERSION_FUNCTION: options.conversion,
-            TAG_CONVERSION_FUNCTION_ARGUMENTS: args,
-            TAG_DEBUG: options.debug,
-            TAG_CLEAN: False
-        }
-    }
-
-    traces = glob.glob(os.path.join(options.directory, "witness.*{}".format(GRAPHML_EXTENSION)))
-
-    install_dir = os.path.abspath(DEFAULT_INSTALL_DIR)
-    if not os.path.exists(install_dir):
-        install_dir = os.path.abspath(os.path.join(os.pardir, DEFAULT_INSTALL_DIR))
-
-    mea = MEA(config, traces, install_dir, options.rule, options.result_dir)
-    mea.clear()
-
-    traces = mea.filter()
-    mea.logger.info("Filtered traces:")
-    for filtered_trace in traces:
-        mea.logger.info(filtered_trace)

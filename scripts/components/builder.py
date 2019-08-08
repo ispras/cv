@@ -8,9 +8,9 @@ import subprocess
 import sys
 import traceback
 
-from component import Component
-from config import COMPONENT_BUILDER, TAG_CLADE_CONF, TAG_MAKE_COMMAND, TAG_FAIL_IF_FAILURE, CLADE_BASE_FILE, \
+from components import COMPONENT_BUILDER, TAG_CLADE_CONF, TAG_MAKE_COMMAND, TAG_FAIL_IF_FAILURE, CLADE_BASE_FILE, \
     CLADE_WORK_DIR, TAG_MAKE_CLEAN_COMMAND, TAG_PATH
+from components.component import Component
 
 REPOSITORY_GIT = "git"
 REPOSITORY_SVN = "svn"
@@ -203,6 +203,7 @@ class Builder(Component):
 
         self.logger.debug("Using Clade tool to build sources with '{}'".format(self.make_command))
         try:
+            # noinspection PyUnresolvedReferences
             from clade import Clade
             c = Clade(CLADE_WORK_DIR, CLADE_BASE_FILE, conf=self.clade_conf)
             c.intercept(str(self.make_command).split())
@@ -223,22 +224,3 @@ class Builder(Component):
 
         os.chdir(self.work_dir)
         self.logger.info("Sources has been successfully built")
-
-
-'''
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--install", "-i", help="install directory", default=os.path.abspath(DEFAULT_INSTALL_DIR))
-    parser.add_argument("--config", "-c", help="config file", required=True)
-    parser.add_argument("--sources", "-s", help="sources directory", required=True)
-    parser.add_argument("--patch", "-p", help="patch for building")
-
-    options = parser.parse_args()
-    with open(options.config) as fd:
-        config = json.load(fd)
-
-    builder = Builder(options.install, config, options.sources)
-    builder.clean()
-    builder.patch(options.patch)
-    builder.build()
-'''

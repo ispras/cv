@@ -11,8 +11,8 @@ import subprocess
 import sys
 import zipfile
 
-from component import Component
-from config import *
+from components import *
+from components.component import Component
 
 TAG_COVERAGE_MODE = "mode"
 TAG_COVERAGE_PERCENT_MODE = "percent mode"

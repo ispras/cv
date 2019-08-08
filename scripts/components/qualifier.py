@@ -3,9 +3,9 @@ import os
 import sys
 import traceback
 
-from builder import Builder
-from component import Component
-from config import COMPONENT_QUALIFIER, DEFAULT_TOOL_PATH, CIF, CLADE_BASE_FILE, CLADE_WORK_DIR, JSON_EXTENSION
+from components import COMPONENT_QUALIFIER, DEFAULT_TOOL_PATH, CIF, CLADE_BASE_FILE, CLADE_WORK_DIR, JSON_EXTENSION
+from components.builder import Builder
+from components.component import Component
 
 DEFAULT_CALLGRAPH_FILE = "callgraph.json"
 TAG_CACHE = "cached call graph"
@@ -32,6 +32,7 @@ class Qualifier(Component):
         else:
             self.logger.debug("Using Clade tool to obtain function call tree")
             try:
+                # noinspection PyUnresolvedReferences
                 from clade import Clade
                 c = Clade(CLADE_WORK_DIR, CLADE_BASE_FILE)
                 c.parse_all()

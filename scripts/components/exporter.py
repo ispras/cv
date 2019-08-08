@@ -1,9 +1,9 @@
 #!/usr/bin/python3
 
-import argparse
 import glob
 import json
 import multiprocessing
+import os
 import re
 import resource
 import shutil
@@ -12,10 +12,9 @@ import tempfile
 import time
 import zipfile
 
-from common import *
-from component import Component
-from config import *
-from coverage import extract_internal_coverage, write_coverage, merge_coverages, count_percent
+from components import *
+from components.component import Component
+from components.coverage_processor import extract_internal_coverage, write_coverage, merge_coverages
 
 ERROR_TRACE_FILE = "error trace.json"
 FINAL_REPORT = "final.json"
@@ -146,8 +145,8 @@ class Exporter(Component):
                                   results[TAG_STATISTICS], merge_type)
             counter += 1
 
-    def export(self, report_launches: str, report_components: str, archive_name: str, unknown_desc: dict = dict,
-               component_attrs: dict = dict):
+    def export(self, report_launches: str, report_components: str, archive_name: str, unknown_desc=dict(),
+               component_attrs=dict()):
         start_wall_time = time.time()
         overall_wall = 0  # Launcher + Exporter.
         overall_cpu = 0  # Sum of all components.
@@ -496,25 +495,3 @@ class Exporter(Component):
         if not self.debug:
             shutil.rmtree(export_dir, ignore_errors=True)
         self.logger.info("Exporting results has been completed")
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--config", "-c", metavar="PATH", help="set PATH to configuration", required=True)
-    options = parser.parse_args()
-    with open(options.config) as data_file:
-        config = json.load(data_file)
-
-    install_dir = os.path.abspath(DEFAULT_INSTALL_DIR)
-    results_dir = os.path.abspath(config[TAG_DIRS][TAG_DIRS_RESULTS])
-    work_dir = os.path.abspath(os.path.join(config[TAG_DIRS][TAG_DIRS_WORK], DEFAULT_EXPORT_DIR))
-
-    exporter = Exporter(config, work_dir, install_dir)
-
-    timestamp = config.get(COMPONENT_EXPORTER, {}).get("timestamp")
-    if not timestamp:
-        sys.exit("Timestamp for report was not specified")
-    report_launches = os.path.join(results_dir, "report_launches_{}.csv".format(timestamp))
-    report_components = os.path.join(results_dir, "report_components_{}.csv".format(timestamp))
-    archive = os.path.join(results_dir, "results_{}.zip".format(timestamp))
-    exporter.export(report_launches, report_components, archive)
