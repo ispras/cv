@@ -128,7 +128,11 @@ class MEA(Component):
                 except:
                     pass
             sorted_traces[key] = trace
-        sorted_traces = sorted(sorted_traces.items(), key=operator.itemgetter(0))
+        try:
+            sorted_traces = sorted(sorted_traces.items(), key=operator.itemgetter(0))
+        except Exception as e:
+            sorted_traces = sorted(sorted_traces.items(), key=operator.itemgetter(1))
+            self.logger.warning("Cannot sort error traces due to: {}".format(e))
 
         process_pool = list()
         for i in range(self.parallel_processes):
