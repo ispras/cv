@@ -1,12 +1,8 @@
-#!/usr/bin/python3
-
-import argparse
 import json
 import logging
 import multiprocessing
 import os
 import re
-import shutil
 import subprocess
 import sys
 import zipfile
@@ -251,37 +247,3 @@ class Coverage(Component):
                         else:
                             f_s.write("{};{}\n".format(file, arch_name))
                 os.fsync(zfp.fp)
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument("--sources-dirs", "-s", dest='sources', nargs='+', help="directories with sources",
-                        required=True)
-    parser.add_argument("--launch-dir", "-l", dest="launch", help="directory, which contains launch results",
-                        required=True)
-    parser.add_argument('--debug', "-d", action='store_true')
-
-    options = parser.parse_args()
-
-    default_install_dir = os.path.abspath(DEFAULT_INSTALL_DIR)
-    if not os.path.exists(default_install_dir):
-        default_install_dir = os.path.abspath(os.path.join(os.pardir, DEFAULT_INSTALL_DIR))
-
-    generated_config = {
-        COMPONENT_COVERAGE: {
-            TAG_COVERAGE_MODE: COVERAGE_MODE_FULL,
-            TAG_DEBUG: options.debug,
-        }
-    }
-
-    if not os.path.exists(DEFAULT_WORK_DIRECTORY):
-        os.makedirs(DEFAULT_WORK_DIRECTORY)
-
-    cov = Coverage(basic_config=generated_config, install_dir=default_install_dir,
-                   work_dir=os.path.abspath(DEFAULT_WORK_DIRECTORY))
-    cov.compute_coverage(options.sources, options.launch)
-
-    shutil.copy(os.path.join(options.launch, DEFAULT_COVERAGE_ARCH), os.getcwd())
-
-    cov.get_component_full_stats()
