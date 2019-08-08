@@ -269,23 +269,6 @@ class MEA(Component):
             src_files.append(src_file)
         parsed_error_trace['files'] = src_files
 
-        # Add missing thread numbers and potentially missing warnings.
-        if self.rule not in [RULE_RACES] + DEADLOCK_SUB_PROPERTIES:
-            is_main_process = False
-            is_warn = False
-            edge = None
-            for edge in parsed_error_trace['edges']:
-                if not is_main_process and 'enter' in edge:
-                    is_main_process = True
-                elif not is_warn and 'warn' in edge:
-                    is_warn = True
-                if is_main_process:
-                    edge['thread'] = '1'
-                else:
-                    edge['thread'] = '0'
-            if not is_warn and edge:
-                edge['warn'] = 'Auto generated error message'
-
     def __parse_trace(self, error_trace_file: str) -> dict:
         # noinspection PyUnresolvedReferences
         from core.vrp.et import import_error_trace
