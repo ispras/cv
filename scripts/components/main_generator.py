@@ -257,6 +257,7 @@ class MainGenerator(Component):
                 else:
                     caller_args = DEFAULT_VOID
                     ret_caller_type = DEFAULT_VOID
+                fp.write("/* ENVIRONMENT_MODEL {}{} generated main function */\n".format(caller, ENTRY_POINT_SUFFIX))
                 fp.write("{0} {1}{2}({3}) {{\n".format(ret_caller_type, caller, ENTRY_POINT_SUFFIX, caller_args))
 
                 for local_var in local_var_defs:
@@ -270,9 +271,12 @@ class MainGenerator(Component):
             fp.write("extern int __VERIFIER_nondet_int();\n")
 
             if strategy in [SIMPLIFIED_THREADED_STRATEGY]:
+                fp.write("/* ENVIRONMENT_MODEL {} generated main function */\n".format(
+                    DEFAULT_MAIN + ENTRY_POINT_SUFFIX))
                 fp.write("void* {0}(void *) {{\n"
                          "  int nondet;\n".format(DEFAULT_MAIN + ENTRY_POINT_SUFFIX))
             elif strategy not in [PARTIAL_STRATEGY]:
+                fp.write("/* ENVIRONMENT_MODEL {} generated main function */\n".format(DEFAULT_MAIN))
                 fp.write("void {0}(int argc, char *argv[]) {{\n"
                          "  int nondet;\n".format(DEFAULT_MAIN))
 
@@ -307,6 +311,7 @@ class MainGenerator(Component):
                     counter += 1
                 fp.write("  }\n"
                          "}\n\n")
+                fp.write("/* ENVIRONMENT_MODEL {} generated main function */\n".format(DEFAULT_MAIN))
                 fp.write("void {0}(int argc, char *argv[]) {{\n"
                          "  int nondet;\n".format(DEFAULT_MAIN))
                 fp.write("  pthread_t thread0;\n"
