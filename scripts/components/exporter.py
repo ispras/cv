@@ -290,7 +290,8 @@ class Exporter(Component):
                         verification_element['type'] = "verification"
                         verification_element['name'] = "CPAchecker"
                         attrs = list()
-                        attrs.append(self.__format_attr("Subsystem", subsystem, True))
+                        if subsystem and subsystem != ".":
+                            attrs.append(self.__format_attr("Subsystem", subsystem, True))
                         attrs.append(self.__format_attr("Verification object", entrypoint, True))
                         attrs.append(self.__format_attr("Rule specification", rule, True))
                         verification_element['attrs'] = attrs
