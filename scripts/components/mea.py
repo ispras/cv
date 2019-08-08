@@ -144,8 +144,6 @@ class MEA(Component):
         start_time = time.time()
         for identifier, error_trace_file in sorted_traces:
             converted_trace = converted_error_traces[error_trace_file]
-            if not converted_trace:
-                continue
             if not self.__compare(converted_trace, error_trace_file):
                 self.logger.debug("Filtered new error trace '{}'".format(error_trace_file))
                 filtered_traces.append(error_trace_file)
