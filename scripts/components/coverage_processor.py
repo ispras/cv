@@ -159,7 +159,8 @@ def __decode_coverage(input_data: dict, output_data: list):
 
 
 class Coverage(Component):
-    def __init__(self, launcher_component: Component = None, basic_config=None, install_dir=None, work_dir=None):
+    def __init__(self, launcher_component: Component = None, basic_config=None, install_dir=None, work_dir=None,
+                 default_source_file=None):
         if launcher_component:
             config = launcher_component.config
         else:
@@ -176,6 +177,7 @@ class Coverage(Component):
         self.full_mode = self.component_config.get(TAG_FULL_COVERAGE_MODE, "full")
         self.internal_logger = logging.getLogger(name=COMPONENT_COVERAGE)
         self.internal_logger.setLevel(self.logger.level)
+        self.default_source_file = default_source_file
 
     def compute_coverage(self, source_dirs: set, launch_directory: str, queue: multiprocessing.Queue = None):
         cov_lines, cov_funcs = 0.0, 0.0
@@ -234,7 +236,8 @@ class Coverage(Component):
         from core.coverage import LCOV
 
         lcov = LCOV(self.internal_logger, coverage_file, dummy_dir, source_dirs, [], self.launcher_dir, self.full_mode,
-                    ignore_files={os.path.join(DIRECTORY_WITH_GENERATED_FILES, COMMON_HEADER_FOR_RULES)})
+                    ignore_files={os.path.join(DIRECTORY_WITH_GENERATED_FILES, COMMON_HEADER_FOR_RULES)},
+                    default_file=self.default_source_file)
 
         archive = os.path.join(DEFAULT_COVERAGE_ARCH)
         files = [DEFAULT_COVERAGE_FILE] + list(lcov.arcnames.keys())
