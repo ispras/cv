@@ -1,7 +1,5 @@
 #!/usr/bin/python3
 
-import argparse
-
 from components.mea import *
 
 
