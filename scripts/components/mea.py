@@ -280,7 +280,7 @@ class MEA(Component):
             return import_error_trace(logger, error_trace_file)
         except:
             # There are empty (or not fully printed) error traces, for which we do not want this output.
-            self.logger.debug("Trace '{0}' can not by parsed due to: ".format(error_trace_file), exc_info=True)
+            self.logger.warning("Trace '{0}' can not by parsed due to: ".format(error_trace_file), exc_info=True)
             return {}
 
     def __print_parsed_error_trace(self, parsed_error_trace: dict, converted_error_trace: list, error_trace_file: str):
