@@ -321,7 +321,7 @@ class Exporter(Component):
                         overall_cpu += cpu
                         max_memory = max(max_memory, mem)
                         reports.append(verification_element)
-                        witnesses = glob.glob("{}/witness.*{}".format(work_dir, ARCHIVE_EXTENSION))
+                        witnesses = glob.glob("{}/witness*{}".format(work_dir, ARCHIVE_EXTENSION))
                         for witness in witnesses:
                             unsafe_element = {}
                             unsafe_element['parent id'] = "/{}_{}".format(self.tool, verifier_counter)
