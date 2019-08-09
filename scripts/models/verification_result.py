@@ -221,10 +221,12 @@ class VerificationResults:
             mea = MEA(self.config, error_traces, install_dir, self.rule, result_dir)
             if mea.process_traces_without_filtering():
                 # Trace is fine, just recheck final verdict.
-                self.verdict = VERDICT_UNSAFE
+                if not self.verdict == VERDICT_SAFE:
+                    self.verdict = VERDICT_UNSAFE
             else:
                 # Trace is bad, most likely verifier was killed during its printing, so just delete it.
-                self.verdict = VERDICT_UNKNOWN
+                if not self.verdict == VERDICT_SAFE:
+                    self.verdict = VERDICT_UNKNOWN
                 self.initial_traces = 0
                 self.filtered_traces = 0
             self.mea_resources[TAG_CPU_TIME] = time.process_time() - start_time_cpu
