@@ -120,8 +120,6 @@ class VerificationResults:
             self.rule = None
             self.entrypoint = None
         self.cpu = 0
-        self.filtering_cpu = 0
-        self.filtering_mem = 0
         self.mem = 0
         self.wall = 0
         self.verdict = VERDICT_UNKNOWN
@@ -135,6 +133,7 @@ class VerificationResults:
         self.debug = config.get(TAG_DEBUG, False)
         self.config = config
         self.coverage_resources = dict()
+        self.mea_resources = dict()
 
     def is_equal(self, verification_task: VerificationTask):
         return self.id == verification_task.entry_desc.subsystem and \
@@ -217,6 +216,8 @@ class VerificationResults:
         # If there is only one trace, filtering will not be performed and it will not be examined.
         if self.initial_traces == 1:
             # Trace should be checked if it is correct or not.
+            start_time_cpu = time.process_time()
+            start_wall_time = time.time()
             mea = MEA(self.config, error_traces, install_dir, self.rule, result_dir)
             if mea.process_traces_without_filtering():
                 # Trace is fine, just recheck final verdict.
@@ -226,6 +227,9 @@ class VerificationResults:
                 self.verdict = VERDICT_UNKNOWN
                 self.initial_traces = 0
                 self.filtered_traces = 0
+            self.mea_resources[TAG_CPU_TIME] = time.process_time() - start_time_cpu
+            self.mea_resources[TAG_WALL_TIME] = time.time() - start_wall_time
+            self.mea_resources[TAG_MEMORY_USAGE] = mea.memory
 
         # Remove auxiliary files.
         if not self.debug:
@@ -238,13 +242,15 @@ class VerificationResults:
     def filter_traces(self, launch_dir: str, install_dir: str, result_dir: str):
         # Perform Multiple Error Analysis to filter found error traces (only for several traces).
         start_time_cpu = time.process_time()
+        start_wall_time = time.time()
         traces = glob.glob("{}/witness*".format(launch_dir))
         mea = MEA(self.config, traces, install_dir, self.rule, result_dir)
         self.filtered_traces = len(mea.filter())
         if self.filtered_traces:
             self.verdict = VERDICT_UNSAFE
-        self.filtering_cpu = time.process_time() - start_time_cpu + mea.cpu_time
-        self.filtering_mem = mea.memory
+        self.mea_resources[TAG_CPU_TIME] = time.process_time() - start_time_cpu + mea.cpu_time
+        self.mea_resources[TAG_WALL_TIME] = time.time() - start_wall_time
+        self.mea_resources[TAG_MEMORY_USAGE] = mea.memory
 
     def parse_line(self, line: str):
         values = line.split(";")
@@ -262,10 +268,10 @@ class VerificationResults:
         self.work_dir = values[11]
         self.cov_lines = float(values[12])
         self.cov_funcs = float(values[13])
-        self.filtering_cpu = float(values[14])
+        self.mea_resources[TAG_CPU_TIME] = float(values[14])
 
     def __str__(self):
         return ";".join([self.id, self.rule, self.entrypoint, self.verdict, self.termination_reason,
                          str(self.cpu), str(self.wall), str(self.mem), str(self.relevant), str(self.initial_traces),
-                         str(self.filtered_traces),
-                         self.work_dir, str(self.cov_lines), str(self.cov_funcs), str(self.filtering_cpu)])
+                         str(self.filtered_traces), self.work_dir, str(self.cov_lines), str(self.cov_funcs),
+                         str(self.mea_resources.get(TAG_CPU_TIME, 0.0))])

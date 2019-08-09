@@ -188,6 +188,7 @@ class MEA(Component):
             if self.__process_trace(error_trace_file, converted_error_traces):
                 self.__print_trace_archive(error_trace_file)
                 is_exported = True
+        self.memory = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) * 1024
         return is_exported
 
     def __process_trace(self, error_trace_file: str, converted_error_traces: dict, queue: multiprocessing.Queue = None):
