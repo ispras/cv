@@ -118,7 +118,7 @@ class MEA(Component):
         # Moreover, first traces are usually more "simpler".
         sorted_traces = {}
         for trace in converted_error_traces.keys():
-            identifier = re.search(r'witness\.(.*){}'.format(GRAPHML_EXTENSION), trace).group(1)
+            identifier = re.search(r'witness(.*){}'.format(GRAPHML_EXTENSION), trace).group(1)
             key = identifier
             if identifier.isdigit():
                 try:
