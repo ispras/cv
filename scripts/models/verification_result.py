@@ -160,9 +160,13 @@ class VerificationResults:
                     self.verdict = VERDICT_UNKNOWN
             elif title == 'cputime':
                 value = column.attrib['value']
+                if str(value).endswith("s"):
+                    value = value[:-1]
                 self.cpu = int(float(value[:-1]))
             elif title == 'walltime':
                 value = column.attrib['value']
+                if str(value).endswith("s"):
+                    value = value[:-1]
                 self.wall = int(float(value[:-1]))
             elif title == 'memUsage' or title == 'memory':
                 value = column.attrib['value']
@@ -265,4 +269,3 @@ class VerificationResults:
                          str(self.cpu), str(self.wall), str(self.mem), str(self.relevant), str(self.initial_traces),
                          str(self.filtered_traces),
                          self.work_dir, str(self.cov_lines), str(self.cov_funcs), str(self.filtering_cpu)])
-
