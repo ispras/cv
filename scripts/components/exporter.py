@@ -30,7 +30,7 @@ GLOBAL_COVERAGE_REAL = "real"
 
 
 class Exporter(Component):
-    def __init__(self, config, work_dir: str, install_dir: str):
+    def __init__(self, config, work_dir: str, install_dir: str, tool=DEFAULT_VERIFIER_TOOL):
         super(Exporter, self).__init__(COMPONENT_EXPORTER, config)
         self.work_dir = work_dir
         self.install_dir = install_dir
@@ -38,6 +38,7 @@ class Exporter(Component):
         self.add_logs = self.component_config.get(TAG_ADD_VERIFIER_LOGS, True)
         self.lock = multiprocessing.Lock()
         self.global_coverage_element = dict()
+        self.tool = tool
 
     def __format_attr(self, name: str, value, compare=False):
         if isinstance(value, int):
@@ -283,10 +284,10 @@ class Exporter(Component):
                         filter_cpu = round(float(res.group(15)), 2)
 
                         verification_element = dict()
-                        verification_element['id'] = "/CPAchecker_{}".format(verifier_counter)
+                        verification_element['id'] = "/{}_{}".format(self.tool, verifier_counter)
                         verification_element['parent id'] = launcher_id
                         verification_element['type'] = "verification"
-                        verification_element['name'] = "CPAchecker"
+                        verification_element['name'] = self.tool
                         attrs = list()
                         if subsystem and subsystem != ".":
                             attrs.append(self.__format_attr("Subsystem", subsystem, True))
@@ -323,7 +324,7 @@ class Exporter(Component):
                         witnesses = glob.glob("{}/witness.*{}".format(work_dir, ARCHIVE_EXTENSION))
                         for witness in witnesses:
                             unsafe_element = {}
-                            unsafe_element['parent id'] = "/CPAchecker_{}".format(verifier_counter)
+                            unsafe_element['parent id'] = "/{}_{}".format(self.tool, verifier_counter)
                             unsafe_element['type'] = "unsafe"
                             found_all_traces = not incomplete_result
                             if rule == RULE_RACES:
@@ -345,7 +346,7 @@ class Exporter(Component):
                             trace_counter += 1
                             report_files_archive = archive_id + ".zip"
 
-                            unsafe_element['id'] = "/CPAchecker/" + archive_id
+                            unsafe_element['id'] = "/{}/{}".format(self.tool, archive_id)
                             unsafe_element['attrs'] = attrs
                             unsafe_element['error traces'] = [report_files_archive]
                             unsafe_element['sources'] = DEFAULT_SOURCES_ARCH
@@ -417,9 +418,9 @@ class Exporter(Component):
                                     if os.path.exists(unknown_archive):
                                         os.remove(unknown_archive)
 
-                            other_element['parent id'] = "/CPAchecker_{}".format(verifier_counter)
+                            other_element['parent id'] = "/{}_{}".format(self.tool, verifier_counter)
                             other_element['type'] = verdict
-                            other_element['id'] = "/CPAchecker/other_" + str(verifier_counter)
+                            other_element['id'] = "/{}/other_{}".format(self.tool, verifier_counter)
                             other_element['attrs'] = attrs
                             reports.append(other_element)
 

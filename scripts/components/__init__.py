@@ -150,3 +150,5 @@ CLADE_BASE_FILE = "cmds.txt"
 TAG_SOURCES = "sources"
 
 DEFAULT_COVERAGE_SOURCE_FILES = "coverage.src"
+
+DEFAULT_VERIFIER_TOOL = "CPAchecker"
