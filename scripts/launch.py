@@ -2,7 +2,7 @@
 
 import argparse
 
-from components.launcher import Launcher
+from components.full_launcher import FullLauncher as Launcher
 
 if __name__ == '__main__':
     """
