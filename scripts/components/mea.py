@@ -48,7 +48,8 @@ class MEA(Component):
     - parsed error trace - result of parser(et), et - file name with error trace (xml);
     - converted error trace - result of conversion(pet), pet - parsed error trace.
     """
-    def __init__(self, general_config: dict, error_traces: list, install_dir: str, rule: str = "", result_dir: str = ""):
+    def __init__(self, general_config: dict, error_traces: list, install_dir: str, rule: str = "",
+                 result_dir: str = ""):
         super(MEA, self).__init__(COMPONENT_MEA, general_config)
         self.install_dir = install_dir
         if result_dir:
@@ -106,8 +107,8 @@ class MEA(Component):
                     time.sleep(BUSY_WAITING_INTERVAL)
             except NestedLoop:
                 pass
-            except:
-                self.logger.error("Could not filter traces:", exc_info=True)
+            except Exception as e:
+                self.logger.error("Could not filter traces: {}".format(e), exc_info=True)
                 kill_launches(process_pool)
 
         wait_for_launches(process_pool)
@@ -123,8 +124,8 @@ class MEA(Component):
             if identifier.isdigit():
                 try:
                     key = int(identifier)
-                except:
-                    pass
+                except Exception as e:
+                    self.logger.debug("Cannot convert to int id {} due to: {}".format(identifier, e))
             sorted_traces[key] = trace
         try:
             sorted_traces = sorted(sorted_traces.items(), key=operator.itemgetter(0))
@@ -161,8 +162,8 @@ class MEA(Component):
                         time.sleep(0.1)
                 except NestedLoop:
                     pass
-                except:
-                    self.logger.error("Could not print filtered error traces: ", exc_info=True)
+                except Exception as e:
+                    self.logger.error("Could not print filtered error traces: {}".format(e), exc_info=True)
                     kill_launches(process_pool)
 
         self.comparison_time = time.time() - start_time
@@ -258,7 +259,8 @@ class MEA(Component):
         os.remove(source_files)
         os.remove(converted_traces_files)
 
-    def __process_parsed_trace(self, parsed_error_trace: dict):
+    @staticmethod
+    def __process_parsed_trace(parsed_error_trace: dict):
         # Normalize source paths.
         src_files = list()
         for src_file in parsed_error_trace['files']:
@@ -271,13 +273,16 @@ class MEA(Component):
         from core.vrp.et import import_error_trace
 
         # Those messages are waste of space.
-        logger = logging.getLogger(name="Klever")
-        logger.setLevel(logging.ERROR)
+        logger = logging.getLogger(name="Witness processor")
+        logging.basicConfig(format='%(name)s: %(levelname)s: %(message)s')
+        if self.debug:
+            logger.setLevel(logging.WARNING)
+        else:
+            logger.setLevel(logging.ERROR)
         try:
             return import_error_trace(logger, error_trace_file)
-        except:
-            # There are empty (or not fully printed) error traces, for which we do not want this output.
-            self.logger.warning("Trace '{0}' can not by parsed due to: ".format(error_trace_file), exc_info=True)
+        except Exception as e:
+            self.logger.warning("Trace '{}' can not by parsed due to: {}".format(error_trace_file, e), exc_info=True)
             return {}
 
     def __print_parsed_error_trace(self, parsed_error_trace: dict, converted_error_trace: list, error_trace_file: str):
@@ -300,7 +305,8 @@ class MEA(Component):
         with open(converted_traces_files, 'w', encoding='utf8') as fp:
             json.dump(converted_traces, fp, ensure_ascii=False, sort_keys=True, indent="\t")
 
-    def __get_aux_file_names(self, error_trace_file: str) -> tuple:
+    @staticmethod
+    def __get_aux_file_names(error_trace_file: str) -> tuple:
         # Returns the following files: json_trace, source_files, converted_traces
         common_part = error_trace_file[:-len(GRAPHML_EXTENSION)] + "_"
         json_trace_name = common_part + JSON_EXTENSION
