@@ -32,9 +32,15 @@ class BenchmarkLauncher(Launcher):
         # Optional arguments.
         self.tool = self.component_config.get(TAG_TOOL_NAME, DEFAULT_VERIFIER_TOOL)
 
-    def __process_single_launch_results(self, result: VerificationResults, launch_directory, queue, columns=None):
+        tools_dir = os.path.abspath(self.component_config[TAG_TOOL_DIR])
+        self.logger.debug("Using tool directory {}".format(tools_dir))
+
+        os.chdir(tools_dir)
+
+    def __process_single_launch_results(self, result: VerificationResults, launch_directory, queue, columns=None,
+                                        source_file=None):
         result.parse_output_dir(launch_directory, self.install_dir, self.result_dir_et, columns)
-        self._process_coverage(result, launch_directory, [self.tasks_dir], result.entrypoint)
+        self._process_coverage(result, launch_directory, [self.tasks_dir], source_file)
         if result.initial_traces > 1:
             result.filter_traces(launch_directory, self.install_dir, self.result_dir_et)
         queue.put(result)
@@ -63,16 +69,17 @@ class BenchmarkLauncher(Launcher):
             process_pool.append(None)
 
         for run in root.findall('./run'):
-            file_name = os.path.basename(run.attrib['name'])
+            file_name = os.path.realpath(os.path.normpath(os.path.abspath(run.attrib['name'])))
+            file_name_base = os.path.basename(file_name)
             properties = run.attrib.get('properties', global_spec)
             result = VerificationResults(None, self.config)
-            result.entrypoint = file_name
+            result.entrypoint = file_name_base
             result.rule = properties
             result.id = "."
 
             columns = run.findall('./column')
 
-            files = glob.glob(os.path.join(group_directory, "*.logfiles", "*{}*".format(file_name)))
+            files = glob.glob(os.path.join(group_directory, "*.logfiles", "*{}*".format(file_name_base)))
             launch_dir = self._copy_result_files(files, group_directory)
 
             result.work_dir = launch_dir
@@ -85,7 +92,8 @@ class BenchmarkLauncher(Launcher):
                         if not process_pool[i]:
                             process_pool[i] = multiprocessing.Process(target=self.__process_single_launch_results,
                                                                       name=result.entrypoint,
-                                                                      args=(result, launch_dir, queue, columns))
+                                                                      args=(result, launch_dir, queue, columns,
+                                                                            file_name))
                             process_pool[i].start()
                             raise NestedLoop
                     time.sleep(BUSY_WAITING_INTERVAL)
@@ -135,12 +143,8 @@ class BenchmarkLauncher(Launcher):
 
     def launch_benchmark(self):
         exec_dir = os.path.abspath(self.component_config[TAG_BENCHMARK_CLIENT_DIR])
-        tools_dir = os.path.abspath(self.component_config[TAG_TOOL_DIR])
         benchmark_name = os.path.abspath(self.component_config[TAG_BENCHMARK_FILE])
         self.logger.info("Launching benchmark {}".format(benchmark_name))
-
-        if tools_dir:
-            os.chdir(tools_dir)
         tasks_dir_rel = os.path.basename(self.tasks_dir)
         if os.path.exists(tasks_dir_rel):
             os.remove(tasks_dir_rel)
