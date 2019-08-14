@@ -284,7 +284,13 @@ class MEA(Component):
         else:
             logger.setLevel(logging.ERROR)
         try:
-            return import_error_trace(logger, error_trace_file)
+            # TODO: process correctness witnesses as well
+            json_error_trace = import_error_trace(logger, error_trace_file)
+            witness_type = json_error_trace.get('type')
+            if not witness_type == 'violation':
+                self.logger.warning('Only violation witnesses are supported, got: {} witness'.format(witness_type))
+                return {}
+            return json_error_trace
         except Exception as e:
             self.logger.warning("Trace '{}' can not by parsed due to: {}".format(error_trace_file, e))
             self.logger.debug("Exception stack: ", exc_info=True)

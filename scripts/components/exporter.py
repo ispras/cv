@@ -322,9 +322,6 @@ class Exporter(Component):
                         max_memory = max(max_memory, mem)
                         reports.append(verification_element)
                         witnesses = glob.glob("{}/witness*{}".format(work_dir, ARCHIVE_EXTENSION))
-                        if verdict == VERDICT_SAFE:
-                            witnesses = []
-                            # TODO: process correctness witnesses as well
                         for witness in witnesses:
                             unsafe_element = {}
                             unsafe_element['parent id'] = "/{}_{}".format(self.tool, verifier_counter)
