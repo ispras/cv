@@ -161,12 +161,12 @@ class VerificationResults:
                 value = column.attrib['value']
                 if str(value).endswith("s"):
                     value = value[:-1]
-                self.cpu = int(float(value[:-1]))
+                self.cpu = float(value[:-1])
             elif title == 'walltime':
                 value = column.attrib['value']
                 if str(value).endswith("s"):
                     value = value[:-1]
-                self.wall = int(float(value[:-1]))
+                self.wall = float(value[:-1])
             elif title == 'memUsage' or title == 'memory':
                 value = column.attrib['value']
                 if str(value).endswith("B"):

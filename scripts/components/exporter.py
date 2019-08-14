@@ -251,7 +251,7 @@ class Exporter(Component):
                     # memory (Mb);<relevancy>;<number of traces>;<number of filtered traces>;<work dir>;<cov lines>;
                     # <cov funcs>;<CPU (s) for filtering>
                     res = re.search(r'(.+){0}(.+){0}(.+){0}(\w+){0}(.+){0}'
-                                    r'(\d+){0}(\d+){0}(\d+){0}(\w+){0}(\d+){0}(\d+){0}'
+                                    r'(.+){0}(.+){0}(\d+){0}(\w+){0}(\d+){0}(\d+){0}'
                                     r'(.+){0}(.+){0}(.+){0}(.+)'.format(CSV_SEPARATOR), line)
                     if res:
                         subsystem = res.group(1)
@@ -270,8 +270,8 @@ class Exporter(Component):
                             incomplete_result = True
                         else:
                             incomplete_result = False
-                        cpu = int(res.group(6)) * 1000
-                        wall = int(res.group(7)) * 1000
+                        cpu = float(res.group(6)) * 1000
+                        wall = float(res.group(7)) * 1000
                         mem = int(res.group(8)) * 1000000
                         relevancy = res.group(9)
                         et = int(res.group(10))
