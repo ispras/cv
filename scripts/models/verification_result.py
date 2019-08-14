@@ -206,7 +206,7 @@ class VerificationResults:
             print("WARNING: log file was not found for entry point '{}'".format(self.entrypoint))
             pass
 
-        error_traces = glob.glob("{}/witness*".format(launch_dir))
+        error_traces = glob.glob("{}/*{}".format(launch_dir, GRAPHML_EXTENSION))
         self.initial_traces = len(error_traces)
         self.filtered_traces = self.initial_traces
 

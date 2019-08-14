@@ -240,6 +240,10 @@ class MEA(Component):
     def __print_trace_archive(self, error_trace_file_name: str):
         json_trace_name, source_files, converted_traces_files = self.__get_aux_file_names(error_trace_file_name)
         archive_name = error_trace_file_name[:-len(GRAPHML_EXTENSION)] + ARCHIVE_EXTENSION
+        archive_name_base = os.path.basename(archive_name)
+        if not archive_name_base.startswith("witness"):
+            archive_name_base = "witness.{}".format(archive_name_base)
+            archive_name = os.path.join(os.path.dirname(archive_name), archive_name_base)
         with zipfile.ZipFile(archive_name, mode='w', compression=zipfile.ZIP_DEFLATED) as zfp:
             zfp.write(json_trace_name, arcname=ERROR_TRACE_FILE)
             zfp.write(source_files, arcname=ERROR_TRACE_SOURCES)
