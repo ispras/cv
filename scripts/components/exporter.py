@@ -242,6 +242,7 @@ class Exporter(Component):
 
             unknowns = {}  # cache of unknowns to prevent duplicating reports.
             unsafes = {}  # archives with error traces.
+            proofs = {}
 
             # Process several error traces in parallel.
             source_files = set()
@@ -321,7 +322,7 @@ class Exporter(Component):
                         overall_cpu += cpu
                         max_memory = max(max_memory, mem)
                         reports.append(verification_element)
-                        witnesses = glob.glob("{}/witness*{}".format(work_dir, ARCHIVE_EXTENSION))
+                        witnesses = glob.glob("{}/{}_witness*{}".format(work_dir, WITNESS_VIOLATION, ARCHIVE_EXTENSION))
                         for witness in witnesses:
                             unsafe_element = {}
                             unsafe_element['parent id'] = "/{}_{}".format(self.tool, verifier_counter)
@@ -361,8 +362,32 @@ class Exporter(Component):
 
                         if not witnesses or incomplete_result:
                             other_element = dict()
+                            witnesses = glob.glob("{}/{}_witness*{}".format(work_dir, WITNESS_CORRECTNESS,
+                                                                            ARCHIVE_EXTENSION))
                             if verdict == VERDICT_SAFE:
                                 verdict = "safe"
+                                if witnesses:
+                                    # TODO: only one correctness witness is supported.
+                                    if len(witnesses) > 1:
+                                        self.logger.warning("Only one correctness witness is supported per "
+                                                            "verification task")
+                                    witness = witnesses[0]
+
+                                    archive_id = "safe_{}".format(trace_counter)
+                                    trace_counter += 1
+                                    report_files_archive = archive_id + ".zip"
+
+                                    other_element['proof'] = report_files_archive
+                                    other_element['sources'] = DEFAULT_SOURCES_ARCH
+                                    proofs[report_files_archive] = witness
+
+                                    try:
+                                        src = json.loads(
+                                            zipfile.ZipFile(witness, 'r').read(ERROR_TRACE_SOURCES).decode())
+                                        source_files.update(src)
+                                    except:
+                                        self.logger.warning("Cannot process sources: ", exc_info=True)
+
                                 attrs = [
                                     self.__format_attr("Coverage", [
                                         self.__format_attr("Lines", "{0}".format(cov_lines)),
@@ -435,6 +460,18 @@ class Exporter(Component):
                         # delete corresponding record.
                         for report in reports:
                             if report.get("type") == "unsafe" and report.get("error traces")[0] == base_name:
+                                reports.remove(report)
+                                failed_reports += 1
+                                break
+
+                for base_name, abs_path in proofs.items():
+                    if os.path.exists(abs_path):
+                        final_zip.write(abs_path, arcname=base_name)
+                        os.remove(abs_path)
+                    else:
+                        # delete corresponding record.
+                        for report in reports:
+                            if report.get("type") == "safe" and report.get("proof")[0] == base_name:
                                 reports.remove(report)
                                 failed_reports += 1
                                 break

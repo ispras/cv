@@ -179,21 +179,27 @@ class MEA(Component):
         self.get_component_stats()
         return filtered_traces
 
-    def process_traces_without_filtering(self) -> bool:
+    def process_traces_without_filtering(self) -> tuple:
         """
         Process all traces (parse, create cache of converted functions, print results to archive) without filtering.
         """
         is_exported = False
+        witness_type = WITNESS_VIOLATION
         for error_trace_file in self.error_traces:
             converted_error_traces = dict()
-            if self.__process_trace(error_trace_file, converted_error_traces):
-                self.__print_trace_archive(error_trace_file)
-                is_exported = True
+            is_exported, witness_type = self.__process_trace(error_trace_file, converted_error_traces)
+            if is_exported:
+                self.__print_trace_archive(error_trace_file, witness_type)
         self.memory = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) * 1024
-        return is_exported
+        return is_exported, witness_type
 
     def __process_trace(self, error_trace_file: str, converted_error_traces: dict, queue: multiprocessing.Queue = None):
-        parsed_error_trace = self.__parse_trace(error_trace_file)
+        # TODO: if we receive several witnesses they are considered to be violation witnesses only.
+        if queue:
+            supported_types = {WITNESS_VIOLATION}
+        else:
+            supported_types = {WITNESS_VIOLATION, WITNESS_CORRECTNESS}
+        parsed_error_trace = self.__parse_trace(error_trace_file, supported_types)
         if parsed_error_trace:
             self.__process_parsed_trace(parsed_error_trace)
             if self.clean:
@@ -213,7 +219,7 @@ class MEA(Component):
             })
             sys.exit(0)
         else:
-            return bool(parsed_error_trace)
+            return bool(parsed_error_trace), parsed_error_trace.get('type', WITNESS_VIOLATION)
 
     def __compare(self, converted_trace: list, file_name: str) -> bool:
         """
@@ -237,12 +243,13 @@ class MEA(Component):
             equivalent = False
         return equivalent
 
-    def __print_trace_archive(self, error_trace_file_name: str):
+    def __print_trace_archive(self, error_trace_file_name: str, witness_type=WITNESS_VIOLATION):
         json_trace_name, source_files, converted_traces_files = self.__get_aux_file_names(error_trace_file_name)
         archive_name = error_trace_file_name[:-len(GRAPHML_EXTENSION)] + ARCHIVE_EXTENSION
         archive_name_base = os.path.basename(archive_name)
-        if not archive_name_base.startswith("witness"):
-            archive_name_base = "witness.{}".format(archive_name_base)
+        mandatory_prefix = "{}_{}".format(witness_type, "witness")
+        if not archive_name_base.startswith(mandatory_prefix):
+            archive_name_base = "{}.{}".format(mandatory_prefix, archive_name_base)
             archive_name = os.path.join(os.path.dirname(archive_name), archive_name_base)
         with zipfile.ZipFile(archive_name, mode='w', compression=zipfile.ZIP_DEFLATED) as zfp:
             zfp.write(json_trace_name, arcname=ERROR_TRACE_FILE)
@@ -272,7 +279,7 @@ class MEA(Component):
             src_files.append(src_file)
         parsed_error_trace['files'] = src_files
 
-    def __parse_trace(self, error_trace_file: str) -> dict:
+    def __parse_trace(self, error_trace_file: str, supported_types: set) -> dict:
         # noinspection PyUnresolvedReferences
         from core.vrp.et import import_error_trace
 
@@ -284,11 +291,10 @@ class MEA(Component):
         else:
             logger.setLevel(logging.ERROR)
         try:
-            # TODO: process correctness witnesses as well
             json_error_trace = import_error_trace(logger, error_trace_file)
             witness_type = json_error_trace.get('type')
-            if not witness_type == 'violation':
-                self.logger.warning('Only violation witnesses are supported, got: {} witness'.format(witness_type))
+            if witness_type not in supported_types:
+                self.logger.warning('Witness type {} is not supported'.format(witness_type))
                 return {}
             return json_error_trace
         except Exception as e:

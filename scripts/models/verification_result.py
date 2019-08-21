@@ -219,13 +219,16 @@ class VerificationResults:
             start_time_cpu = time.process_time()
             start_wall_time = time.time()
             mea = MEA(self.config, error_traces, install_dir, self.rule, result_dir)
-            if mea.process_traces_without_filtering():
+            is_exported, witness_type = mea.process_traces_without_filtering()
+            if is_exported:
                 # Trace is fine, just recheck final verdict.
-                if not self.verdict == VERDICT_SAFE:
+                if witness_type == WITNESS_VIOLATION:
+                    # Change global verdict to Unsafe, if there is at least one correct violation witness.
                     self.verdict = VERDICT_UNSAFE
             else:
                 # Trace is bad, most likely verifier was killed during its printing, so just delete it.
-                if not self.verdict == VERDICT_SAFE:
+                if self.verdict == VERDICT_UNSAFE and witness_type == WITNESS_VIOLATION:
+                    # TODO: Add exception text to log.
                     self.verdict = VERDICT_UNKNOWN
                 self.initial_traces = 0
                 self.filtered_traces = 0
