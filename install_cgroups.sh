@@ -10,6 +10,7 @@ fi
 special_directories=(
 '/sys/fs/cgroup/cpuset/'
 '/sys/fs/cgroup/freezer/'
+'/sys/fs/cgroup/blkio/'
 '/sys/fs/cgroup/cpu,cpuacct/'
 '/sys/fs/cgroup/cpuacct/'
 '/sys/fs/cgroup/memory/'
