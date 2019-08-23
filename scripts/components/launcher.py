@@ -55,6 +55,7 @@ TAG_VERIFIER_OPTIONS = "verifier options"
 TAG_EXPORT_HTML_ERROR_TRACES = "standalone error traces"
 
 TIMESTAMP_PATTERN = "<timestamp>"
+RUNDEFINITION_PATTERN = "<rundefinition>"
 COMMIT_PATTERN = "<commit>"
 
 SCHEDULER_CLOUD = "cloud"
@@ -148,6 +149,7 @@ class Launcher(Component):
             cloud_priority = self.config.get(TAG_CLOUD, {}).get(TAG_CLOUD_PRIORITY, DEFAULT_CLOUD_PRIORITY)
             self.benchmark_args = "{} --cloud --cloudMaster {} --cloudPriority {}".\
                 format(self.benchmark_args, cloud_master, cloud_priority)
+        self.job_name_suffix = ""
 
     def _copy_result_files(self, files: list, group_directory: str) -> str:
         launch_dir = os.path.abspath(tempfile.mkdtemp(dir=group_directory))
@@ -221,6 +223,7 @@ class Launcher(Component):
         timestamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H_%M_%S')
         if predefined_name:
             job_name = predefined_name.replace(TIMESTAMP_PATTERN, timestamp)
+            job_name = job_name.replace(RUNDEFINITION_PATTERN, self.job_name_suffix)
             job_name = job_name.replace(COMMIT_PATTERN, str(commits))
         elif commits:
             job_name = "{}: {} ({})".format(self.config_file, commits, timestamp)
