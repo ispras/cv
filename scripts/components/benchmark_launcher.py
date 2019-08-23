@@ -54,6 +54,11 @@ class BenchmarkLauncher(Launcher):
         results = list()
         global_spec = None
         is_spec = False
+        task_name = root.attrib.get('name', '')
+        block_id = root.attrib.get('block', '')
+        if task_name.endswith(block_id):
+            task_name = task_name[:-(len(block_id) + 1)]
+        self.job_name_suffix = task_name
         for option in root.attrib.get('options', '').split():
             if is_spec:
                 global_spec = str(os.path.basename(option))
@@ -79,7 +84,7 @@ class BenchmarkLauncher(Launcher):
 
             columns = run.findall('./column')
 
-            files = glob.glob(os.path.join(group_directory, "*.logfiles", "*{}*".format(file_name_base)))
+            files = glob.glob(os.path.join(group_directory, "*.logfiles", "{}.{}*".format(task_name, file_name_base)))
             launch_dir = self._copy_result_files(files, group_directory)
 
             result.work_dir = launch_dir
