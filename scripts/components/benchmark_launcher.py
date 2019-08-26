@@ -55,10 +55,12 @@ class BenchmarkLauncher(Launcher):
         global_spec = None
         is_spec = False
         task_name = root.attrib.get('name', '')
-        block_id = root.attrib.get('block', '')
+        block_id = root.attrib.get('block', "NONE")
+        if block_id == "NONE":
+            return None
+        self.job_name_suffix = task_name
         if task_name.endswith(block_id):
             task_name = task_name[:-(len(block_id) + 1)]
-        self.job_name_suffix = task_name
         for option in root.attrib.get('options', '').split():
             if is_spec:
                 global_spec = str(os.path.basename(option))
@@ -179,5 +181,5 @@ class BenchmarkLauncher(Launcher):
         is_upload = uploader_config and uploader_config.get(TAG_UPLOADER_UPLOAD_RESULTS, False)
         for file in xml_files:
             result_archive = self.__parse_result_file(file, self.output_dir)
-            if is_upload:
+            if is_upload and result_archive:
                 self._upload_results(uploader_config, result_archive)
