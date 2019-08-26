@@ -12,7 +12,8 @@ import zipfile
 # noinspection PyUnresolvedReferences
 from aux.mea import DEFAULT_CONVERSION_FUNCTION, CONVERSION_FUNCTION_MODEL_FUNCTIONS, CONVERSION_FUNCTION_CALL_TREE, \
     CONVERSION_FUNCTION_NOTES, convert_error_trace, compare_error_traces, is_equivalent, DEFAULT_COMPARISON_FUNCTION, \
-    DEFAULT_SIMILARITY_THRESHOLD, TAG_COMPARISON_FUNCTION, TAG_CONVERSION_FUNCTION, TAG_ADDITIONAL_MODEL_FUNCTIONS
+    DEFAULT_SIMILARITY_THRESHOLD, TAG_COMPARISON_FUNCTION, TAG_CONVERSION_FUNCTION, TAG_ADDITIONAL_MODEL_FUNCTIONS, \
+    CONVERSION_FUNCTION_FULL
 
 from aux.common import *
 from components import *
@@ -206,7 +207,11 @@ class MEA(Component):
                 os.remove(error_trace_file)
             self.logger.debug("Trace '{0}' has been parsed".format(error_trace_file))
 
-            converted_error_trace = convert_error_trace(parsed_error_trace, self.conversion_function,
+            if parsed_error_trace.get('type') == WITNESS_CORRECTNESS:
+                conversion_function = CONVERSION_FUNCTION_FULL
+            else:
+                conversion_function = self.conversion_function
+            converted_error_trace = convert_error_trace(parsed_error_trace, conversion_function,
                                                         self.conversion_function_args)
             self.__print_parsed_error_trace(parsed_error_trace, converted_error_trace, error_trace_file)
             converted_error_traces[error_trace_file] = converted_error_trace
@@ -312,13 +317,14 @@ class MEA(Component):
             json.dump(parsed_error_trace['files'], fp, ensure_ascii=False, sort_keys=True, indent="\t")
 
         converted_traces = dict()
-        for conversion_function in EXPORTING_CONVERTED_FUNCTIONS:
-            if conversion_function == self.conversion_function and not self.conversion_function_args:
-                converted_traces[conversion_function] = converted_error_trace
-            else:
-                # Important note: here we create converted error trace without params.
-                converted_traces[conversion_function] = \
-                    convert_error_trace(parsed_error_trace, conversion_function, {})
+        if parsed_error_trace.get('type') == WITNESS_VIOLATION:
+            for conversion_function in EXPORTING_CONVERTED_FUNCTIONS:
+                if conversion_function == self.conversion_function and not self.conversion_function_args:
+                    converted_traces[conversion_function] = converted_error_trace
+                else:
+                    # Important note: here we create converted error trace without params.
+                    converted_traces[conversion_function] = \
+                        convert_error_trace(parsed_error_trace, conversion_function, {})
         with open(converted_traces_files, 'w', encoding='utf8') as fp:
             json.dump(converted_traces, fp, ensure_ascii=False, sort_keys=True, indent="\t")
 
