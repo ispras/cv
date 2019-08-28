@@ -1150,9 +1150,15 @@ class FullLauncher(Launcher):
 
         self.logger.info("Exporting results into archive: '{}'".format(result_archive))
 
+        config = {
+            TAG_CONFIG_MEMORY_LIMIT: str(memory_limit) + "GB",
+            TAG_CONFIG_CPU_TIME_LIMIT: time_limit,
+            TAG_CONFIG_CPU_CORES_LIMIT: core_limit
+        }
         exporter = Exporter(self.config, DEFAULT_EXPORT_DIR, self.install_dir)
         exporter.export(report_launches, report_resources, report_components, result_archive,
-                        unknown_desc={COMPONENT_PREPARATOR: preparator_unknowns}, component_attrs=component_attrs)
+                        unknown_desc={COMPONENT_PREPARATOR: preparator_unknowns}, component_attrs=component_attrs,
+                        verifier_config=config)
 
         uploader_config = self.config.get(UPLOADER, {})
         if uploader_config and uploader_config.get(TAG_UPLOADER_UPLOAD_RESULTS, False):

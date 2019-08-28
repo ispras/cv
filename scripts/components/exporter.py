@@ -145,7 +145,7 @@ class Exporter(Component):
             counter += 1
 
     def export(self, report_launches: str, report_resources: str, report_components: str, archive_name: str,
-               unknown_desc=dict(), component_attrs=dict()):
+               unknown_desc=dict(), component_attrs=dict(), verifier_config=dict()):
         start_wall_time = time.time()
         overall_wall = 0  # Launcher + Exporter.
         overall_cpu = 0  # Sum of all components.
@@ -184,6 +184,8 @@ class Exporter(Component):
             {"Linux kernel version": subprocess.check_output("uname -r", shell=True).decode().rstrip()},
             {"architecture": subprocess.check_output("uname -m", shell=True).decode().rstrip()}
         ]
+        if verifier_config:
+            root_element['config'] = verifier_config
         root_element['attrs'] = [self.__format_attr(TAG_VERSION, self.version)]
 
         launcher_id = "/"

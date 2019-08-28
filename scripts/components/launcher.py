@@ -94,6 +94,11 @@ DEFAULT_PREPARATION_CONFIG = "conf.json"
 DEFAULT_PROPERTY_MEMSAFETY = "properties/memsafety.spc"
 DEFAULT_PROPERTY_UNREACHABILITY = "properties/unreachability.spc"
 
+TAG_CONFIG_MEMORY_LIMIT = "Memory limit"
+TAG_CONFIG_CPU_TIME_LIMIT = "CPU time limit"
+TAG_CONFIG_CPU_CORES_LIMIT = "CPU cores limit"
+TAG_CONFIG_OPTIONS = "Options"
+
 
 class Launcher(Component):
     """

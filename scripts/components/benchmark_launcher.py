@@ -56,6 +56,20 @@ class BenchmarkLauncher(Launcher):
         is_spec = False
         task_name = root.attrib.get('name', '')
         block_id = root.attrib.get('block', "NONE")
+        memory_limit = root.attrib.get('memlimit', None)
+        time_limit = root.attrib.get('timelimit', None)
+        cpu_cores_limit = root.attrib.get('cpuCores', None)
+        options = root.attrib.get('options', '')
+        config = {}
+        if memory_limit:
+            config[TAG_CONFIG_MEMORY_LIMIT] = memory_limit
+        if time_limit:
+            config[TAG_CONFIG_CPU_TIME_LIMIT] = time_limit
+        if cpu_cores_limit:
+            config[TAG_CONFIG_CPU_CORES_LIMIT] = cpu_cores_limit
+        if options:
+            config[TAG_CONFIG_OPTIONS] = options
+
         if block_id == "NONE":
             return None
         self.job_name_suffix = task_name
@@ -63,7 +77,7 @@ class BenchmarkLauncher(Launcher):
             task_name = task_name[:-(len(block_id) + 1)]
             if block_id == "0":
                 self.job_name_suffix = task_name
-        for option in root.attrib.get('options', '').split():
+        for option in options.split():
             if is_spec:
                 global_spec = str(os.path.basename(option))
                 if global_spec.endswith('.spc') or global_spec.endswith('.prp'):
@@ -147,7 +161,7 @@ class BenchmarkLauncher(Launcher):
 
         self.logger.info("Exporting results into archive: '{}'".format(result_archive))
         exporter = Exporter(self.config, DEFAULT_EXPORT_DIR, self.install_dir, tool=self.tool)
-        exporter.export(report_launches, report_resources, report_components, result_archive)
+        exporter.export(report_launches, report_resources, report_components, result_archive, verifier_config=config)
         return result_archive
 
     def launch_benchmark(self):
