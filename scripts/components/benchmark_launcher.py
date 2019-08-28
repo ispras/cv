@@ -185,3 +185,7 @@ class BenchmarkLauncher(Launcher):
             result_archive = self.__parse_result_file(file, self.output_dir)
             if is_upload and result_archive:
                 self._upload_results(uploader_config, result_archive)
+        if not self.debug:
+            self.logger.info("Clear working directories")
+            for tmp_dir in glob.glob(os.path.join(self.output_dir, 'tmp*')):
+                shutil.rmtree(tmp_dir, ignore_errors=True)
