@@ -181,7 +181,7 @@ class Exporter(Component):
             {"CPU model": subprocess.check_output("cat /proc/cpuinfo  | grep 'name'| uniq", shell=True).decode().
                 replace("model name	: ", "").rstrip()},
             {"CPU cores": str(max_cores)},
-            {"Linux kernel version": subprocess.check_output("uname -n", shell=True).decode().rstrip()},
+            {"Linux kernel version": subprocess.check_output("uname -r", shell=True).decode().rstrip()},
             {"architecture": subprocess.check_output("uname -m", shell=True).decode().rstrip()}
         ]
         root_element['attrs'] = [self.__format_attr(TAG_VERSION, self.version)]
