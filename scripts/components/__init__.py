@@ -158,3 +158,7 @@ DEFAULT_RESULTS_DIR = "results"
 
 WITNESS_VIOLATION = 'violation'
 WITNESS_CORRECTNESS = 'correctness'
+
+ADDITIONAL_RESOURCES = [
+    'blkio-read', 'blkio-write', 'error traces'
+]

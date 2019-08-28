@@ -61,6 +61,8 @@ class BenchmarkLauncher(Launcher):
         self.job_name_suffix = task_name
         if task_name.endswith(block_id):
             task_name = task_name[:-(len(block_id) + 1)]
+            if block_id == "0":
+                self.job_name_suffix = task_name
         for option in root.attrib.get('options', '').split():
             if is_spec:
                 global_spec = str(os.path.basename(option))
@@ -124,8 +126,8 @@ class BenchmarkLauncher(Launcher):
             coverage_resources[TAG_WALL_TIME] += result.coverage_resources.get(TAG_WALL_TIME, 0.0)
             mea_resources[TAG_CPU_TIME] += result.mea_resources.get(TAG_CPU_TIME, 0.0)
             mea_resources[TAG_WALL_TIME] += result.mea_resources.get(TAG_WALL_TIME, 0.0)
-        report_launches, result_archive, report_components, _ = self._get_results_names()
-        self._print_launches_report(report_launches, results)
+        report_launches, result_archive, report_components, _, report_resources = self._get_results_names()
+        self._print_launches_report(report_launches, report_resources, results)
         overall_cpu_time = time.process_time() - self.start_cpu_time
         overall_wall_time = time.time() - self.start_time
         self.logger.info("Preparing report on components into file: '{}'".format(report_components))
@@ -145,7 +147,7 @@ class BenchmarkLauncher(Launcher):
 
         self.logger.info("Exporting results into archive: '{}'".format(result_archive))
         exporter = Exporter(self.config, DEFAULT_EXPORT_DIR, self.install_dir, tool=self.tool)
-        exporter.export(report_launches, report_components, result_archive)
+        exporter.export(report_launches, report_resources, report_components, result_archive)
         return result_archive
 
     def launch_benchmark(self):

@@ -1074,7 +1074,7 @@ class FullLauncher(Launcher):
         self.logger.debug("Overall CPU time of script: {}".format(overall_cpu_time))
         self.logger.info("Solving of verification tasks has been completed")
 
-        report_launches, result_archive, report_components, short_report = self._get_results_names()
+        report_launches, result_archive, report_components, short_report, report_resources = self._get_results_names()
 
         self.logger.debug("Processing results")
         cov_lines = {}
@@ -1113,7 +1113,7 @@ class FullLauncher(Launcher):
         else:
             wall_cov /= min(number_of_processes, self.cpu_cores)
 
-        self._print_launches_report(report_launches, results, cov_lines, cov_funcs)
+        self._print_launches_report(report_launches, report_resources, results, cov_lines, cov_funcs)
         self.logger.info("Preparing report on components into file: '{}'".format(report_components))
         with open(report_components, "w") as f_report:
             f_report.write("Name;CPU;Wall;Memory\n")  # Header.
@@ -1151,7 +1151,7 @@ class FullLauncher(Launcher):
         self.logger.info("Exporting results into archive: '{}'".format(result_archive))
 
         exporter = Exporter(self.config, DEFAULT_EXPORT_DIR, self.install_dir)
-        exporter.export(report_launches, report_components, result_archive,
+        exporter.export(report_launches, report_resources, report_components, result_archive,
                         unknown_desc={COMPONENT_PREPARATOR: preparator_unknowns}, component_attrs=component_attrs)
 
         uploader_config = self.config.get(UPLOADER, {})

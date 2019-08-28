@@ -134,6 +134,7 @@ class VerificationResults:
         self.config = config
         self.coverage_resources = dict()
         self.mea_resources = dict()
+        self.resources = dict()
 
     def is_equal(self, verification_task: VerificationTask):
         return self.id == verification_task.entry_desc.subsystem and \
@@ -172,6 +173,11 @@ class VerificationResults:
                 if str(value).endswith("B"):
                     value = value[:-1]
                 self.mem = int(int(value) / 1000000)
+            elif title in ADDITIONAL_RESOURCES:
+                value = column.attrib['value']
+                if str(value).endswith("B"):
+                    value = value[:-1]
+                self.resources[title] = int(value)
 
     def parse_output_dir(self, launch_dir: str, install_dir: str, result_dir: str, parsed_columns=None):
         # Process BenchExec xml output file.
@@ -280,3 +286,13 @@ class VerificationResults:
                          str(self.cpu), str(self.wall), str(self.mem), str(self.relevant), str(self.initial_traces),
                          str(self.filtered_traces), self.work_dir, str(self.cov_lines), str(self.cov_funcs),
                          str(self.mea_resources.get(TAG_CPU_TIME, 0.0))])
+
+    def print_resources(self):
+        res = list()
+        for resource in ADDITIONAL_RESOURCES:
+            if resource == "error traces":
+                value = self.filtered_traces
+            else:
+                value = self.resources.get(resource, 0)
+            res.append(str(value))
+        return ";".join(res)

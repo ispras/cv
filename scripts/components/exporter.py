@@ -144,8 +144,8 @@ class Exporter(Component):
                                   results[TAG_STATISTICS], merge_type)
             counter += 1
 
-    def export(self, report_launches: str, report_components: str, archive_name: str, unknown_desc=dict(),
-               component_attrs=dict()):
+    def export(self, report_launches: str, report_resources: str, report_components: str, archive_name: str,
+               unknown_desc=dict(), component_attrs=dict()):
         start_wall_time = time.time()
         overall_wall = 0  # Launcher + Exporter.
         overall_cpu = 0  # Sum of all components.
@@ -246,7 +246,10 @@ class Exporter(Component):
 
             # Process several error traces in parallel.
             source_files = set()
-            with open(report_launches, encoding='utf8', errors='ignore') as fp:
+            with open(report_launches, encoding='utf8', errors='ignore') as fp,\
+                    open(report_resources, encoding='utf8', errors='ignore') as fr:
+                resources_data = fr.readlines()[1:]
+                id_counter = 0
                 for line in fp.readlines():
                     # <subsystem>;<rule id>;<entrypoint>;<verdict>;<termination reason>;<CPU (s)>;<wall (s)>;
                     # memory (Mb);<relevancy>;<number of traces>;<number of filtered traces>;<work dir>;<cov lines>;
@@ -300,6 +303,10 @@ class Exporter(Component):
                             "memory size": mem,
                             "wall time": wall
                         }
+                        res_data = resources_data[id_counter].rstrip().split(CSV_SEPARATOR)
+                        for i, add_res in enumerate(ADDITIONAL_RESOURCES):
+                            verification_element['resources'][add_res] = res_data[i + 1]
+                        id_counter += 1
                         if rule == RULE_COVERAGE:
                             global_cov_files[GLOBAL_COVERAGE_MAX].add(work_dir)
                             self.__process_coverage(final_zip, verifier_counter, work_dir, coverage_sources, True)

@@ -244,11 +244,15 @@ class Launcher(Component):
     def _get_none_rule_key(self, verification_result: VerificationResults):
         return "{0}_{1}".format(verification_result.id, verification_result.entrypoint)
 
-    def _print_launches_report(self, file_name: str, results: list, cov_lines: dict = None, cov_funcs: dict = None):
+    def _print_launches_report(self, file_name: str, report_resources: str, results: list, cov_lines: dict = None,
+                               cov_funcs: dict = None):
         self.logger.info("Preparing report on launches into file: '{}'".format(file_name))
-        with open(file_name, "w") as f_report:
+        with open(file_name, "w") as f_report, open(report_resources, "w") as f_resources:
+            # Write headers.
             f_report.write("Subsystem;Rule;Entrypoint;Verdict;Termination;CPU;Wall;Memory;Relevancy;"
-                           "Traces;Filtered traces;Work dir;Cov lines;Cov funcs;MEA time\n")  # Header.
+                           "Traces;Filtered traces;Work dir;Cov lines;Cov funcs;MEA time\n")
+            f_resources.write("Counter;" + ";".join(ADDITIONAL_RESOURCES) + "\n")
+            counter = 1
             for result in results:
                 # Add coverage information.
                 if result.verdict == VERDICT_SAFE and not result.rule == RULE_COVERAGE:
@@ -258,6 +262,8 @@ class Launcher(Component):
                     if not result.cov_funcs and cov_funcs:
                         result.cov_funcs = cov_funcs.get(key, 0.0)
                 f_report.write(str(result) + "\n")
+                f_resources.write("{};".format(counter) + result.print_resources() + "\n")
+                counter += 1
 
     def _get_results_names(self) -> tuple:
         reports_prefix = self._get_result_file_prefix()
@@ -265,4 +271,5 @@ class Launcher(Component):
         result_archive = os.path.join(self.results_dir, "results_{0}.zip".format(reports_prefix))
         report_components = os.path.join(self.results_dir, "report_components_{0}.csv".format(reports_prefix))
         short_report = os.path.join(self.results_dir, "short_report_{0}.csv".format(reports_prefix))
-        return report_launches, result_archive, report_components, short_report
+        report_resources = os.path.join(self.results_dir, "report_resources_{0}.csv".format(reports_prefix))
+        return report_launches, result_archive, report_components, short_report, report_resources
