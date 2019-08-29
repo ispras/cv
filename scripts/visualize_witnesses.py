@@ -39,7 +39,7 @@ if __name__ == "__main__":
     if not os.path.exists(install_dir):
         install_dir = os.path.abspath(os.path.join(os.pardir, DEFAULT_INSTALL_DIR))
 
-    mea = MEA(config, traces, install_dir, options.rule, options.result_dir)
+    mea = MEA(config, traces, install_dir, options.rule, options.result_dir, is_standalone=True)
     mea.clear()
 
     traces = mea.filter()

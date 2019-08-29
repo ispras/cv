@@ -50,7 +50,7 @@ class MEA(Component):
     - converted error trace - result of conversion(pet), pet - parsed error trace.
     """
     def __init__(self, general_config: dict, error_traces: list, install_dir: str, rule: str = "",
-                 result_dir: str = ""):
+                 result_dir: str = "", is_standalone=False):
         super(MEA, self).__init__(COMPONENT_MEA, general_config)
         self.install_dir = install_dir
         if result_dir:
@@ -78,6 +78,7 @@ class MEA(Component):
         # CPU time of each operation.
         self.package_processing_time = 0.0
         self.comparison_time = 0.0
+        self.is_standalone = is_standalone
 
     def filter(self) -> list:
         """
@@ -196,7 +197,7 @@ class MEA(Component):
 
     def __process_trace(self, error_trace_file: str, converted_error_traces: dict, queue: multiprocessing.Queue = None):
         # TODO: if we receive several witnesses they are considered to be violation witnesses only.
-        if queue:
+        if queue and not self.is_standalone:
             supported_types = {WITNESS_VIOLATION}
         else:
             supported_types = {WITNESS_VIOLATION, WITNESS_CORRECTNESS}
