@@ -5,6 +5,9 @@
     "parser.readLineDirectives=true",
     "output.disable=true",
     "counterexample.export.file=",
-    "cpa.predicate.abortOnLargeArrays=false"
+    "cpa.predicate.abortOnLargeArrays=false",
+    "cpa.arg.proofWitness=witness.correctness.graphml",
+    "cpa.arg.export=true",
+    "cpa.arg.compressWitness=false"
   ]
 }
