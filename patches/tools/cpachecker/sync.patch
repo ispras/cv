@@ -184,3 +184,28 @@ Index: src/org/sosy_lab/cpachecker/cmdline/ForceTerminationOnShutdown.java
 
    private final LogManager logger;
    private final Thread mainThread;
+Index: build/build-compile.xml
+===================================================================
+--- build/build-compile.xml	(revision 31532)
++++ build/build-compile.xml	(working copy)
+@@ -58,7 +58,6 @@
+             <compilerarg value="-Xlint:-fallthrough"/> <!-- checked by error-prone, too, and javac does not recognized $FALL-THROUGH$ -->
+             <compilerarg value="-Xlint:-processing"/>
+             <compilerarg value="-Xlint:-options"/> <!-- suppress warning about bootclasspath on newer JDK -->
+-            <compilerarg value="-Werror"/>
+             <compilerarg value="-XDcompilePolicy=simple"/> <!-- necessary for error-prone -->
+             <compilerarg value="-Xplugin:ErrorProne -XepDisableWarningsInGeneratedCode ${errorprone.options}" unless:set="errorprone.disable"/>
+             <compilerarg value="-s"/><compilerarg value="${source.generated.dir}"/>
+@@ -75,12 +74,6 @@
+         <mkdir dir="${source.generated.dir}"/>
+
+         <copy file=".settings/org.eclipse.jdt.core.prefs" tofile="${ivy.lib.dir}/build/org.eclipse.jdt.core.prefs">
+-            <!-- Convert all compiler warnings to errors. -->
+-            <filterchain>
+-                <replacetokens begintoken="=" endtoken="g">
+-                    <token key="warnin" value="=error"/>
+-                </replacetokens>
+-            </filterchain>
+         </copy>
+
+         <javac debug="true"
