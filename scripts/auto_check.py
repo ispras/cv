@@ -33,7 +33,7 @@ TAG_BRANCH = "branch"
 COMPONENT_AUTO_CHECKER = "AutoChecker"
 DEFAULT_LAUNCHER_LOG = "launcher.log"
 
-LAUNCHER_SCRIPT = "./scripts/launcher.py"
+LAUNCHER_SCRIPT = "./scripts/launch.py"
 
 
 def branch_corrector(branch: str):
