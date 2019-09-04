@@ -186,7 +186,10 @@ class Exporter(Component):
         ]
         if verifier_config:
             root_element['config'] = verifier_config
-        root_element['attrs'] = [self.__format_attr(TAG_VERSION, self.version)]
+        if self.version:
+            root_element['attrs'] = [self.__format_attr(TAG_VERSION, self.version)]
+        else:
+            root_element['attrs'] = []
 
         launcher_id = "/"
         if_coverage_sources_written = False
