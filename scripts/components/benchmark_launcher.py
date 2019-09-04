@@ -172,6 +172,12 @@ class BenchmarkLauncher(Launcher):
         if os.path.exists(tasks_dir_rel):
             os.remove(tasks_dir_rel)
         os.symlink(self.tasks_dir, tasks_dir_rel)
+        for task_dir_in in glob.glob(os.path.join(self.tasks_dir, "*")):
+            if os.path.isdir(task_dir_in):
+                tasks_dir_rel = os.path.basename(task_dir_in)
+                if os.path.exists(tasks_dir_rel):
+                    os.remove(tasks_dir_rel)
+                os.symlink(task_dir_in, tasks_dir_rel)
 
         benchmark_name_rel = os.path.basename(benchmark_name)
         if os.path.exists(benchmark_name_rel):
