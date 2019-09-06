@@ -159,7 +159,7 @@ class Launcher(Component):
     def _copy_result_files(self, files: list, group_directory: str) -> str:
         launch_dir = os.path.abspath(tempfile.mkdtemp(dir=group_directory))
         for file in files:
-            if file.endswith(".files"):
+            if file.endswith(".files") or file.endswith("output"):
                 for root, dirs, files_in in os.walk(file):
                     for name in files_in:
                         file = os.path.join(root, name)

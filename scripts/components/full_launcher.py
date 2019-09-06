@@ -453,7 +453,11 @@ class FullLauncher(Launcher):
         for launch in launches:
             files = glob.glob(os.path.join(group_directory, "*.logfiles", "{0}_{2}_{1}.{3}*".
                                            format(launch.entrypoint, os.path.basename(launch.cil_file),
-                                                  launch.rule, os.path.basename(launch.cil_file))))
+                                                  launch.rule, os.path.basename(launch.cil_file)))) +\
+                    glob.glob(os.path.join(group_directory, "*.files", "{0}_{2}_{1}.{3}*".
+                                   format(launch.entrypoint, os.path.basename(launch.cil_file),
+                                          launch.rule, os.path.basename(launch.cil_file)), 'output'))
+
             launch_dir = self._copy_result_files(files, group_directory)
             xml_files = glob.glob(os.path.join(group_directory, 'benchmark*results.{}_{}_{}.xml'.format(
                 launch.entrypoint, launch.rule, os.path.basename(launch.cil_file)
