@@ -171,6 +171,36 @@ install-scripts: check-deploy-dir
 	cp -r ${root_dir}/plugin/ . ; \
 	mkdir -p buildbot
 
+install-witness-visualizer: check-deploy-dir build-klever
+	@mkdir -p ${DEPLOY_DIR}/${install_dir}
+	@rm -rf ${DEPLOY_DIR}/${klever_dir}
+	@mkdir -p ${DEPLOY_DIR}/${klever_dir}
+	@mkdir -p ${DEPLOY_DIR}/${klever_dir}/core/core/vrp/et/
+	@cp ${klever_dir}/core/core/vrp/et/*.py ${DEPLOY_DIR}/${klever_dir}/core/core/vrp/et/
+	@mkdir -p ${DEPLOY_DIR}/${klever_dir}/bridge/
+	@mkdir -p ${DEPLOY_DIR}/${klever_dir}/bridge/templates/reports/
+	@mkdir -p ${DEPLOY_DIR}/${klever_dir}/bridge/reports/
+	@mkdir -p ${DEPLOY_DIR}/${klever_dir}/bridge/bridge/
+	@mkdir -p ${DEPLOY_DIR}/${klever_dir}/bridge/media/
+	@cp -r ${klever_dir}/bridge/static ${DEPLOY_DIR}/${klever_dir}/bridge/
+	@cp ${klever_dir}/bridge/templates/base.html ${DEPLOY_DIR}/${klever_dir}/bridge/templates/
+	@cp ${klever_dir}/bridge/reports/templates/reports/*.html ${DEPLOY_DIR}/${klever_dir}/bridge/templates/reports/
+	@cp -r ${klever_dir}/bridge/reports/mea ${DEPLOY_DIR}/${klever_dir}/bridge/reports/
+	@cp -r ${klever_dir}/bridge/reports/static ${DEPLOY_DIR}/${klever_dir}/bridge/reports/
+	@cp ${klever_dir}/bridge/reports/etv.py ${DEPLOY_DIR}/${klever_dir}/bridge/reports/
+	@cp ${klever_dir}/bridge/bridge/* ${DEPLOY_DIR}/${klever_dir}/bridge/bridge/
+	@rm -rf ${DEPLOY_DIR}/${klever_dir}/bridge/static/codemirror
+	@rm -rf ${DEPLOY_DIR}/${klever_dir}/bridge/static/calendar
+	@rm -rf ${DEPLOY_DIR}/${klever_dir}/bridge/static/jstree
+	@rm -rf ${DEPLOY_DIR}/${klever_dir}/bridge/static/js/population.js
+	@cd ${DEPLOY_DIR} ; \
+	cp -r ${root_dir}/scripts/ . ; \
+	cp ${klever_dir}/bridge/reports/mea/core.py ${DEPLOY_DIR}/scripts/aux/mea.py
+	@echo "*** Witness Visualizer has been successfully installed into the directory ${DEPLOY_DIR} ***"
+
+install-benchmark-processor: install-witness-visualizer
+	@cp -r ${klever_dir}/utils/ ${DEPLOY_DIR}/${klever_dir}/
+	@cp ${klever_dir}/core/core/*.py ${DEPLOY_DIR}/${klever_dir}/core/core/
 
 install: check-deploy-dir install-klever install-benchexec install-cil $(install-cpa) install-scripts
 	@echo "*** Successfully installed into the directory ${DEPLOY_DIR}' ***"
