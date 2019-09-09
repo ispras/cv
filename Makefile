@@ -217,18 +217,6 @@ install-cpa-with-cloud-links: | check-deploy-dir $(install-cpa)
 	done
 	@echo "*** Successfully created links for verification cloud in CPAchecker installation directories ***"
 
-deploy-web-interface: build-klever
-	@$(call check_dir,${WEB_INTERFACE_DIR},"WEB_INTERFACE_DIR")
-	@echo "*** Deploying web-interface into directory ${WEB_INTERFACE_DIR} ***"
-	@rm -rf ${WEB_INTERFACE_DIR}
-	@mkdir -p ${WEB_INTERFACE_DIR}
-	@cp -r ${klever_dir}/* ${WEB_INTERFACE_DIR}
-	@python3 ${WEB_INTERFACE_DIR}/bridge/manage.py compilemessages
-	@python3 ${WEB_INTERFACE_DIR}/bridge/manage.py migrate
-	@python3 ${WEB_INTERFACE_DIR}/bridge/manage.py createsuperuser
-	@echo "*** Successfully installed web-interface into the directory ${WEB_INTERFACE_DIR} ***"
-	@echo "*** Start web-interface with command 'python3 ${WEB_INTERFACE_DIR}/bridge/manage.py runserver <host>:<port>' ***"
-
 install-plugin:
 	@$(call check_dir,${PLUGIN_DIR},"PLUGIN_DIR","is_exist")
 	@$(call check_dir,${PLUGIN_ID},"PLUGIN_ID")
