@@ -242,7 +242,7 @@ define download_cpa
 			svn co ${cpa_trunk_repo} ${install_dir}/$1; \
 		fi ; \
 	fi
-	cd ${install_dir}/$1; svn up -r $(word 2,$($1)); svn revert -R . ; \
+	cd ${install_dir}/$1; svn cleanup; svn up -r $(word 2,$($1)); svn revert -R . ; \
 	for patch in ../../patches/tools/cpachecker/$1.patch ../../plugin/*/patches/tools/cpachecker/$1.patch; do  \
 		if [ -e "$${patch}" ]; then \
 			echo "Applying patch '$${patch}'" ; \
