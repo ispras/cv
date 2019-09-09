@@ -19,6 +19,8 @@ class BenchmarkLauncher(Launcher):
     """
     def __init__(self, config_file, additional_config: dict):
         super(BenchmarkLauncher, self).__init__(COMPONENT_BENCHMARK_LAUNCHER, config_file)
+        if not os.path.exists(self.work_dir):
+            os.makedirs(self.work_dir, exist_ok=True)
 
         # Propagate command line arguments.
         for name, val in additional_config.items():
