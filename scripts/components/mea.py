@@ -6,7 +6,6 @@ import operator
 import re
 import resource
 import time
-import uuid
 import zipfile
 
 # noinspection PyUnresolvedReferences
@@ -25,6 +24,7 @@ CONVERTED_ERROR_TRACES = "converted error traces.json"
 TAG_PARALLEL_PROCESSES = "internal parallel processes"
 TAG_CONVERSION_FUNCTION_ARGUMENTS = "conversion function arguments"
 TAG_CLEAN = "clean"
+TAG_UNZIP = "unzip"
 
 EXPORTING_CONVERTED_FUNCTIONS = {
     DEFAULT_CONVERSION_FUNCTION,
@@ -71,6 +71,7 @@ class MEA(Component):
         self.comparison_function = self.__get_option_for_rule(TAG_COMPARISON_FUNCTION, DEFAULT_COMPARISON_FUNCTION)
         self.conversion_function_args = self.__get_option_for_rule(TAG_CONVERSION_FUNCTION_ARGUMENTS, {})
         self.clean = self.__get_option_for_rule(TAG_CLEAN, True)
+        self.unzip = self.__get_option_for_rule(TAG_UNZIP, True)
 
         # Cache of filtered converted error traces.
         self.__cache = dict()
@@ -173,8 +174,9 @@ class MEA(Component):
 
         self.memory += int(resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss) * 1024
 
-        self.logger.info("Filtering has been completed: {0} -> {1}".format(len(self.error_traces),
-                                                                           len(filtered_traces)))
+        if not self.comparison_function == DO_NOT_FILTER:
+            self.logger.info("Filtering has been completed: {0} -> {1}".format(len(self.error_traces),
+                                                                               len(filtered_traces)))
         self.logger.debug("Package processing of error traces took {}s".format(round(self.package_processing_time, 2)))
         self.logger.debug("Comparing error traces took {}s".format(round(self.comparison_time, 2)))
         self.clear()
@@ -253,7 +255,10 @@ class MEA(Component):
         json_trace_name, source_files, converted_traces_files = self.__get_aux_file_names(error_trace_file_name)
         archive_name = error_trace_file_name[:-len(GRAPHML_EXTENSION)] + ARCHIVE_EXTENSION
         archive_name_base = os.path.basename(archive_name)
-        mandatory_prefix = "{}_{}".format(witness_type, "witness")
+        if self.is_standalone:
+            mandatory_prefix = "witness"
+        else:
+            mandatory_prefix = "{}_{}".format(witness_type, "witness")
         if not archive_name_base.startswith(mandatory_prefix):
             archive_name_base = "{}.{}".format(mandatory_prefix, archive_name_base)
             archive_name = os.path.join(os.path.dirname(archive_name), archive_name_base)
@@ -264,17 +269,32 @@ class MEA(Component):
         if self.result_dir:
             os.environ.setdefault("DJANGO_SETTINGS_MODULE", "bridge.settings")
             import django
+            from django.conf import settings
+            settings.INSTALLED_APPS = (
+                'django.contrib.admin',
+                'django.contrib.auth',
+                'django.contrib.contenttypes',
+                'django.contrib.humanize',
+                'django.contrib.sessions',
+                'django.contrib.messages',
+                'django.contrib.staticfiles',
+                'reports',
+            )
             django.setup()
             # noinspection PyUnresolvedReferences
             from reports.etv import convert_json_trace_to_html
             with open(json_trace_name) as fd:
                 content = fd.read()
-            name = os.path.join(self.result_dir, "{}_{}".format(uuid.uuid4().hex, os.path.basename(archive_name)))
+            name = os.path.join(self.result_dir, os.path.basename(archive_name))
             self.logger.info("Exporting html error trace '{}'".format(name))
             convert_json_trace_to_html(content, name)
+            if self.unzip:
+                self.command_caller('unzip -d "{}" -o "{}"'.format(self.result_dir, name))
         os.remove(json_trace_name)
         os.remove(source_files)
         os.remove(converted_traces_files)
+        if self.is_standalone and not self.debug:
+            os.remove(archive_name)
 
     @staticmethod
     def __process_parsed_trace(parsed_error_trace: dict):
