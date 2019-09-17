@@ -120,6 +120,7 @@ class Launcher(Component):
         super(Launcher, self).__init__(name, config)
 
         # Since Launcher does not produce a lot of output and any of its failure is fatal, we can put in on stdout.
+        self.debug = self.config.get(TAG_DEBUG, False)
         if self.debug:
             self.output_desc = sys.stdout
         else:
