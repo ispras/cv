@@ -12,6 +12,7 @@ TAG_RESOLVE_MISSED_PROTO = "resolve missed proto"
 TAG_STRATEGY = "strategy"
 TAG_FILES_SUFFIX = "files suffix"
 TAG_CIL_OPTIONS = "cil options"
+TAG_FAIL_ON_ANY_CIL_FAIL = "fail on any cil fail"
 COMMAND_COMPILER = "command"
 
 PREPARATION_STRATEGY_SUBSYSTEM = "subsystem"  # Take all single build commands for specific directory.
@@ -76,6 +77,7 @@ class Preparator(Component):
         self.unsupported_opts_regex = re.compile(r"unrecognized command line option [‘«\"](.*?)[’»\"]")
         self.resolve_missed_proto = self.component_config.get(TAG_RESOLVE_MISSED_PROTO, False)
         self.strategy = self.component_config.get(TAG_STRATEGY, PREPARATION_STRATEGY_SUBSYSTEM)
+        self.fail_on_cil = self.component_config.get(TAG_FAIL_ON_ANY_CIL_FAIL, False)
 
         # Create working directory for this component.
         preprocess_dir = os.path.join(self.work_dir, DEFAULT_PREPROCESS_DIR)
@@ -484,6 +486,9 @@ class Preparator(Component):
                 if file_cmd in self.build_commands:
                     self.build_commands[file_cmd][3] = True
             else:
+                if self.fail_on_cil:
+                    self.__on_exit()
+                    sys.exit("Stop verification task preparation due to CIL failure")
                 self.logger.warning("Skip file '%s' due to failed check", file)
                 if self.is_auxiliary(file):
                     self.__on_exit()
