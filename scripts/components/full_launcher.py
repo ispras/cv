@@ -970,6 +970,8 @@ class FullLauncher(Launcher):
         self.logger.debug("Starting scheduler for verifier launches with {} processes".format(number_of_processes))
         counter = 1
         number_of_launches = len(launches)
+        if number_of_launches == 0:
+            sys.exit("No launches were set by the given configuration")
         queue = multiprocessing.Queue()
         self.mea_input_queue = multiprocessing.Queue()
         if self.scheduler == SCHEDULER_CLOUD:
