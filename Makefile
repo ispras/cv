@@ -19,6 +19,7 @@ astraver_cil_dir=${install_dir}/${astraver_cil}
 benchexec_dir=${install_dir}/${benchexec}
 cif_dir=${install_dir}/${cif}
 plugin_dir="plugin"
+deployment_dir="deployment"
 
 cpa_arch="build.tar.bz2"
 compiled_cif_arch="cif.xz"
@@ -226,7 +227,12 @@ install-plugin:
 	fi
 	@mkdir -p ${plugin_dir}/${PLUGIN_ID}
 	@cp -r ${PLUGIN_DIR}/* ${plugin_dir}/${PLUGIN_ID}
-	
+
+install-control-groups-daemon:
+	@sudo cp ${deployment_dir}/cgroups-boot /etc/init.d/
+	@sudo chown root:root /etc/init.d/cgroups-boot
+	@sudo update-rc.d cgroups-boot defaults
+
 delete-plugins:
 	@echo "*** Removing all installed plugins ***"
 	@rm -rf plugin/*

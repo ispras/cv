@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+#
+# Copyright (c) 2019 ISP RAS (http://www.ispras.ru)
+# Ivannikov Institute for System Programming of the Russian Academy of Sciences
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+### BEGIN INIT INFO
+# Provides:          cgroups-boot
+# Required-Start:
+# Required-Stop:
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Control groups setup
+# Description:       Setups control groups for BenchExec on boot
+### END INIT INFO
+
+case "$1" in
+    start)
+        cgroups=$(cat /proc/mounts | grep "cgroup")
+        if [ ${cgroups} ]; then
+            echo "Control groups are already installed"
+        else
+            mount -t cgroup none /sys/fs/cgroup
+        fi
+
+        special_directories=(
+            '/sys/fs/cgroup/cpuset/'
+            '/sys/fs/cgroup/freezer/'
+            '/sys/fs/cgroup/blkio/'
+            '/sys/fs/cgroup/cpu,cpuacct/'
+            '/sys/fs/cgroup/cpuacct/'
+            '/sys/fs/cgroup/memory/'
+            '/sys/fs/cgroup/cpu,cpuacct/user.slice'
+            '/sys/fs/cgroup/memory/user.slice'
+            '/sys/fs/cgroup'
+        )
+
+        for dir in ${special_directories[@]};
+        do
+            if [ -d "${dir}" ]; then
+                chmod o+wt ${dir}
+            fi
+        done
+
+        ;;
+    stop)
+        ;;
+    *)
+        exit 2
+        ;;
+esac
+
+exit 0
