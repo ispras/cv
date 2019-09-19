@@ -1,92 +1,19 @@
-Установка веб-сервера Klever Bridge
-===================================
+Deployment of the Continuous Verification web-interface for results visualization
+=================================================================================
 
-Перед настройкой web-интерфейса, необходимо убедиться, что он собран в директории tools/klever.
-Выполнить сборку можно командой
+1. Deploy Klever-CV web-interface with command:
 
-Для mysql: библиотеку mysqlclient, требует mariadb-devel, python3-devel
+make deploy-klever-cv DEPLOY_DIR=<deploy path>
 
-1. Настройка базы данных
-------------------------
+WARNING: everything in the <deploy path> will be removed. This path will be used for keeping database files,
+therefore it should not be modified for correct visualization of results.
 
-Необходимо выбрать и настроить одну из поддерживаемых баз данных.
+2. Install prerequisites and setup server according to the instruction <deploy path>/README.
 
-1.1. PostgreSQL
+After that the server can be launched from <deploy path> with command:
 
-1.1.1. Trust all local connections by editing "pg_hba.conf" and by restarting the PostgreSQL server:
+./start.sh --host <host> --port <port> &
 
-$ sudo sed -i '/^local/c\local all all trust' /path/to/pg_hba.conf"
-$ Restart (on Ubuntu: sudo service postgresql restart)
+and then stopped with command:
 
-1.1.2. Create a new PostgreSQL database (**db_name**):
-
-$ createdb -U postgres -T template0 -E utf8 -O postgres db_name
-
-1.1.3. Create "tools/klever/bridge/bridge/db.json":
-
-{
-    "ENGINE": "django.db.backends.postgresql_psycopg2",
-    "NAME": "db_name",
-    "USER": "postgres"
-}
-
-1.2. MySQL/MariaDB
-
-1.2.1. Create a new MySQL/MariaDB user (**db_user**) identified by a password (**db_user_passwd**):
-
-MariaDB [(none)]> CREATE USER `db_user`@`localhost` IDENTIFIED BY 'db_user_passwd';
-
-Note: Password can be omitted.
-
-1.2.2. Create a new MySQL/MariaDB database (**db_name**) with character set *utf8* and collation *utf8_bin*.
-Grant full access on all its tables to **db_user**:
-
-MariaDB [(none)]> CREATE DATABASE `db_name` CHARACTER SET utf8 COLLATE utf8_bin;
-MariaDB [(none)]> GRANT ALL ON `db_name`.* TO `db_user`@`localhost`;
-MariaDB [(none)]> FLUSH PRIVILEGES;
-
-1.2.3. Create "tools/klever/bridge/bridge/db.json":
-
-{
-    "ENGINE": "django.db.backends.mysql",
-    "NAME": "db_name",
-    "USER": "db_user",
-    "PASSWORD": "db_user_passwd",
-    "HOST": "127.0.0.1",
-    "PORT": "3306"
-}
-
-Note: Password can be omitted if it wasn't set before.
-Host and port can be omitted if they don't differ from the values specified in the example.
-
-2. Установка web-интерфейса
----------------------------
-
-2.2. Развернуть web-интерфейс командой:
-
-$ make deploy-web-interface WEB_INTERFACE_DIR=<deploy_dir>
-
-Данная команда попросит ввести имя администратора web-интерфейса и пароль, которые в дальнешем будут необходимы для доступа к web-интерфейсу.
-Директория <deploy_dir> полностью перезатирается, в дальнейшем в ней будут храниться результаты верификации, которые могут занимать достаточно много места.
-Повторная развертка web-интерфейса в ту же директорию *стирает* все ранее полученные результаты.
-
-2.3. Для запуска web-интерфейса необходимо выполнить команду:
-
-$ python3 <deploy_dir>/bridge/manage.py runserver <host>:<port>
-
-Запуск web-интерфейса фоновым процессом:
-
-$ nohup python3 <deploy_dir>/bridge/manage.py runserver <host>:<port> &> <path to log file> &
-
-Файл <path to log file> будет содержать отладочную информацию.
-
-2.4. Использование web-интерфейса.
-
-После запуска web-интерфейса на предыдущем шаге он доступен по адресу: host:port
-
-При первом использовании необходимо ввести произвольные имя/пароль для пользователя service и имя/пароль для нового пользоватя manager, после чего выполнить Populate.
-После этого необходимо использовать имя/пароль для пользователя manager.
-
-2.5. Остановка web-интерфейса.
-
-Для остановки web-интерфейса необходимо прибить все процессы, созданные на шаге 2.3.
+./stop.sh
