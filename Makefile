@@ -124,6 +124,12 @@ install-klever: build-klever check-deploy-dir
 	@cp -r ${klever_dir} ${DEPLOY_DIR}/${klever_dir}
 	@cp -r ${mea_lib} ${DEPLOY_DIR}/scripts/aux/mea.py
 
+deploy-klever-cv: build-klever check-deploy-dir
+	@echo "*** Deploying ${klever}-CV web-interface ***"
+	@mkdir -p ${DEPLOY_DIR}
+	@rm -rf ${DEPLOY_DIR}
+	@cp -r ${klever_dir} ${DEPLOY_DIR}
+
 install-clade: check-deploy-dir
 	@echo "*** Installing ${clade} into directory ${DEPLOY_DIR} ***"
 	@$(call download_tool,${clade},${DEPLOY_DIR},${clade_repo})
