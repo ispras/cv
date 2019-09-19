@@ -242,10 +242,10 @@ class Launcher(Component):
             command = "{} --copy".format(command)
         try:
             subprocess.check_call(command, shell=True)
+            self.logger.info("Results were successfully uploaded into the server: {}/jobs".format(server))
         except:
             self.logger.warning("Error on uploading of report archive '{}' via command '{}':\n".
                                 format(result_file, command), exc_info=True)
-        self.logger.info("Results were successfully uploaded into the server: {}/jobs".format(server))
 
     def _get_none_rule_key(self, verification_result: VerificationResults):
         return "{0}_{1}".format(verification_result.id, verification_result.entrypoint)
