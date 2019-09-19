@@ -1,7 +1,5 @@
 {
   "-ldv-bam": [],
   "-setprop": [
-    "coverage.enabled=true",
-    "coverage.file=coverage.info"
   ]
 }

@@ -1,14 +1,11 @@
 {
-  "-smg-ldv": [],
+  "-smg-ldv-mea": [],
   "-setprop": [
-    "analysis.stopAfterError=false",
-    "cpa.arg.witness.exportSourcecode=true",
-    "counterexample.export.exportImmediately=true",
     "cpa.smg.guessSize = 3000",
-    "counterexample.export.filters=PathEqualityCounterexampleFilter",
-    "analysis.algorithm.CEGAR=true",
-    "cegar.refiner=cpa.smg.refiner.SMGBasicRefiner",
-    "cpa.smg.handleUnknownDereferenceAsSafe=true",
-    "solver.solver=Z3"
+    "cpa.arg.witness.handleTMPVariableAsEpsilonForWitness = false",
+    "cpa.arg.witness.removeInsufficientEdges = false",
+    "counterexample.export.graphml=",
+    "counterexample.export.extendedWitnessFile=witness.%d.graphml",
+    "counterexample.export.exportExtendedWitness=true"
   ]
 }
