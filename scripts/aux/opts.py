@@ -1,4 +1,7 @@
-# Copyright (c) 2018 ISP RAS (http://www.ispras.ru)
+#
+# CV is a framework for continuous verification.
+#
+# Copyright (c) 2018-2019 ISP RAS (http://www.ispras.ru)
 # Ivannikov Institute for System Programming of the Russian Academy of Sciences
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,6 +15,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
 # These are options like "-include header.h" with space between option and value
 # Options with values that are not separated by space should not be included here
