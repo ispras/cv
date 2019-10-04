@@ -38,6 +38,10 @@ class FullLauncher(Launcher):
     def __init__(self, config_file):
         super(FullLauncher, self).__init__(COMPONENT_LAUNCHER, config_file)
 
+        if not self.scheduler or self.scheduler not in SCHEDULERS:
+            self.logger.error("Scheduler '{}' is not known. Choose from {}".format(self.scheduler, SCHEDULERS))
+            exit(1)
+
         self.entrypoints_dir = os.path.join(self.root_dir, DEFAULT_ENTRYPOINTS_DIR)
         self.rules_dir = os.path.join(self.root_dir, DEFAULT_RULES_DIR)
         self.options_dir = os.path.join(self.root_dir, VERIFIER_FILES_DIR, VERIFIER_OPTIONS_DIR)

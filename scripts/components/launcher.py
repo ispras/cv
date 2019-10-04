@@ -166,9 +166,6 @@ class Launcher(Component):
 
         # Defines type of scheduler.
         self.scheduler = self.component_config.get(TAG_SCHEDULER)
-        if not self.scheduler or self.scheduler not in SCHEDULERS:
-            self.logger.error("Scheduler '{}' is not known. Choose from {}".format(self.scheduler, SCHEDULERS))
-            exit(1)
         self.benchmark_args = self.component_config.get(TAG_BENCHMARK_ARGS, "")
         if self.scheduler == SCHEDULER_CLOUD:
             cloud_master = self.config.get(TAG_CLOUD, {}).get(TAG_CLOUD_MASTER)

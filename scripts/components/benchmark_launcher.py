@@ -186,6 +186,10 @@ class BenchmarkLauncher(Launcher):
         return result_archive
 
     def launch_benchmark(self):
+        if not self.scheduler or not self.scheduler == SCHEDULER_CLOUD:
+            self.logger.error("Scheduler '{}' is not supported (only cloud scheduler is currently supported)".
+                              format(self.scheduler))
+            exit(1)
         exec_dir = os.path.abspath(self.component_config[TAG_BENCHMARK_CLIENT_DIR])
         benchmark_name = os.path.abspath(self.component_config[TAG_BENCHMARK_FILE])
         self.logger.info("Launching benchmark {}".format(benchmark_name))
