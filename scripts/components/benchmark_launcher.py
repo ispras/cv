@@ -36,7 +36,7 @@ class BenchmarkLauncher(Launcher):
     """
     Main component, which launches the given benchmark if needed and processes results.
     """
-    def __init__(self, config_file, additional_config: dict):
+    def __init__(self, config_file, additional_config: dict, is_launch=False):
         super(BenchmarkLauncher, self).__init__(COMPONENT_BENCHMARK_LAUNCHER, config_file)
         if not os.path.exists(self.work_dir):
             os.makedirs(self.work_dir, exist_ok=True)
@@ -53,10 +53,25 @@ class BenchmarkLauncher(Launcher):
         # Optional arguments.
         self.tool = self.component_config.get(TAG_TOOL_NAME, DEFAULT_VERIFIER_TOOL)
 
-        tools_dir = os.path.abspath(self.component_config[TAG_TOOL_DIR])
-        self.logger.debug("Using tool directory {}".format(tools_dir))
+        if is_launch:
+            tools_dir = os.path.abspath(self.component_config[TAG_TOOL_DIR])
+            self.logger.debug("Using tool directory {}".format(tools_dir))
+            os.chdir(tools_dir)
+        else:
+            self.logger.debug("Using working directory {}".format(self.work_dir))
+            os.chdir(self.work_dir)
 
-        os.chdir(tools_dir)
+        self.logger.debug("Create a symbolic links for source directory {}".format(self.tasks_dir))
+        tasks_dir_rel = os.path.basename(self.tasks_dir)
+        if os.path.exists(tasks_dir_rel):
+            os.remove(tasks_dir_rel)
+        os.symlink(self.tasks_dir, tasks_dir_rel)
+        for task_dir_in in glob.glob(os.path.join(self.tasks_dir, "*")):
+            if os.path.isdir(task_dir_in):
+                tasks_dir_rel = os.path.basename(task_dir_in)
+                if os.path.exists(tasks_dir_rel):
+                    os.remove(tasks_dir_rel)
+                os.symlink(task_dir_in, tasks_dir_rel)
 
     def __process_single_launch_results(self, result: VerificationResults, launch_directory, queue, columns=None,
                                         source_file=None):
@@ -193,16 +208,6 @@ class BenchmarkLauncher(Launcher):
         exec_dir = os.path.abspath(self.component_config[TAG_BENCHMARK_CLIENT_DIR])
         benchmark_name = os.path.abspath(self.component_config[TAG_BENCHMARK_FILE])
         self.logger.info("Launching benchmark {}".format(benchmark_name))
-        tasks_dir_rel = os.path.basename(self.tasks_dir)
-        if os.path.exists(tasks_dir_rel):
-            os.remove(tasks_dir_rel)
-        os.symlink(self.tasks_dir, tasks_dir_rel)
-        for task_dir_in in glob.glob(os.path.join(self.tasks_dir, "*")):
-            if os.path.isdir(task_dir_in):
-                tasks_dir_rel = os.path.basename(task_dir_in)
-                if os.path.exists(tasks_dir_rel):
-                    os.remove(tasks_dir_rel)
-                os.symlink(task_dir_in, tasks_dir_rel)
 
         benchmark_name_rel = os.path.basename(benchmark_name)
         if os.path.exists(benchmark_name_rel):

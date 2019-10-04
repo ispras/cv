@@ -47,7 +47,7 @@ if __name__ == '__main__':
         TAG_TOOL_NAME: options.name
     }
 
-    launcher = Launcher(options.config, additional_config)
+    launcher = Launcher(options.config, additional_config, options.launch)
     if options.launch:
         launcher.launch_benchmark()
     launcher.process_results()
