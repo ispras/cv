@@ -35,7 +35,8 @@ DEFAULT_PREPARATION_PATCHES_DIR = "patches/preparation"
 DEFAULT_ENTRYPOINTS_DIR = "entrypoints"
 DEFAULT_RULES_DIR = "rules"
 DEFAULT_PLUGIN_DIR = "plugin"
-
+DEFAULT_WORK_DIR = "work_dir"
+DEFAULT_RESULTS_DIR = "results"
 DEFAULT_BACKUP_PREFIX = "backup_"
 
 TAG_LIMIT_MEMORY = "memory size"
@@ -147,8 +148,8 @@ class Launcher(Component):
 
         # Remember some useful directories.
         self.root_dir = os.getcwd()  # By default tool-set is run from this directory.
-        self.work_dir = os.path.abspath(self.config[TAG_DIRS][TAG_DIRS_WORK])
-        self.results_dir = os.path.abspath(self.config[TAG_DIRS][TAG_DIRS_RESULTS])
+        self.work_dir = os.path.abspath(self.config.get(TAG_DIRS, {}).get(TAG_DIRS_WORK, DEFAULT_WORK_DIR))
+        self.results_dir = os.path.abspath(self.config.get(TAG_DIRS, {}).get(TAG_DIRS_RESULTS, DEFAULT_RESULTS_DIR))
         if not os.path.exists(self.results_dir):
             os.makedirs(self.results_dir, exist_ok=True)
 
