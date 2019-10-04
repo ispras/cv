@@ -34,6 +34,8 @@ Mandatory options:
 
 ### Benchmark Visualizer
 
+Benchmark Visualizer is a tool for visualizing benchmark verification results.
+
 #### Deployment
 
 1. Web-interface 
