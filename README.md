@@ -23,7 +23,7 @@ make install-witness-visualizer DEPLOY_DIR=<deployment directory>
 After deployment Witness Visualizer can be used to convert witnesses from the `<deployment directory>` with command:
 
 ```
-scripts/visualize_witnesses.py
+scripts/visualize_witnesses.py OPTIONS
 ```
 
 Mandatory options:
@@ -31,6 +31,12 @@ Mandatory options:
 * `-d` DIRECTORY, `--directory` DIRECTORY: directory with witnesses to be visualized (either `-w` or `-d` option must be specified);
 * `-r` RESULT_DIR, `--result-dir` RESULT_DIR: directory, in which visualized witnesses will be placed in html format;
 * `-s` SOURCE_DIR, `--source-dir` SOURCE_DIR: source files directory.
+
+For example:
+
+```bash
+scripts/visualize_witnesses.py --witness output/witness.graphml --result-dir results/ --source-dir ~/sv-benchmarks
+```
 
 ### Benchmark Visualizer
 
