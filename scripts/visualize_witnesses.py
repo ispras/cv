@@ -31,6 +31,8 @@ if __name__ == "__main__":
     parser.add_argument("-w", "--witness", help="witness to be visualized")
     parser.add_argument("-s", "--source-dir", dest="source_dir", help="directory with source files", default=None)
     parser.add_argument('-u', "--unzip", help="unzip resulting archives", action='store_true')
+    parser.add_argument("--dry-run", dest="dry_run", help="do not visualize witnesses, only check their quality",
+                        action='store_true')
 
     parser.add_argument("--conversion", help="conversion function (required for witnesses filtering)",
                         default=DEFAULT_CONVERSION_FUNCTION)
@@ -54,7 +56,8 @@ if __name__ == "__main__":
             TAG_CONVERSION_FUNCTION_ARGUMENTS: args,
             TAG_DEBUG: options.debug,
             TAG_CLEAN: False,
-            TAG_UNZIP: options.unzip
+            TAG_UNZIP: options.unzip,
+            TAG_DRY_RUN: options.dry_run
         }
     }
 
@@ -82,7 +85,8 @@ if __name__ == "__main__":
         os.symlink(source_dir, source_dir_rel)
 
     witnesses = mea.filter()
-    mea.logger.info("Successfully processed {} witnesses".format(len(witnesses)))
+    if not options.dry_run:
+        mea.logger.info("Successfully processed {} witnesses".format(len(witnesses)))
 
     if source_dir:
         source_dir_rel = os.path.basename(source_dir)

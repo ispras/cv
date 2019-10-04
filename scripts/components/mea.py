@@ -44,6 +44,7 @@ TAG_PARALLEL_PROCESSES = "internal parallel processes"
 TAG_CONVERSION_FUNCTION_ARGUMENTS = "conversion function arguments"
 TAG_CLEAN = "clean"
 TAG_UNZIP = "unzip"
+TAG_DRY_RUN = "dry run"
 
 EXPORTING_CONVERTED_FUNCTIONS = {
     DEFAULT_CONVERSION_FUNCTION,
@@ -91,6 +92,7 @@ class MEA(Component):
         self.conversion_function_args = self.__get_option_for_rule(TAG_CONVERSION_FUNCTION_ARGUMENTS, {})
         self.clean = self.__get_option_for_rule(TAG_CLEAN, True)
         self.unzip = self.__get_option_for_rule(TAG_UNZIP, True)
+        self.dry_run = self.__get_option_for_rule(TAG_DRY_RUN, False)
 
         # Cache of filtered converted error traces.
         self.__cache = dict()
@@ -337,6 +339,15 @@ class MEA(Component):
             logger.setLevel(logging.ERROR)
         try:
             json_error_trace = import_error_trace(logger, error_trace_file)
+            if self.dry_run:
+                warnings = json_error_trace.get('warnings', [])
+                if warnings:
+                    self.logger.warning("There are missing elements for witness {}:".format(error_trace_file))
+                    for warning in warnings:
+                        print(warning)
+                else:
+                    self.logger.info("There are no missing elements for witness {}:".format(error_trace_file))
+                return {}
             witness_type = json_error_trace.get('type')
             if witness_type not in supported_types:
                 self.logger.warning('Witness type {} is not supported'.format(witness_type))
