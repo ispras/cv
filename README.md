@@ -10,6 +10,24 @@ This framework aims at results analysis of continuous verification, which can be
 
 Witness Visualizer converts generic witnesses from [SV-COMP](https://sv-comp.sosy-lab.org) tools into user-friendly format.
 
+#### Requirements
+
+Python (version>=3.4), python modules:
+- requests;
+- ujson;
+- graphviz;
+- ply;
+- pytest;
+- atomicwrites;
+- more-itertools;
+- pluggy;
+- py;
+- attrs;
+- setuptools;
+- six;
+- django (2.1);
+- psycopg2.
+
 #### Deployment
 
 In order to install Witness Visualizer in the `<deployment directory>` execute the following command:
