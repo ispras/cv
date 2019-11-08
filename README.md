@@ -68,7 +68,7 @@ See instruction [docs/web_interface.txt](docs/web_interface.txt).
 
 2. Control scripts
 
-In order to install Benchmark Visualizer in the <deployment directory> execute the following command:
+In order to install Benchmark Visualizer in the `<deployment directory>` execute the following command:
 
 ```shell
 make install-benchmark-visualizer DEPLOY_DIR=<deployment directory>
