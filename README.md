@@ -56,6 +56,9 @@ For example:
 scripts/visualize_witnesses.py --witness output/witness.graphml --result-dir results/ --source-dir ~/sv-benchmarks
 ```
 
+There are some examples of [SV-COMP](https://sv-comp.sosy-lab.org) witnesses in the `docs/examples/witnesses` directory,
+which can be used to validate Witness Visualizer installation.
+
 ### Benchmark Visualizer
 
 Benchmark Visualizer is a tool for visualizing benchmark verification results.

@@ -1,0 +1,1452 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+ <key attr.name="isViolationNode" attr.type="boolean" for="node" id="violation">
+  <default>false</default>
+ </key>
+ <key attr.name="isEntryNode" attr.type="boolean" for="node" id="entry">
+  <default>false</default>
+ </key>
+ <key attr.name="isSinkNode" attr.type="boolean" for="node" id="sink">
+  <default>false</default>
+ </key>
+ <key attr.name="enterLoopHead" attr.type="boolean" for="edge" id="enterLoopHead">
+  <default>false</default>
+ </key>
+ <key attr.name="violatedProperty" attr.type="string" for="node" id="violatedProperty"/>
+ <key attr.name="sourcecodeLanguage" attr.type="string" for="graph" id="sourcecodelang"/>
+ <key attr.name="programFile" attr.type="string" for="graph" id="programfile"/>
+ <key attr.name="programHash" attr.type="string" for="graph" id="programhash"/>
+ <key attr.name="specification" attr.type="string" for="graph" id="specification"/>
+ <key attr.name="architecture" attr.type="string" for="graph" id="architecture"/>
+ <key attr.name="producer" attr.type="string" for="graph" id="producer"/>
+ <key attr.name="creationTime" attr.type="string" for="graph" id="creationtime"/>
+ <key attr.name="startline" attr.type="int" for="edge" id="startline"/>
+ <key attr.name="endline" attr.type="int" for="edge" id="endline"/>
+ <key attr.name="startoffset" attr.type="int" for="edge" id="startoffset"/>
+ <key attr.name="endoffset" attr.type="int" for="edge" id="endoffset"/>
+ <key attr.name="originFileName" attr.type="string" for="edge" id="originfile">
+  <default>/tmp/vcloud-vcloud-master/worker/working_dir_2cc98666-edb9-45d2-b198-c7749ae4366b/sv-benchmarks/c/ldv-linux-3.0/usb_urb-drivers-media-dvb-ttusb-dec-ttusb_dec.ko_false-unreach-call.cil.out.i</default>
+ </key>
+ <key attr.name="control" attr.type="string" for="edge" id="control"/>
+ <key attr.name="assumption" attr.type="string" for="edge" id="assumption"/>
+ <key attr.name="assumption.resultfunction" attr.type="string" for="edge" id="assumption.resultfunction"/>
+ <key attr.name="assumption.scope" attr.type="string" for="edge" id="assumption.scope"/>
+ <key attr.name="enterFunction" attr.type="string" for="edge" id="enterFunction"/>
+ <key attr.name="returnFromFunction" attr.type="string" for="edge" id="returnFrom"/>
+ <key attr.name="witness-type" attr.type="string" for="graph" id="witness-type"/>
+ <key attr.name="inputWitnessHash" attr.type="string" for="graph" id="inputwitnesshash"/>
+ <graph edgedefault="directed">
+  <data key="witness-type">violation_witness</data>
+  <data key="sourcecodelang">C</data>
+  <data key="producer">CPAchecker 1.7</data>
+  <data key="specification">CHECK( init(main()), LTL(G ! call(__VERIFIER_error())) )</data>
+  <data key="programfile">../../sv-benchmarks/c/ldv-linux-3.0/usb_urb-drivers-media-dvb-ttusb-dec-ttusb_dec.ko_false-unreach-call.cil.out.i</data>
+  <data key="programhash">c7228543a6eb0df79d87b58143ac6ae4e53ce8d320e5a0a243bc5f966ebdec92</data>
+  <data key="architecture">64bit</data>
+  <data key="creationtime">2018-12-10T17:50:26+01:00</data>
+  <node id="A0">
+   <data key="entry">true</data>
+  </node>
+  <node id="A186_1129_1"/>
+  <edge source="A0" target="A186_1129_1">
+   <data key="startline">9967</data>
+   <data key="endline">9967</data>
+   <data key="startoffset">282076</data>
+   <data key="endoffset">282086</data>
+   <data key="enterFunction">main</data>
+  </edge>
+  <node id="A186_1131_1"/>
+  <edge source="A186_1129_1" target="A186_1131_1">
+   <data key="startline">9969</data>
+   <data key="endline">9969</data>
+   <data key="startoffset">282130</data>
+   <data key="endoffset">282182</data>
+   <data key="assumption">(var_ttusb_dec_probe_38_p1-&gt;idProduct) == (4102U);</data>
+   <data key="assumption.scope">main</data>
+  </edge>
+  <node id="A186"/>
+  <edge source="A186_1131_1" target="A186">
+   <data key="startline">9976</data>
+   <data key="endline">9976</data>
+   <data key="startoffset">282286</data>
+   <data key="endoffset">282305</data>
+   <data key="assumption">(__mod_adapter_nrtype56[0]) == (112); (__mod_debugtype49[8]) == (61); (__param_enable_rc.perm) == (420LL); (__mod_enable_rc54[38]) == (111); (__mod_debug50[20]) == (102); (__mod_author1781[16]) == (115); (__mod_adapter_nr56[13]) == (110); (__mod_enable_rc54[24]) == (102); (__mod_description1782[7]) == (116); (__mod_output_pvatype51[10]) == (117); (__mod_author1781[17]) == (32); (__mod_debug50[27]) == (103); (__mod_license1783[3]) == (101); (__mod_adapter_nr56[18]) == (66); (__mod_debugtype49[5]) == (121); (__param_str_enable_rc[5]) == (101); (rc_keys[14]) == (352U); (__mod_output_pva52[55]) == (41); (__mod_description1782[26]) == (117); (__mod_debug50[35]) == (101); (__mod_debug50[3]) == (109); (__mod_debug50[46]) == (46); (rc_keys[20]) == (399U); (__mod_output_pva52[54]) == (102); (__mod_enable_rctype53[2]) == (114); (__mod_debug50[23]) == (100); (__mod_output_pva52[5]) == (111); (__mod_description1782[6]) == (112); (__mod_enable_rctype53[12]) == (98); (__mod_enable_rctype53[0]) == (112); (__mod_enable_rc54[51]) == (116); (__mod_adapter_nr56[2]) == (114); (__mod_output_pvatype51[17]) == (118); (__mod_adapter_nr56[27]) == (32); (__mod_adapter_nrtype56[12]) == (112); (__mod_debugtype49[15]) == (105); (__mod_description1782[21]) == (110); (__mod_output_pva52[25]) == (65); (__mod_description1782[35]) == (69); (__mod_description1782[24]) == (72); (__mod_enable_rc54[13]) == (99); (__param_str_adapter_nr[5]) == (101); (__mod_adapter_nr56[0]) == (112); (__param_debug.flags) == (0LL); (__mod_output_pvatype51[15]) == (95); (__mod_enable_rc54[5]) == (101); (__param_str_enable_rc[8]) == (99); (__param_str_adapter_nr[7]) == (95); (__mod_adapter_nr56[14]) == (114); (__mod_description1782[0]) == (100); (__mod_enable_rc54[46]) == (101); (__mod_debugtype49[16]) == (110); (__mod_author1781[37]) == (111); (rc_keys[4]) == (4U); (__mod_description1782[3]) == (99); (__mod_description1782[23]) == (47); (ttusb_dec_driver.id_table-&gt;match_flags) == (3U); (__mod_adapter_nr56[26]) == (114); (__mod_output_pvatype51[3]) == (109); (__mod_description1782[11]) == (61); (__mod_output_pva52[43]) == (40); (__mod_debug50[29]) == (105); (ttusb_dec_driver.id_table-&gt;idProduct) == (4102U); (__mod_output_pva52[28]) == (114); (__param_str_enable_rc[0]) == (101); (__mod_debug50[45]) == (41); (__mod_output_pva52[0]) == (112); (__mod_description1782[18]) == (84); (rc_keys[2]) == (2U); (__mod_description1782[33]) == (32); (__param_output_pva.flags) == (0LL); ((ttusb_dec_table[0]).idProduct) == (4102U); (__mod_enable_rc54[21]) == (110); (__mod_enable_rc54[10]) == (101); (__mod_enable_rctype53[17]) == (99); (__mod_output_pva52[45]) == (101); (__mod_debug50[40]) == (116); (__mod_output_pva52[31]) == (32); (__mod_license1783[7]) == (61); (__param_str_output_pva[5]) == (116); (__mod_adapter_nr56[22]) == (97); (__mod_description1782[28]) == (112); (__mod_enable_rctype53[18]) == (58); (__mod_adapter_nr56[5]) == (97); (__mod_enable_rctype53[20]) == (110); debug == (0); (__mod_enable_rc54[23]) == (111); (__param_str_adapter_nr[6]) == (114); (__mod_description1782[8]) == (105); (__mod_author1781[1]) == (117); (__mod_enable_rc54[57]) == (41); ((ttusb_dec_table[1]).idProduct) == (4104U); (__mod_author1781[3]) == (104); (__mod_output_pva52[15]) == (58); (__mod_author1781[28]) == (64); (__mod_debug50[6]) == (101); (__mod_output_pva52[23]) == (80); (__mod_adapter_nr56[30]) == (109); (__mod_author1781[39]) == (103); (__mod_debug50[11]) == (84); (__param_str_output_pva[7]) == (112); (__mod_output_pva52[12]) == (112); (__mod_author1781[33]) == (101); (__mod_description1782[25]) == (97); (__mod_output_pva52[3]) == (109); (__mod_output_pva52[10]) == (116); (__mod_enable_rc54[16]) == (117); (__mod_debugtype49[7]) == (101); ((ttusb_dec_table[2]).idProduct) == (4105U); (__mod_debugtype49[13]) == (103); ((ttusb_dec_table[0]).match_flags) == (3U); (__mod_output_pva52[40]) == (99); (__mod_description1782[31]) == (103); (__mod_description1782[22]) == (100); (__mod_adapter_nrtype56[13]) == (116); (__mod_adapter_nrtype56[21]) == (114); (__mod_adapter_nr56[9]) == (116); (__mod_debugtype49[14]) == (58); (__mod_output_pva52[30]) == (109); (__mod_adapter_nr56[20]) == (97); (__mod_output_pva52[50]) == (116); output_pva == (0); (__mod_debug50[0]) == (112); (__mod_enable_rctype53[9]) == (101); (__mod_author1781[18]) == (60); (__mod_author1781[22]) == (117); (__mod_output_pva52[4]) == (61); (__param_str_debug[1]) == (101); (__mod_adapter_nrtype56[14]) == (101); (__mod_adapter_nrtype56[30]) == (104); (rc_keys[1]) == (113U); (__mod_adapter_nrtype56[25]) == (32); (__mod_adapter_nrtype56[8]) == (61); (__mod_debug50[13]) == (114); (__mod_debugtype49[9]) == (100); (__mod_adapter_nrtype56[17]) == (110); (__mod_output_pva52[6]) == (117); (__mod_adapter_nr56[11]) == (114); (rc_keys[9]) == (9U); (__mod_license1783[0]) == (108); (__mod_enable_rctype53[10]) == (110); (__mod_license1783[6]) == (101); (__mod_debug50[32]) == (32); (__mod_output_pvatype51[16]) == (112); (__param_str_enable_rc[3]) == (98); (__param_str_debug[3]) == (117); (__mod_description1782[20]) == (101); (__mod_debug50[37]) == (97); (__mod_description1782[27]) == (112); (__mod_description1782[2]) == (115); (__mod_debug50[10]) == (58); (__mod_author1781[35]) == (115); (__mod_adapter_nrtype56[4]) == (116); (__param_str_debug[0]) == (100); (__mod_author1781[29]) == (103); (__param_str_output_pva[2]) == (116); (__param_str_enable_rc[2]) == (97); (__mod_output_pva52[37]) == (101); (__mod_debug50[15]) == (32); (__mod_enable_rc54[7]) == (97); (__mod_enable_rc54[15]) == (84); (__mod_output_pvatype51[22]) == (116); (__mod_output_pva52[26]) == (32); (__mod_output_pvatype51[9]) == (111); (__mod_adapter_nrtype56[1]) == (97); (__mod_output_pva52[2]) == (114); (__mod_enable_rc54[42]) == (111); (__mod_output_pva52[46]) == (102); (__mod_enable_rc54[39]) == (110); (__mod_debugtype49[10]) == (101); (rc_keys[8]) == (8U); (__mod_adapter_nr56[8]) == (112); (__mod_debugtype49[2]) == (114); (__mod_output_pva52[13]) == (118); (__mod_enable_rctype53[1]) == (97); (__mod_debug50[30]) == (110); (__mod_enable_rctype53[8]) == (61); (__mod_adapter_nr56[28]) == (110); (__mod_enable_rctype53[13]) == (108); (__mod_enable_rc54[1]) == (97); (__mod_adapter_nr56[33]) == (114); (__param_str_debug[2]) == (98); (__mod_author1781[24]) == (45); (__mod_enable_rc54[30]) == (114); (__param_str_output_pva[4]) == (117); (__mod_enable_rc54[4]) == (61); (__mod_author1781[25]) == (100); (__mod_enable_rc54[2]) == (114); (__mod_enable_rc54[18]) == (110); (__mod_adapter_nrtype56[24]) == (121); LDV_IN_INTERRUPT == (1); (__mod_debug50[9]) == (103); (__mod_output_pvatype51[12]) == (112); (__mod_enable_rc54[8]) == (98); (__mod_enable_rctype53[4]) == (116); (__mod_adapter_nrtype56[2]) == (114); (__mod_adapter_nrtype56[29]) == (115); (__mod_adapter_nr56[21]) == (100); (__mod_enable_rc54[9]) == (108); (__mod_debug50[31]) == (103); (__param_str_output_pva[1]) == (117); (__mod_enable_rc54[20]) == (111); (__mod_description1782[5]) == (105); (__mod_output_pvatype51[7]) == (101); (__mod_output_pva52[38]) == (118); (__mod_description1782[16]) == (110); (__param_str_adapter_nr[1]) == (100); (rc_keys[25]) == (385U); (__mod_author1781[38]) == (114); (rc_keys[7]) == (7U); (__mod_output_pva52[22]) == (32); (rc_keys[22]) == (401U); (__mod_output_pva52[24]) == (86); (__mod_enable_rc54[37]) == (99); (__mod_output_pva52[19]) == (112); (__mod_adapter_nr56[25]) == (101); (__mod_enable_rctype53[14]) == (101); (__mod_debug50[33]) == (40); (rc_keys[23]) == (357U); (rc_keys[18]) == (1U); (__mod_enable_rc54[34]) == (116); (__mod_debugtype49[1]) == (97); (__mod_debugtype49[4]) == (116); (__mod_enable_rc54[53]) == (32); (__mod_output_pva52[1]) == (97); (__mod_output_pva52[36]) == (100); (__mod_author1781[19]) == (108); (__mod_output_pvatype51[20]) == (105); (__param_str_enable_rc[4]) == (108); (__mod_enable_rc54[26]) == (32); (rc_keys[6]) == (6U); (__mod_adapter_nrtype56[33]) == (116); (__mod_description1782[4]) == (114); (__mod_author1781[12]) == (87); (__mod_adapter_nrtype56[28]) == (32); (__mod_debug50[24]) == (101); (__param_adapter_nr.flags) == (0LL); ((ttusb_dec_table[1]).idVendor) == (2888U); (__mod_adapter_nr56[12]) == (95); (__mod_author1781[4]) == (111); (__mod_output_pvatype51[5]) == (121); (__mod_enable_rc54[40]) == (116); (__mod_description1782[1]) == (101); (__mod_description1782[38]) == (85); (__mod_enable_rc54[50]) == (108); (__mod_author1781[15]) == (100); (__mod_debug50[26]) == (117); (rc_keys[17]) == (412U); (__mod_enable_rc54[47]) == (102); (__param_str_output_pva[3]) == (112); (__mod_output_pvatype51[14]) == (116); (rc_keys[5]) == (5U); (__mod_author1781[34]) == (116); (__mod_adapter_nr56[10]) == (101); (__mod_enable_rc54[0]) == (112); (__mod_output_pva52[9]) == (117); (__mod_debug50[1]) == (97); (__mod_author1781[11]) == (32); (__mod_output_pva52[41]) == (101); (__mod_output_pva52[48]) == (117); (__mod_output_pva52[35]) == (32); (__mod_description1782[14]) == (99); (__param_str_enable_rc[1]) == (110); (__mod_output_pvatype51[1]) == (97); (__mod_description1782[17]) == (111); (__mod_adapter_nrtype56[32]) == (114); (__mod_output_pva52[7]) == (116); (__mod_license1783[9]) == (80); (__mod_author1781[6]) == (61); (__mod_description1782[29]) == (97); (__mod_output_pva52[53]) == (102); (__param_str_output_pva[8]) == (118); ldv_coherent_state == (0); (rc_keys[24]) == (50U); (__mod_output_pvatype51[4]) == (116); (__mod_debug50[21]) == (102); (__mod_adapter_nrtype56[6]) == (112); (__mod_author1781[26]) == (118); (__mod_debug50[38]) == (117); (__mod_debug50[18]) == (47); (__mod_enable_rc54[54]) == (111); (__mod_adapter_nr56[4]) == (61); (rc_keys[21]) == (400U); (__mod_adapter_nr56[29]) == (117); (__mod_enable_rc54[29]) == (32); (__mod_author1781[40]) == (62); (__mod_license1783[10]) == (76); (__mod_adapter_nrtype56[10]) == (100); (__mod_output_pva52[33]) == (118); (__mod_output_pvatype51[19]) == (58); (__mod_debug50[34]) == (100); (__mod_output_pvatype51[8]) == (61); (__mod_enable_rc54[52]) == (58); (__mod_output_pva52[42]) == (32); (__mod_description1782[39]) == (83); (__param_debug.perm) == (420LL); (__mod_output_pva52[32]) == (100); (__mod_license1783[4]) == (110); (__mod_adapter_nrtype56[9]) == (97); (__mod_output_pva52[34]) == (114); (__mod_adapter_nrtype56[19]) == (58); (__mod_output_pva52[47]) == (97); (__mod_enable_rc54[35]) == (101); (__mod_adapter_nrtype56[23]) == (97); (__mod_enable_rc54[45]) == (100); (__mod_adapter_nr56[23]) == (112); (ttusb_dec_driver.id_table-&gt;idVendor) == (2888U); (__mod_adapter_nrtype56[7]) == (101); (__mod_author1781[21]) == (110); res_ttusb_dec_probe_38 == (0); (__mod_author1781[5]) == (114); (__mod_description1782[13]) == (101); (__mod_debugtype49[12]) == (117); (__mod_debug50[39]) == (108); (__mod_description1782[30]) == (117); (__mod_description1782[10]) == (110); (__param_arr_adapter_nr.elemsize) == (2U); (__mod_author1781[23]) == (120); (__param_str_adapter_nr[9]) == (114); (__mod_adapter_nr56[34]) == (115); (__mod_output_pva52[51]) == (58); (__param_str_adapter_nr[3]) == (112); (__mod_debug50[28]) == (103); (__mod_enable_rc54[22]) == (47); (var_ttusb_dec_probe_38_p1-&gt;idProduct) == (4102U); (__mod_adapter_nr56[24]) == (116); (__mod_enable_rc54[44]) == (40); (__mod_output_pvatype51[2]) == (114); (__mod_adapter_nr56[32]) == (101); (__mod_description1782[40]) == (66); (__mod_debug50[5]) == (100); (__mod_adapter_nr56[16]) == (68); (__mod_adapter_nrtype56[22]) == (114); (__mod_debugtype49[11]) == (98); (rc_keys[3]) == (3U); (__mod_debug50[36]) == (102); (__mod_debugtype49[3]) == (109); (__mod_enable_rc54[19]) == (32); (__mod_debug50[41]) == (58); (__mod_output_pvatype51[18]) == (97); (__param_arr_adapter_nr.max) == (8U); (__mod_license1783[2]) == (99); (__mod_output_pva52[44]) == (100); (__param_str_adapter_nr[8]) == (110); (__mod_adapter_nrtype56[26]) == (111); (rc_keys[19]) == (398U); (__mod_enable_rctype53[11]) == (97); (__mod_enable_rc54[25]) == (102); (__mod_author1781[7]) == (65); (__mod_debugtype49[0]) == (112); (__mod_enable_rc54[43]) == (108); (__mod_adapter_nr56[7]) == (97); (__param_enable_rc.flags) == (0LL); (__mod_author1781[30]) == (105); (__mod_description1782[34]) == (68); (__mod_adapter_nrtype56[11]) == (97); (__mod_debug50[25]) == (98); (__mod_author1781[8]) == (108); ((ttusb_dec_table[2]).idVendor) == (2888U); enable_rc == (0); ((ttusb_dec_table[0]).idVendor) == (2888U); (__mod_enable_rc54[27]) == (73); (__mod_debug50[2]) == (114); (__mod_enable_rc54[55]) == (102); (rc_keys[0]) == (116U); (__mod_enable_rc54[31]) == (101); (__mod_output_pvatype51[13]) == (117); (__mod_enable_rctype53[5]) == (121); (__mod_enable_rc54[32]) == (109); (__mod_adapter_nr56[1]) == (97); (__mod_debug50[4]) == (61); (rc_keys[10]) == (10U); (__mod_adapter_nrtype56[16]) == (95); (__mod_adapter_nr56[3]) == (109); (__param_str_debug[4]) == (103); (__mod_debug50[12]) == (117); (__mod_output_pva52[49]) == (108); (__mod_description1782[32]) == (101); (__mod_author1781[13]) == (111); (__mod_enable_rc54[12]) == (114); (__mod_description1782[37]) == (32); (__mod_output_pvatype51[0]) == (112); (__mod_author1781[10]) == (120); (rc_keys[15]) == (115U); (__mod_license1783[1]) == (105); (__mod_output_pvatype51[11]) == (116); (__mod_enable_rctype53[19]) == (105); (__mod_adapter_nr56[31]) == (98); (__mod_adapter_nrtype56[27]) == (102); (__mod_enable_rc54[48]) == (97); (__mod_author1781[27]) == (98); (__mod_description1782[36]) == (67); (rc_keys[11]) == (11U); (__mod_enable_rctype53[16]) == (114); (__mod_output_pva52[11]) == (95); (__mod_adapter_nrtype56[18]) == (114); (__mod_output_pvatype51[6]) == (112); (__param_output_pva.perm) == (292LL); (__mod_enable_rctype53[7]) == (101); (__mod_output_pva52[21]) == (116); (__mod_enable_rc54[14]) == (58); (__mod_description1782[19]) == (114); (__mod_debug50[22]) == (32); (__mod_debug50[19]) == (111); (__mod_adapter_nr56[17]) == (86); (__mod_adapter_nrtype56[20]) == (97); (__param_str_adapter_nr[0]) == (97); (__mod_adapter_nr56[19]) == (32); (__mod_author1781[20]) == (105); ((ttusb_dec_table[2]).match_flags) == (3U); (__mod_adapter_nr56[15]) == (58); ldv_urb_state == (0); (__mod_enable_rctype53[15]) == (95); (__mod_enable_rc54[17]) == (114); (__mod_description1782[12]) == (84); (rc_keys[13]) == (114U); (__mod_enable_rctype53[3]) == (109); (__mod_adapter_nr56[6]) == (100); (__mod_enable_rc54[6]) == (110); (__mod_enable_rc54[36]) == (32); (__mod_debug50[17]) == (110); (__mod_output_pva52[17]) == (117); (__mod_author1781[9]) == (101); (__mod_adapter_nrtype56[3]) == (109); (__mod_enable_rc54[3]) == (109); (__mod_license1783[5]) == (115); (__mod_adapter_nrtype56[5]) == (121); (__mod_debug50[8]) == (117); (__mod_output_pva52[52]) == (111); (__mod_debug50[14]) == (110); (__mod_author1781[2]) == (116); (rc_keys[16]) == (403U); (__mod_author1781[32]) == (108); (__mod_output_pva52[27]) == (102); (__mod_debug50[44]) == (102); (__mod_enable_rc54[41]) == (114); (__mod_adapter_nrtype56[31]) == (111); (__mod_author1781[14]) == (111); (__param_str_adapter_nr[4]) == (116); (__mod_license1783[8]) == (71); (rc_keys[12]) == (402U); (*(x86_dma_fallback_dev.dma_mask)) == (2ULL); (__mod_output_pva52[8]) == (112); ((ttusb_dec_table[1]).match_flags) == (3U); (__mod_description1782[15]) == (104); (__param_adapter_nr.perm) == (292LL); (__param_str_output_pva[0]) == (111); (__param_str_adapter_nr[2]) == (97); (__mod_author1781[31]) == (98); (__mod_description1782[9]) == (111); (__mod_enable_rctype53[6]) == (112); (__mod_enable_rc54[28]) == (82); (__mod_enable_rctype53[21]) == (116); (__mod_enable_rc54[56]) == (102); (__mod_debug50[7]) == (98); (__param_str_output_pva[9]) == (97); (__mod_enable_rc54[11]) == (95); (__mod_enable_rc54[33]) == (111); (__param_str_output_pva[6]) == (95); (__param_str_enable_rc[6]) == (95); (__mod_output_pvatype51[21]) == (110); (__mod_output_pva52[18]) == (116); (__param_str_enable_rc[7]) == (114); (__mod_output_pva52[39]) == (105); (__mod_author1781[0]) == (97); (__mod_debug50[16]) == (111); (__mod_debug50[42]) == (111); (__mod_output_pva52[14]) == (97); (__mod_adapter_nrtype56[15]) == (114); (__mod_output_pva52[16]) == (79); (__mod_debugtype49[17]) == (116); (__mod_author1781[36]) == (46); (__mod_output_pva52[20]) == (117); (__mod_debugtype49[6]) == (112); (__mod_output_pva52[29]) == (111); (__mod_enable_rc54[49]) == (117); (__mod_debug50[43]) == (102);</data>
+   <data key="assumption.scope">main</data>
+  </edge>
+  <node id="A187"/>
+  <edge source="A186" target="A187">
+   <data key="startline">9977</data>
+   <data key="endline">9977</data>
+   <data key="startoffset">282310</data>
+   <data key="endoffset">282326</data>
+   <data key="enterFunction">ldv_initialize</data>
+  </edge>
+  <node id="A189"/>
+  <edge source="A187" target="A189">
+   <data key="startline">10307</data>
+   <data key="endline">10307</data>
+   <data key="startoffset">290258</data>
+   <data key="endoffset">290264</data>
+   <data key="returnFrom">ldv_initialize</data>
+  </edge>
+  <node id="A191"/>
+  <edge source="A189" target="A191">
+   <data key="startline">9978</data>
+   <data key="endline">9978</data>
+   <data key="startoffset">282340</data>
+   <data key="endoffset">282355</data>
+   <data key="enterFunction">ttusb_dec_init</data>
+  </edge>
+  <node id="A193"/>
+  <edge source="A191" target="A193">
+   <data key="startline">9887</data>
+   <data key="endline">9887</data>
+   <data key="startoffset">278724</data>
+   <data key="endoffset">278755</data>
+   <data key="enterFunction">usb_register</data>
+  </edge>
+  <node id="A195"/>
+  <edge source="A193" target="A195">
+   <data key="startline">6708</data>
+   <data key="endline">6708</data>
+   <data key="startoffset">195208</data>
+   <data key="endoffset">195264</data>
+   <data key="enterFunction">usb_register_driver</data>
+  </edge>
+  <node id="A196"/>
+  <edge source="A195" target="A196">
+   <data key="startline">10364</data>
+   <data key="endline">10364</data>
+   <data key="startoffset">292013</data>
+   <data key="endoffset">292035</data>
+   <data key="assumption">\result == (0); (arg0-&gt;id_table-&gt;match_flags) == (3U); (arg0-&gt;id_table-&gt;idVendor) == (2888U); (arg0-&gt;id_table-&gt;idProduct) == (4102U);</data>
+   <data key="assumption.resultfunction">__VERIFIER_nondet_int</data>
+   <data key="assumption.scope">usb_register_driver</data>
+  </edge>
+  <node id="A197"/>
+  <edge source="A196" target="A197">
+   <data key="startline">10364</data>
+   <data key="endline">10364</data>
+   <data key="startoffset">292006</data>
+   <data key="endoffset">292035</data>
+   <data key="returnFrom">usb_register_driver</data>
+  </edge>
+  <node id="A199"/>
+  <edge source="A197" target="A199">
+   <data key="startline">6710</data>
+   <data key="endline">6710</data>
+   <data key="startoffset">195273</data>
+   <data key="endoffset">195287</data>
+   <data key="returnFrom">usb_register</data>
+  </edge>
+  <node id="sink">
+   <data key="sink">true</data>
+  </node>
+  <edge source="A199" target="sink">
+   <data key="startline">9889</data>
+   <data key="endline">9889</data>
+   <data key="startoffset">278768</data>
+   <data key="endoffset">278777</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <node id="A202"/>
+  <edge source="A199" target="A202">
+   <data key="startline">9889</data>
+   <data key="endline">9889</data>
+   <data key="startoffset">278768</data>
+   <data key="endoffset">278777</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <node id="A210"/>
+  <edge source="A202" target="A210">
+   <data key="startline">9896</data>
+   <data key="endline">9896</data>
+   <data key="startoffset">278912</data>
+   <data key="endoffset">278920</data>
+   <data key="returnFrom">ttusb_dec_init</data>
+  </edge>
+  <node id="A212"/>
+  <edge source="A210" target="A212">
+   <data key="startline">9980</data>
+   <data key="endline">9980</data>
+   <data key="startoffset">282368</data>
+   <data key="endoffset">282374</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <edge source="A210" target="sink">
+   <data key="startline">9980</data>
+   <data key="endline">9980</data>
+   <data key="startoffset">282368</data>
+   <data key="endoffset">282374</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <node id="A215"/>
+  <edge source="A212" target="A215">
+   <data key="enterLoopHead">true</data>
+   <data key="startline">9984</data>
+   <data key="endline">9984</data>
+   <data key="startoffset">282416</data>
+   <data key="endoffset">282452</data>
+   <data key="assumption">ldv_s_ttusb_dec_driver_usb_driver == (0);</data>
+   <data key="assumption.scope">main</data>
+  </edge>
+  <node id="A714"/>
+  <edge source="A215" target="A714">
+   <data key="startline">9989</data>
+   <data key="endline">9989</data>
+   <data key="startoffset">282505</data>
+   <data key="endoffset">282537</data>
+   <data key="assumption">tmp___9 == (2);</data>
+   <data key="assumption.scope">main</data>
+  </edge>
+  <edge source="A714" target="sink">
+   <data key="startline">9991</data>
+   <data key="endline">9991</data>
+   <data key="startoffset">282554</data>
+   <data key="endoffset">282560</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <node id="A716"/>
+  <edge source="A714" target="A716">
+   <data key="startline">9991</data>
+   <data key="endline">9991</data>
+   <data key="startoffset">282554</data>
+   <data key="endoffset">282560</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <node id="A722"/>
+  <edge source="A716" target="A722">
+   <data key="startline">9998</data>
+   <data key="endline">9998</data>
+   <data key="startoffset">282683</data>
+   <data key="endoffset">282715</data>
+   <data key="assumption">tmp___8 == (0);</data>
+   <data key="assumption.scope">main</data>
+  </edge>
+  <node id="A723"/>
+  <edge source="A722" target="A723">
+   <data key="startline">10000</data>
+   <data key="endline">10000</data>
+   <data key="startoffset">282732</data>
+   <data key="endoffset">282743</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <edge source="A722" target="sink">
+   <data key="startline">10000</data>
+   <data key="endline">10000</data>
+   <data key="startoffset">282732</data>
+   <data key="endoffset">282743</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <node id="A790"/>
+  <edge source="A723" target="A790">
+   <data key="startline">10009</data>
+   <data key="endline">10009</data>
+   <data key="startoffset">282904</data>
+   <data key="endoffset">282941</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <edge source="A723" target="sink">
+   <data key="enterLoopHead">true</data>
+   <data key="startline">10009</data>
+   <data key="endline">10009</data>
+   <data key="startoffset">282904</data>
+   <data key="endoffset">282941</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <node id="A793"/>
+  <edge source="A790" target="A793">
+   <data key="startline">10011</data>
+   <data key="endline">10011</data>
+   <data key="startoffset">282993</data>
+   <data key="endoffset">283046</data>
+   <data key="enterFunction">ttusb_dec_probe</data>
+  </edge>
+  <node id="A794_1_6"/>
+  <edge source="A793" target="A794_1_6">
+   <data key="startline">9645</data>
+   <data key="endline">9645</data>
+   <data key="startoffset">272061</data>
+   <data key="endoffset">272083</data>
+   <data key="assumption">(id-&gt;idProduct) == (4102U);</data>
+   <data key="assumption.scope">ttusb_dec_probe</data>
+  </edge>
+  <node id="A795"/>
+  <edge source="A794_1_6" target="A795">
+   <data key="startline">9652</data>
+   <data key="endline">9652</data>
+   <data key="startoffset">272190</data>
+   <data key="endoffset">272194</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <edge source="A794_1_6" target="sink">
+   <data key="startline">9652</data>
+   <data key="endline">9652</data>
+   <data key="startoffset">272190</data>
+   <data key="endoffset">272194</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <node id="A804"/>
+  <edge source="A795" target="A804">
+   <data key="startline">9659</data>
+   <data key="endline">9659</data>
+   <data key="startoffset">272278</data>
+   <data key="endoffset">272302</data>
+   <data key="enterFunction">interface_to_usbdev</data>
+  </edge>
+  <node id="A806"/>
+  <edge source="A804" target="A806">
+   <data key="startline">6685</data>
+   <data key="endline">6685</data>
+   <data key="startoffset">194602</data>
+   <data key="endoffset">194689</data>
+   <data key="returnFrom">interface_to_usbdev</data>
+  </edge>
+  <node id="A808"/>
+  <edge source="A806" target="A808">
+   <data key="startline">9660</data>
+   <data key="endline">9660</data>
+   <data key="startoffset">272317</data>
+   <data key="endoffset">272356</data>
+   <data key="enterFunction">kzalloc</data>
+  </edge>
+  <node id="A810"/>
+  <edge source="A808" target="A810">
+   <data key="startline">6437</data>
+   <data key="endline">6437</data>
+   <data key="startoffset">188569</data>
+   <data key="endoffset">188597</data>
+   <data key="enterFunction">kmalloc</data>
+  </edge>
+  <node id="A812"/>
+  <edge source="A810" target="A812">
+   <data key="startline">6428</data>
+   <data key="endline">6428</data>
+   <data key="startoffset">188429</data>
+   <data key="endoffset">188450</data>
+   <data key="enterFunction">__kmalloc</data>
+  </edge>
+  <node id="A814"/>
+  <edge source="A812" target="A814">
+   <data key="startline">10207</data>
+   <data key="endline">10207</data>
+   <data key="startoffset">287113</data>
+   <data key="endoffset">287128</data>
+   <data key="assumption">arg0 == (15496UL); arg1 == (32976U);</data>
+   <data key="assumption.scope">__kmalloc</data>
+   <data key="enterFunction">external_alloc</data>
+  </edge>
+  <node id="A816"/>
+  <edge source="A814" target="A816">
+   <data key="startline">10379</data>
+   <data key="endline">10379</data>
+   <data key="startoffset">292440</data>
+   <data key="endoffset">292473</data>
+   <data key="returnFrom">external_alloc</data>
+  </edge>
+  <node id="A818"/>
+  <edge source="A816" target="A818">
+   <data key="startline">10207</data>
+   <data key="endline">10207</data>
+   <data key="startoffset">287098</data>
+   <data key="endoffset">287128</data>
+   <data key="returnFrom">__kmalloc</data>
+  </edge>
+  <node id="A820"/>
+  <edge source="A818" target="A820">
+   <data key="startline">6430</data>
+   <data key="endline">6430</data>
+   <data key="startoffset">188459</data>
+   <data key="endoffset">188473</data>
+   <data key="returnFrom">kmalloc</data>
+  </edge>
+  <node id="A822"/>
+  <edge source="A820" target="A822">
+   <data key="startline">6439</data>
+   <data key="endline">6439</data>
+   <data key="startoffset">188606</data>
+   <data key="endoffset">188616</data>
+   <data key="returnFrom">kzalloc</data>
+  </edge>
+  <edge source="A822" target="sink">
+   <data key="startline">9663</data>
+   <data key="endline">9663</data>
+   <data key="startoffset">272406</data>
+   <data key="endoffset">272408</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <node id="A826"/>
+  <edge source="A822" target="A826">
+   <data key="startline">9663</data>
+   <data key="endline">9663</data>
+   <data key="startoffset">272406</data>
+   <data key="endoffset">272408</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <node id="A828"/>
+  <edge source="A826" target="A828">
+   <data key="startline">9671</data>
+   <data key="endline">9671</data>
+   <data key="startoffset">272531</data>
+   <data key="endoffset">272564</data>
+   <data key="enterFunction">usb_set_intfdata</data>
+  </edge>
+  <node id="A830"/>
+  <edge source="A828" target="A830">
+   <data key="startline">6676</data>
+   <data key="endline">6676</data>
+   <data key="startoffset">194374</data>
+   <data key="endoffset">194406</data>
+   <data key="enterFunction">dev_set_drvdata</data>
+  </edge>
+  <node id="A831"/>
+  <edge source="A830" target="A831">
+   <data key="startline">10244</data>
+   <data key="endline">10244</data>
+   <data key="startoffset">288318</data>
+   <data key="endoffset">288340</data>
+   <data key="assumption">\result == (9);</data>
+   <data key="assumption.resultfunction">__VERIFIER_nondet_int</data>
+   <data key="assumption.scope">dev_set_drvdata</data>
+  </edge>
+  <node id="A832"/>
+  <edge source="A831" target="A832">
+   <data key="startline">10244</data>
+   <data key="endline">10244</data>
+   <data key="startoffset">288311</data>
+   <data key="endoffset">288340</data>
+   <data key="returnFrom">dev_set_drvdata</data>
+  </edge>
+  <node id="A834"/>
+  <edge source="A832" target="A834">
+   <data key="startline">6678</data>
+   <data key="endline">6678</data>
+   <data key="startoffset">194416</data>
+   <data key="endoffset">194422</data>
+   <data key="returnFrom">usb_set_intfdata</data>
+  </edge>
+  <node id="A837"/>
+  <edge source="A834" target="A837">
+   <data key="startline">9673</data>
+   <data key="endline">9673</data>
+   <data key="startoffset">272578</data>
+   <data key="endoffset">272604</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <edge source="A834" target="sink">
+   <data key="startline">9673</data>
+   <data key="endline">9673</data>
+   <data key="startoffset">272578</data>
+   <data key="endoffset">272604</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <node id="A907"/>
+  <edge source="A837" target="A907">
+   <data key="startline">9685</data>
+   <data key="endline">9685</data>
+   <data key="startoffset">272806</data>
+   <data key="endoffset">272854</data>
+   <data key="enterFunction">ttusb_dec_set_model</data>
+  </edge>
+  <node id="A908"/>
+  <edge source="A907" target="A908">
+   <data key="startline">9826</data>
+   <data key="endline">9826</data>
+   <data key="startoffset">275633</data>
+   <data key="endoffset">275650</data>
+   <data key="assumption">((signed long long int)(dec-&gt;model)) == (2LL);</data>
+   <data key="assumption.scope">ttusb_dec_set_model</data>
+  </edge>
+  <edge source="A908" target="sink">
+   <data key="startline">9827</data>
+   <data key="endline">9827</data>
+   <data key="startoffset">275659</data>
+   <data key="endoffset">275674</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <node id="A910"/>
+  <edge source="A908" target="A910">
+   <data key="startline">9827</data>
+   <data key="endline">9827</data>
+   <data key="startoffset">275659</data>
+   <data key="endoffset">275674</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <edge source="A910" target="sink">
+   <data key="startline">9830</data>
+   <data key="endline">9830</data>
+   <data key="startoffset">275711</data>
+   <data key="endoffset">275726</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <node id="A912"/>
+  <edge source="A910" target="A912">
+   <data key="startline">9830</data>
+   <data key="endline">9830</data>
+   <data key="startoffset">275711</data>
+   <data key="endoffset">275726</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <node id="A913"/>
+  <edge source="A912" target="A913">
+   <data key="startline">9833</data>
+   <data key="endline">9833</data>
+   <data key="startoffset">275763</data>
+   <data key="endoffset">275778</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <edge source="A912" target="sink">
+   <data key="startline">9833</data>
+   <data key="endline">9833</data>
+   <data key="startoffset">275763</data>
+   <data key="endoffset">275778</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <node id="A930"/>
+  <edge source="A913" target="A930">
+   <data key="startline">9852</data>
+   <data key="endline">9852</data>
+   <data key="startoffset">276268</data>
+   <data key="endoffset">276274</data>
+   <data key="returnFrom">ttusb_dec_set_model</data>
+  </edge>
+  <node id="A935"/>
+  <edge source="A930" target="A935">
+   <data key="startline">9703</data>
+   <data key="endline">9703</data>
+   <data key="startoffset">273170</data>
+   <data key="endoffset">273192</data>
+   <data key="enterFunction">ttusb_dec_init_usb</data>
+  </edge>
+  <node id="A936_1_16"/>
+  <edge source="A935" target="A936_1_16">
+   <data key="startline">8952</data>
+   <data key="endline">8952</data>
+   <data key="startoffset">255783</data>
+   <data key="endoffset">255802</data>
+   <data key="assumption">((signed long long int)(dec-&gt;model)) == (2LL);</data>
+   <data key="assumption.scope">ttusb_dec_init_usb</data>
+  </edge>
+  <node id="A937"/>
+  <edge source="A936_1_16" target="A937">
+   <data key="enterLoopHead">true</data>
+   <data key="startline">8959</data>
+   <data key="endline">8959</data>
+   <data key="startoffset">255935</data>
+   <data key="endoffset">255939</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <edge source="A936_1_16" target="sink">
+   <data key="startline">8959</data>
+   <data key="endline">8959</data>
+   <data key="startoffset">255935</data>
+   <data key="endoffset">255939</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <node id="A948"/>
+  <edge source="A937" target="A948">
+   <data key="startline">8969</data>
+   <data key="endline">8969</data>
+   <data key="startoffset">256063</data>
+   <data key="endoffset">256124</data>
+   <data key="enterFunction">__mutex_init</data>
+  </edge>
+  <node id="A950"/>
+  <edge source="A948" target="A950">
+   <data key="startline">10213</data>
+   <data key="endline">10213</data>
+   <data key="startoffset">287324</data>
+   <data key="endoffset">287330</data>
+   <data key="returnFrom">__mutex_init</data>
+  </edge>
+  <node id="A951"/>
+  <edge source="A950" target="A951">
+   <data key="enterLoopHead">true</data>
+   <data key="startline">8969</data>
+   <data key="endline">8969</data>
+   <data key="startoffset">256063</data>
+   <data key="endoffset">256126</data>
+  </edge>
+  <node id="A955"/>
+  <edge source="A951" target="A955">
+   <data key="startline">8980</data>
+   <data key="endline">8980</data>
+   <data key="startoffset">256256</data>
+   <data key="endoffset">256317</data>
+   <data key="enterFunction">__mutex_init</data>
+  </edge>
+  <node id="A957"/>
+  <edge source="A955" target="A957">
+   <data key="startline">10213</data>
+   <data key="endline">10213</data>
+   <data key="startoffset">287324</data>
+   <data key="endoffset">287330</data>
+   <data key="returnFrom">__mutex_init</data>
+  </edge>
+  <node id="A960"/>
+  <edge source="A957" target="A960">
+   <data key="startline">8988</data>
+   <data key="endline">8988</data>
+   <data key="startoffset">256417</data>
+   <data key="endoffset">256444</data>
+   <data key="enterFunction">__create_pipe</data>
+  </edge>
+  <node id="A962"/>
+  <edge source="A960" target="A962">
+   <data key="startline">6751</data>
+   <data key="endline">6751</data>
+   <data key="startoffset">197023</data>
+   <data key="endoffset">197081</data>
+   <data key="assumption">endpoint == (3U);</data>
+   <data key="assumption.scope">__create_pipe</data>
+   <data key="returnFrom">__create_pipe</data>
+  </edge>
+  <node id="A964"/>
+  <edge source="A962" target="A964">
+   <data key="startline">8989</data>
+   <data key="endline">8989</data>
+   <data key="startoffset">256449</data>
+   <data key="endoffset">256502</data>
+   <data key="assumption">(dec-&gt;command_pipe) == (3221323776U);</data>
+   <data key="assumption.scope">ttusb_dec_init_usb</data>
+  </edge>
+  <node id="A965"/>
+  <edge source="A964" target="A965">
+   <data key="startline">8990</data>
+   <data key="endline">8990</data>
+   <data key="startoffset">256517</data>
+   <data key="endoffset">256544</data>
+   <data key="enterFunction">__create_pipe</data>
+  </edge>
+  <node id="A967"/>
+  <edge source="A965" target="A967">
+   <data key="startline">6751</data>
+   <data key="endline">6751</data>
+   <data key="startoffset">197023</data>
+   <data key="endoffset">197081</data>
+   <data key="assumption">endpoint == (4U);</data>
+   <data key="assumption.scope">__create_pipe</data>
+   <data key="returnFrom">__create_pipe</data>
+  </edge>
+  <node id="A969"/>
+  <edge source="A967" target="A969">
+   <data key="startline">8991</data>
+   <data key="endline">8991</data>
+   <data key="startoffset">256549</data>
+   <data key="endoffset">256610</data>
+   <data key="assumption">(dec-&gt;result_pipe) == (3221356672U);</data>
+   <data key="assumption.scope">ttusb_dec_init_usb</data>
+  </edge>
+  <node id="A970"/>
+  <edge source="A969" target="A970">
+   <data key="startline">8992</data>
+   <data key="endline">8992</data>
+   <data key="startoffset">256625</data>
+   <data key="endoffset">256652</data>
+   <data key="enterFunction">__create_pipe</data>
+  </edge>
+  <node id="A972"/>
+  <edge source="A970" target="A972">
+   <data key="startline">6751</data>
+   <data key="endline">6751</data>
+   <data key="startoffset">197023</data>
+   <data key="endoffset">197081</data>
+   <data key="assumption">endpoint == (8U);</data>
+   <data key="assumption.scope">__create_pipe</data>
+   <data key="returnFrom">__create_pipe</data>
+  </edge>
+  <node id="A974"/>
+  <edge source="A972" target="A974">
+   <data key="startline">8993</data>
+   <data key="endline">8993</data>
+   <data key="startoffset">256657</data>
+   <data key="endoffset">256685</data>
+   <data key="assumption">(dec-&gt;in_pipe) == (262272U);</data>
+   <data key="assumption.scope">ttusb_dec_init_usb</data>
+  </edge>
+  <node id="A975"/>
+  <edge source="A974" target="A975">
+   <data key="startline">8994</data>
+   <data key="endline">8994</data>
+   <data key="startoffset">256701</data>
+   <data key="endoffset">256728</data>
+   <data key="enterFunction">__create_pipe</data>
+  </edge>
+  <node id="A977"/>
+  <edge source="A975" target="A977">
+   <data key="startline">6751</data>
+   <data key="endline">6751</data>
+   <data key="startoffset">197023</data>
+   <data key="endoffset">197081</data>
+   <data key="assumption">endpoint == (7U);</data>
+   <data key="assumption.scope">__create_pipe</data>
+   <data key="returnFrom">__create_pipe</data>
+  </edge>
+  <node id="A979"/>
+  <edge source="A977" target="A979">
+   <data key="startline">8995</data>
+   <data key="endline">8995</data>
+   <data key="startoffset">256733</data>
+   <data key="endoffset">256756</data>
+   <data key="assumption">(dec-&gt;out_pipe) == (229376U);</data>
+   <data key="assumption.scope">ttusb_dec_init_usb</data>
+  </edge>
+  <node id="A980"/>
+  <edge source="A979" target="A980">
+   <data key="startline">8996</data>
+   <data key="endline">8996</data>
+   <data key="startoffset">256772</data>
+   <data key="endoffset">256800</data>
+   <data key="enterFunction">__create_pipe</data>
+  </edge>
+  <node id="A982"/>
+  <edge source="A980" target="A982">
+   <data key="startline">6751</data>
+   <data key="endline">6751</data>
+   <data key="startoffset">197023</data>
+   <data key="endoffset">197081</data>
+   <data key="assumption">endpoint == (10U);</data>
+   <data key="assumption.scope">__create_pipe</data>
+   <data key="returnFrom">__create_pipe</data>
+  </edge>
+  <node id="A984"/>
+  <edge source="A982" target="A984">
+   <data key="startline">8997</data>
+   <data key="endline">8997</data>
+   <data key="startoffset">256805</data>
+   <data key="endoffset">256864</data>
+   <data key="assumption">(dec-&gt;irq_pipe) == (1074069632U);</data>
+   <data key="assumption.scope">ttusb_dec_init_usb</data>
+  </edge>
+  <node id="A985"/>
+  <edge source="A984" target="A985">
+   <data key="startline">8999</data>
+   <data key="endline">8999</data>
+   <data key="startoffset">256877</data>
+   <data key="endoffset">256885</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <edge source="A984" target="sink">
+   <data key="startline">8999</data>
+   <data key="endline">8999</data>
+   <data key="startoffset">256877</data>
+   <data key="endoffset">256885</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <node id="A1081"/>
+  <edge source="A985" target="A1081">
+   <data key="startline">9026</data>
+   <data key="endline">9026</data>
+   <data key="startoffset">257550</data>
+   <data key="endoffset">257578</data>
+   <data key="enterFunction">ttusb_dec_alloc_iso_urbs</data>
+  </edge>
+  <node id="A1082_1_19"/>
+  <edge source="A1081" target="A1082_1_19">
+   <data key="startline">8774</data>
+   <data key="endline">8774</data>
+   <data key="startoffset">252149</data>
+   <data key="endoffset">252153</data>
+   <data key="assumption">((signed long long int)(dec-&gt;model)) == (2LL); (dec-&gt;command_pipe) == (3221323776U); (dec-&gt;result_pipe) == (3221356672U); (dec-&gt;in_pipe) == (262272U); (dec-&gt;out_pipe) == (229376U); (dec-&gt;irq_pipe) == (1074069632U);</data>
+   <data key="assumption.scope">ttusb_dec_alloc_iso_urbs</data>
+  </edge>
+  <node id="A1083"/>
+  <edge source="A1082_1_19" target="A1083">
+   <data key="startline">8777</data>
+   <data key="endline">8777</data>
+   <data key="startoffset">252187</data>
+   <data key="endoffset">252191</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <edge source="A1082_1_19" target="sink">
+   <data key="startline">8777</data>
+   <data key="endline">8777</data>
+   <data key="startoffset">252187</data>
+   <data key="endoffset">252191</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <node id="A1092"/>
+  <edge source="A1083" target="A1092">
+   <data key="startline">8784</data>
+   <data key="endline">8785</data>
+   <data key="startoffset">252295</data>
+   <data key="endoffset">252425</data>
+   <data key="enterFunction">pci_alloc_consistent</data>
+  </edge>
+  <node id="A1093_1_20"/>
+  <edge source="A1092" target="A1093_1_20">
+   <data key="startline">6611</data>
+   <data key="endline">6611</data>
+   <data key="startoffset">192506</data>
+   <data key="endoffset">192523</data>
+   <data key="assumption">size == (14336UL);</data>
+   <data key="assumption.scope">pci_alloc_consistent</data>
+  </edge>
+  <node id="A1094"/>
+  <edge source="A1093_1_20" target="A1094">
+   <data key="startline">6614</data>
+   <data key="endline">6614</data>
+   <data key="startoffset">192555</data>
+   <data key="endoffset">192606</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <edge source="A1093_1_20" target="sink">
+   <data key="startline">6614</data>
+   <data key="endline">6614</data>
+   <data key="startoffset">192555</data>
+   <data key="endoffset">192606</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <node id="A1101"/>
+  <edge source="A1094" target="A1101">
+   <data key="startline">6620</data>
+   <data key="endline">6620</data>
+   <data key="startoffset">192706</data>
+   <data key="endoffset">192751</data>
+   <data key="enterFunction">dma_alloc_coherent</data>
+  </edge>
+  <node id="A1102_1_21"/>
+  <edge source="A1101" target="A1102_1_21">
+   <data key="startline">6519</data>
+   <data key="endline">6519</data>
+   <data key="startoffset">190596</data>
+   <data key="endoffset">190618</data>
+   <data key="assumption">size == (14336UL); gfp == (32U);</data>
+   <data key="assumption.scope">dma_alloc_coherent</data>
+  </edge>
+  <node id="A1103"/>
+  <edge source="A1102_1_21" target="A1103">
+   <data key="startline">6526</data>
+   <data key="endline">6526</data>
+   <data key="startoffset">190717</data>
+   <data key="endoffset">190732</data>
+   <data key="enterFunction">get_dma_ops</data>
+  </edge>
+  <node id="A1104"/>
+  <edge source="A1103" target="A1104">
+   <data key="startline">6467</data>
+   <data key="endline">6467</data>
+   <data key="startoffset">189365</data>
+   <data key="endoffset">189414</data>
+   <data key="assumption">tmp == (0L);</data>
+   <data key="assumption.scope">get_dma_ops</data>
+  </edge>
+  <node id="A1105"/>
+  <edge source="A1104" target="A1105">
+   <data key="startline">6469</data>
+   <data key="endline">6469</data>
+   <data key="startoffset">189427</data>
+   <data key="endoffset">189429</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <edge source="A1104" target="sink">
+   <data key="startline">6469</data>
+   <data key="endline">6469</data>
+   <data key="startoffset">189427</data>
+   <data key="endoffset">189429</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <edge source="A1105" target="sink">
+   <data key="startline">6472</data>
+   <data key="endline">6472</data>
+   <data key="startoffset">189473</data>
+   <data key="endoffset">189493</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <node id="A1109"/>
+  <edge source="A1105" target="A1109">
+   <data key="startline">6472</data>
+   <data key="endline">6472</data>
+   <data key="startoffset">189473</data>
+   <data key="endoffset">189493</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <node id="A1113"/>
+  <edge source="A1109" target="A1113">
+   <data key="startline">6475</data>
+   <data key="endline">6475</data>
+   <data key="startoffset">189535</data>
+   <data key="endoffset">189563</data>
+   <data key="returnFrom">get_dma_ops</data>
+  </edge>
+  <node id="A1115"/>
+  <edge source="A1113" target="A1115">
+   <data key="startline">6528</data>
+   <data key="endline">6528</data>
+   <data key="startoffset">190750</data>
+   <data key="endoffset">190772</data>
+   <data key="assumption">gfp == (32U);</data>
+   <data key="assumption.scope">dma_alloc_coherent</data>
+  </edge>
+  <node id="A1116"/>
+  <edge source="A1115" target="A1116">
+   <data key="startline">6530</data>
+   <data key="endline">6530</data>
+   <data key="startoffset">190787</data>
+   <data key="endoffset">190789</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <edge source="A1115" target="sink">
+   <data key="startline">6530</data>
+   <data key="endline">6530</data>
+   <data key="startoffset">190787</data>
+   <data key="endoffset">190789</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <node id="A1119"/>
+  <edge source="A1116" target="A1119">
+   <data key="startline">6531</data>
+   <data key="endline">6531</data>
+   <data key="startoffset">190798</data>
+   <data key="endoffset">190825</data>
+   <data key="assumption">(*(dev-&gt;dma_mask)) == (2ULL);</data>
+   <data key="assumption.scope">dma_alloc_coherent</data>
+  </edge>
+  <node id="A1122"/>
+  <edge source="A1119" target="A1122">
+   <data key="startline">6535</data>
+   <data key="endline">6535</data>
+   <data key="startoffset">190859</data>
+   <data key="endoffset">190884</data>
+   <data key="enterFunction">is_device_dma_capable</data>
+  </edge>
+  <node id="A1123_1_24"/>
+  <edge source="A1122" target="A1123_1_24">
+   <data key="startline">6443</data>
+   <data key="endline">6443</data>
+   <data key="startoffset">188689</data>
+   <data key="endoffset">188695</data>
+   <data key="assumption">(*(dev-&gt;dma_mask)) == (2ULL);</data>
+   <data key="assumption.scope">is_device_dma_capable</data>
+  </edge>
+  <node id="A1124"/>
+  <edge source="A1123_1_24" target="A1124">
+   <data key="startline">6445</data>
+   <data key="endline">6445</data>
+   <data key="startoffset">188709</data>
+   <data key="endoffset">188768</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <edge source="A1123_1_24" target="sink">
+   <data key="startline">6445</data>
+   <data key="endline">6445</data>
+   <data key="startoffset">188709</data>
+   <data key="endoffset">188768</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <node id="A1128"/>
+  <edge source="A1124" target="A1128">
+   <data key="startline">6446</data>
+   <data key="endline">6446</data>
+   <data key="startoffset">188781</data>
+   <data key="endoffset">188804</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <edge source="A1124" target="sink">
+   <data key="startline">6446</data>
+   <data key="endline">6446</data>
+   <data key="startoffset">188781</data>
+   <data key="endoffset">188804</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <node id="A1132"/>
+  <edge source="A1128" target="A1132">
+   <data key="startline">6447</data>
+   <data key="endline">6447</data>
+   <data key="startoffset">188815</data>
+   <data key="endoffset">188821</data>
+   <data key="assumption">tmp == (1);</data>
+   <data key="assumption.scope">is_device_dma_capable</data>
+  </edge>
+  <node id="A1137"/>
+  <edge source="A1132" target="A1137">
+   <data key="startline">6454</data>
+   <data key="endline">6454</data>
+   <data key="startoffset">188888</data>
+   <data key="endoffset">188898</data>
+   <data key="returnFrom">is_device_dma_capable</data>
+  </edge>
+  <edge source="A1137" target="sink">
+   <data key="startline">6537</data>
+   <data key="endline">6537</data>
+   <data key="startoffset">190897</data>
+   <data key="endoffset">190903</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <node id="A1140"/>
+  <edge source="A1137" target="A1140">
+   <data key="startline">6537</data>
+   <data key="endline">6537</data>
+   <data key="startoffset">190897</data>
+   <data key="endoffset">190903</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <edge source="A1140" target="sink">
+   <data key="startline">6541</data>
+   <data key="endline">6541</data>
+   <data key="startoffset">190955</data>
+   <data key="endoffset">190973</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <node id="A1143"/>
+  <edge source="A1140" target="A1143">
+   <data key="startline">6541</data>
+   <data key="endline">6541</data>
+   <data key="startoffset">190955</data>
+   <data key="endoffset">190973</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <node id="A1145"/>
+  <edge source="A1143" target="A1145">
+   <data key="startline">6546</data>
+   <data key="endline">6546</data>
+   <data key="startoffset">191033</data>
+   <data key="endoffset">191070</data>
+   <data key="enterFunction">dma_alloc_coherent_gfp_flags</data>
+  </edge>
+  <node id="A1146_1_25"/>
+  <edge source="A1145" target="A1146_1_25">
+   <data key="startline">6496</data>
+   <data key="endline">6496</data>
+   <data key="startoffset">190061</data>
+   <data key="endoffset">190082</data>
+   <data key="assumption">(*(dev-&gt;dma_mask)) == (2ULL); gfp == (32U);</data>
+   <data key="assumption.scope">dma_alloc_coherent_gfp_flags</data>
+  </edge>
+  <node id="A1147"/>
+  <edge source="A1146_1_25" target="A1147">
+   <data key="startline">6500</data>
+   <data key="endline">6500</data>
+   <data key="startoffset">190124</data>
+   <data key="endoffset">190156</data>
+   <data key="enterFunction">dma_alloc_coherent_mask</data>
+  </edge>
+  <node id="A1148_1_26"/>
+  <edge source="A1147" target="A1148_1_26">
+   <data key="startline">6480</data>
+   <data key="endline">6480</data>
+   <data key="startoffset">189664</data>
+   <data key="endoffset">189685</data>
+   <data key="assumption">(*(dev-&gt;dma_mask)) == (2ULL); gfp == (32U);</data>
+   <data key="assumption.scope">dma_alloc_coherent_mask</data>
+  </edge>
+  <node id="A1148_2_26"/>
+  <edge source="A1148_1_26" target="A1148_2_26">
+   <data key="startline">6482</data>
+   <data key="endline">6482</data>
+   <data key="startoffset">189695</data>
+   <data key="endoffset">189708</data>
+   <data key="assumption">dma_mask == (0UL);</data>
+   <data key="assumption.scope">dma_alloc_coherent_mask</data>
+  </edge>
+  <node id="A1148"/>
+  <edge source="A1148_2_26" target="A1148">
+   <data key="startline">6483</data>
+   <data key="endline">6483</data>
+   <data key="startoffset">189713</data>
+   <data key="endoffset">189761</data>
+   <data key="assumption">gfp == (32U); (*(dev-&gt;dma_mask)) == (2ULL); dma_mask == (0UL);</data>
+   <data key="assumption.scope">dma_alloc_coherent_mask</data>
+  </edge>
+  <node id="A1149"/>
+  <edge source="A1148" target="A1149">
+   <data key="startline">6484</data>
+   <data key="endline">6484</data>
+   <data key="startoffset">189772</data>
+   <data key="endoffset">189779</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <edge source="A1148" target="sink">
+   <data key="startline">6484</data>
+   <data key="endline">6484</data>
+   <data key="startoffset">189772</data>
+   <data key="endoffset">189779</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <node id="A1152"/>
+  <edge source="A1149" target="A1152">
+   <data key="startline">6485</data>
+   <data key="endline">6485</data>
+   <data key="startoffset">189792</data>
+   <data key="endoffset">189799</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <edge source="A1149" target="sink">
+   <data key="startline">6485</data>
+   <data key="endline">6485</data>
+   <data key="startoffset">189792</data>
+   <data key="endoffset">189799</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <node id="A1156"/>
+  <edge source="A1152" target="A1156">
+   <data key="startline">6488</data>
+   <data key="endline">6488</data>
+   <data key="startoffset">189879</data>
+   <data key="endoffset">189926</data>
+   <data key="assumption">dma_mask == (4294967295UL);</data>
+   <data key="assumption.scope">dma_alloc_coherent_mask</data>
+  </edge>
+  <node id="A1161"/>
+  <edge source="A1156" target="A1161">
+   <data key="startline">6492</data>
+   <data key="endline">6492</data>
+   <data key="startoffset">189952</data>
+   <data key="endoffset">189967</data>
+   <data key="returnFrom">dma_alloc_coherent_mask</data>
+  </edge>
+  <node id="A1163"/>
+  <edge source="A1161" target="A1163">
+   <data key="startline">6501</data>
+   <data key="endline">6501</data>
+   <data key="startoffset">190161</data>
+   <data key="endoffset">190174</data>
+   <data key="assumption">dma_mask == (4294967295UL);</data>
+   <data key="assumption.scope">dma_alloc_coherent_gfp_flags</data>
+  </edge>
+  <edge source="A1163" target="sink">
+   <data key="startline">6503</data>
+   <data key="endline">6503</data>
+   <data key="startoffset">190187</data>
+   <data key="endoffset">190238</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <node id="A1165"/>
+  <edge source="A1163" target="A1165">
+   <data key="startline">6503</data>
+   <data key="endline">6503</data>
+   <data key="startoffset">190187</data>
+   <data key="endoffset">190238</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <node id="A1170"/>
+  <edge source="A1165" target="A1170">
+   <data key="startline">6507</data>
+   <data key="endline">6507</data>
+   <data key="startoffset">190284</data>
+   <data key="endoffset">190335</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <edge source="A1165" target="sink">
+   <data key="startline">6507</data>
+   <data key="endline">6507</data>
+   <data key="startoffset">190284</data>
+   <data key="endoffset">190335</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <node id="A1173"/>
+  <edge source="A1170" target="A1173">
+   <data key="startline">6508</data>
+   <data key="endline">6508</data>
+   <data key="startoffset">190351</data>
+   <data key="endoffset">190358</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <edge source="A1170" target="sink">
+   <data key="startline">6508</data>
+   <data key="endline">6508</data>
+   <data key="startoffset">190351</data>
+   <data key="endoffset">190358</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <node id="A1176"/>
+  <edge source="A1173" target="A1176">
+   <data key="startline">6509</data>
+   <data key="endline">6509</data>
+   <data key="startoffset">190370</data>
+   <data key="endoffset">190383</data>
+   <data key="assumption">gfp == (36U);</data>
+   <data key="assumption.scope">dma_alloc_coherent_gfp_flags</data>
+  </edge>
+  <node id="A1181"/>
+  <edge source="A1176" target="A1181">
+   <data key="startline">6514</data>
+   <data key="endline">6514</data>
+   <data key="startoffset">190422</data>
+   <data key="endoffset">190432</data>
+   <data key="returnFrom">dma_alloc_coherent_gfp_flags</data>
+  </edge>
+  <node id="A1184"/>
+  <edge source="A1181" target="A1184">
+   <data key="startline">6548</data>
+   <data key="endline">6548</data>
+   <data key="startoffset">191144</data>
+   <data key="endoffset">191198</data>
+   <data key="enterFunction">debug_dma_alloc_coherent</data>
+  </edge>
+  <node id="A1186"/>
+  <edge source="A1184" target="A1186">
+   <data key="startline">10233</data>
+   <data key="endline">10233</data>
+   <data key="startoffset">287989</data>
+   <data key="endoffset">287995</data>
+   <data key="assumption">(*(arg0-&gt;dma_mask)) == (2ULL); arg1 == (14336UL); arg2 == (0ULL);</data>
+   <data key="assumption.scope">debug_dma_alloc_coherent</data>
+   <data key="returnFrom">debug_dma_alloc_coherent</data>
+  </edge>
+  <node id="A1192"/>
+  <edge source="A1186" target="A1192">
+   <data key="startline">6550</data>
+   <data key="endline">6550</data>
+   <data key="startoffset">191208</data>
+   <data key="endoffset">191221</data>
+   <data key="returnFrom">dma_alloc_coherent</data>
+  </edge>
+  <node id="A1194"/>
+  <edge source="A1192" target="A1194">
+   <data key="startline">6622</data>
+   <data key="endline">6622</data>
+   <data key="startoffset">192760</data>
+   <data key="endoffset">192774</data>
+   <data key="returnFrom">pci_alloc_consistent</data>
+  </edge>
+  <edge source="A1194" target="sink">
+   <data key="startline">8787</data>
+   <data key="endline">8787</data>
+   <data key="startoffset">252440</data>
+   <data key="endoffset">252454</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <node id="A1197"/>
+  <edge source="A1194" target="A1197">
+   <data key="startline">8787</data>
+   <data key="endline">8787</data>
+   <data key="startoffset">252440</data>
+   <data key="endoffset">252454</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <node id="A1198"/>
+  <edge source="A1197" target="A1198">
+   <data key="enterLoopHead">true</data>
+   <data key="startline">8799</data>
+   <data key="endline">8799</data>
+   <data key="startoffset">252688</data>
+   <data key="endoffset">252692</data>
+   <data key="assumption">i == (0);</data>
+   <data key="assumption.scope">ttusb_dec_alloc_iso_urbs</data>
+  </edge>
+  <node id="A1203"/>
+  <edge source="A1198" target="A1203">
+   <data key="startline">8804</data>
+   <data key="endline">8804</data>
+   <data key="startoffset">252747</data>
+   <data key="endoffset">252751</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <edge source="A1198" target="sink">
+   <data key="startline">8804</data>
+   <data key="endline">8804</data>
+   <data key="startoffset">252747</data>
+   <data key="endoffset">252751</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <node id="A1243"/>
+  <edge source="A1203" target="A1243">
+   <data key="startline">8809</data>
+   <data key="endline">8809</data>
+   <data key="startoffset">252815</data>
+   <data key="endoffset">252835</data>
+   <data key="enterFunction">usb_alloc_urb</data>
+  </edge>
+  <node id="A1244_1_28"/>
+  <edge source="A1243" target="A1244_1_28">
+   <data key="startline">10131</data>
+   <data key="endline">10131</data>
+   <data key="startoffset">285755</data>
+   <data key="endoffset">285776</data>
+   <data key="assumption">iso_packets == (4); mem_flags == (32U);</data>
+   <data key="assumption.scope">usb_alloc_urb</data>
+  </edge>
+  <node id="A1244_2_28"/>
+  <edge source="A1244_1_28" target="A1244_2_28">
+   <data key="enterLoopHead">true</data>
+   <data key="startline">10132</data>
+   <data key="endline">10132</data>
+   <data key="startoffset">285782</data>
+   <data key="endoffset">285794</data>
+  </edge>
+  <node id="A1246"/>
+  <edge source="A1244_2_28" target="A1246">
+   <data key="startline">10138</data>
+   <data key="endline">10138</data>
+   <data key="startoffset">285862</data>
+   <data key="endoffset">285884</data>
+   <data key="enterFunction">ldv_undefined_pointer</data>
+  </edge>
+  <node id="A1248"/>
+  <edge source="A1246" target="A1248">
+   <data key="startline">10311</data>
+   <data key="endline">10311</data>
+   <data key="startoffset">290345</data>
+   <data key="endoffset">290360</data>
+   <data key="enterFunction">external_alloc</data>
+  </edge>
+  <node id="A1250"/>
+  <edge source="A1248" target="A1250">
+   <data key="startline">10379</data>
+   <data key="endline">10379</data>
+   <data key="startoffset">292440</data>
+   <data key="endoffset">292473</data>
+   <data key="returnFrom">external_alloc</data>
+  </edge>
+  <node id="A1252"/>
+  <edge source="A1250" target="A1252">
+   <data key="startline">10311</data>
+   <data key="endline">10311</data>
+   <data key="startoffset">290330</data>
+   <data key="endoffset">290360</data>
+   <data key="returnFrom">ldv_undefined_pointer</data>
+  </edge>
+  <node id="A1255"/>
+  <edge source="A1252" target="A1255">
+   <data key="startline">10141</data>
+   <data key="endline">10141</data>
+   <data key="startoffset">285935</data>
+   <data key="endoffset">285950</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <edge source="A1252" target="sink">
+   <data key="startline">10141</data>
+   <data key="endline">10141</data>
+   <data key="startoffset">285935</data>
+   <data key="endoffset">285950</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <node id="A1260"/>
+  <edge source="A1255" target="A1260">
+   <data key="startline">10142</data>
+   <data key="endline">10142</data>
+   <data key="startoffset">285961</data>
+   <data key="endoffset">285992</data>
+   <data key="returnFrom">usb_alloc_urb</data>
+  </edge>
+  <node id="A1262"/>
+  <edge source="A1260" target="A1262">
+   <data key="startline">8811</data>
+   <data key="endline">8811</data>
+   <data key="startoffset">252852</data>
+   <data key="endoffset">252854</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <edge source="A1260" target="sink">
+   <data key="startline">8811</data>
+   <data key="endline">8811</data>
+   <data key="startoffset">252852</data>
+   <data key="endoffset">252854</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <node id="A1465"/>
+  <edge source="A1262" target="A1465">
+   <data key="startline">8814</data>
+   <data key="endline">8814</data>
+   <data key="startoffset">252886</data>
+   <data key="endoffset">252912</data>
+   <data key="enterFunction">ttusb_dec_free_iso_urbs</data>
+  </edge>
+  <node id="A1467"/>
+  <edge source="A1465" target="A1467">
+   <data key="startline">8744</data>
+   <data key="endline">8744</data>
+   <data key="startoffset">251637</data>
+   <data key="endoffset">251641</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <edge source="A1465" target="sink">
+   <data key="startline">8744</data>
+   <data key="endline">8744</data>
+   <data key="startoffset">251637</data>
+   <data key="endoffset">251641</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <node id="A1476"/>
+  <edge source="A1467" target="A1476">
+   <data key="enterLoopHead">true</data>
+   <data key="startline">8750</data>
+   <data key="endline">8750</data>
+   <data key="startoffset">251722</data>
+   <data key="endoffset">251726</data>
+   <data key="assumption">i == (0);</data>
+   <data key="assumption.scope">ttusb_dec_free_iso_urbs</data>
+  </edge>
+  <node id="A1481"/>
+  <edge source="A1476" target="A1481">
+   <data key="startline">8754</data>
+   <data key="endline">8754</data>
+   <data key="startoffset">251777</data>
+   <data key="endoffset">251781</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <edge source="A1476" target="sink">
+   <data key="startline">8754</data>
+   <data key="endline">8754</data>
+   <data key="startoffset">251777</data>
+   <data key="endoffset">251781</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <node id="A1569"/>
+  <edge source="A1481" target="A1569">
+   <data key="enterLoopHead">true</data>
+   <data key="startline">8759</data>
+   <data key="endline">8759</data>
+   <data key="startoffset">251839</data>
+   <data key="endoffset">251865</data>
+   <data key="enterFunction">usb_free_urb</data>
+  </edge>
+  <node id="A1572"/>
+  <edge source="A1569" target="A1572">
+   <data key="startline">10162</data>
+   <data key="endline">10162</data>
+   <data key="startoffset">286362</data>
+   <data key="endoffset">286417</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <edge source="A1569" target="sink">
+   <data key="startline">10162</data>
+   <data key="endline">10162</data>
+   <data key="startoffset">286362</data>
+   <data key="endoffset">286417</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <edge source="A1572" target="sink">
+   <data key="startline">10168</data>
+   <data key="endline">10168</data>
+   <data key="startoffset">286491</data>
+   <data key="endoffset">286493</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <node id="A1582"/>
+  <edge source="A1572" target="A1582">
+   <data key="startline">10168</data>
+   <data key="endline">10168</data>
+   <data key="startoffset">286491</data>
+   <data key="endoffset">286493</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <edge source="A1582" target="sink">
+   <data key="startline">10169</data>
+   <data key="endline">10169</data>
+   <data key="startoffset">286508</data>
+   <data key="endoffset">286525</data>
+   <data key="control">condition-true</data>
+  </edge>
+  <node id="A1584"/>
+  <edge source="A1582" target="A1584">
+   <data key="startline">10169</data>
+   <data key="endline">10169</data>
+   <data key="startoffset">286508</data>
+   <data key="endoffset">286525</data>
+   <data key="control">condition-false</data>
+  </edge>
+  <node id="A1585">
+   <data key="violation">true</data>
+   <data key="violatedProperty">__VERIFIER_error(); called in line 10055</data>
+  </node>
+  <edge source="A1584" target="A1585">
+   <data key="startline">10172</data>
+   <data key="endline">10172</data>
+   <data key="startoffset">286563</data>
+   <data key="endoffset">286578</data>
+   <data key="enterFunction">ldv_blast_assert</data>
+  </edge>
+ </graph>
+</graphml>
