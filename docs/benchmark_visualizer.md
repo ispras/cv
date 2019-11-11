@@ -71,3 +71,5 @@ ZIP archive with reports "..." was successfully uploaded on "<host>:<port>/jobs/
 ``` 
 
 After that you can access uploaded results on the page `<host>:<port>/jobs/<new report id>`.
+
+Some simple examples of benchmark verification results can be found in the `docs/examples/benchmarks` directory.
