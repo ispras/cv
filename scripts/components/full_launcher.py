@@ -677,9 +677,8 @@ class FullLauncher(Launcher):
         sources_process = multiprocessing.Process(target=self.__prepare_sources, name="sources",
                                                   args=(sources_queue, ))
         sources_process.start()
-        sources_process.join()  # Wait here since this information may reduce future preparation work.
-
-        if not sources_process.exitcode:
+        while True:
+            sleep(BUSY_WAITING_INTERVAL * 10)
             if sources_queue.qsize():
                 data = sources_queue.get()
                 if not specific_functions:
@@ -688,7 +687,10 @@ class FullLauncher(Launcher):
                 qualifier_resources = data.get(SOURCE_QUEUE_QUALIFIER_RESOURCES)
                 builder_resources = data.get(SOURCE_QUEUE_BUILDER_RESOURCES)
                 self.build_results = data.get(SOURCE_QUEUE_RESULTS)
-        else:
+                break
+
+        sources_process.join()  # Wait here since this information may reduce future preparation work.
+        if sources_process.exitcode:
             self.logger.error("Source directories were not prepared")
             exit(sources_process.exitcode)
 
