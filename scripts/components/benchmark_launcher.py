@@ -138,7 +138,9 @@ class BenchmarkLauncher(Launcher):
 
             columns = run.findall('./column')
 
-            files = glob.glob(os.path.join(group_directory, "*.logfiles", "{}.{}*".format(task_name, file_name_base)))
+            files = glob.glob(os.path.join(group_directory, "*.logfiles", "{}.{}*".
+                                           format(task_name, file_name_base))) + \
+                    glob.glob(os.path.join(group_directory, "*.files", "{}.{}*".format(task_name, file_name_base), '*'))
             launch_dir = self._copy_result_files(files, group_directory)
 
             result.work_dir = launch_dir
