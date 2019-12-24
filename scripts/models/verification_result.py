@@ -31,6 +31,10 @@ from components.mea import MEA
 TAG_OPTIMIZE = "optimize"
 
 
+def to_str(val) -> str:
+    return "{}".format(val)
+
+
 class EntryPointDesc:
     def __init__(self, file: str, identifier: str):
         self.file = file
@@ -301,10 +305,11 @@ class VerificationResults:
         self.mea_resources[TAG_CPU_TIME] = float(values[14])
 
     def __str__(self):
-        return ";".join([self.id, self.rule, self.entrypoint, self.verdict, self.termination_reason,
-                         str(self.cpu), str(self.wall), str(self.mem), str(self.relevant), str(self.initial_traces),
-                         str(self.filtered_traces), self.work_dir, str(self.cov_lines), str(self.cov_funcs),
-                         str(self.mea_resources.get(TAG_CPU_TIME, 0.0))])
+        return ";".join([to_str(self.id), to_str(self.rule), to_str(self.entrypoint), to_str(self.verdict),
+                         to_str(self.termination_reason), to_str(self.cpu), to_str(self.wall), to_str(self.mem),
+                         to_str(self.relevant), to_str(self.initial_traces), to_str(self.filtered_traces),
+                         to_str(self.work_dir), to_str(self.cov_lines), to_str(self.cov_funcs),
+                         to_str(self.mea_resources.get(TAG_CPU_TIME, 0.0))])
 
     def print_resources(self):
         res = list()
