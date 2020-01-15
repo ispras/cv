@@ -80,10 +80,11 @@ if __name__ == "__main__":
 
     source_dir = options.source_dir
     if source_dir:
-        source_dir_rel = os.path.basename(source_dir.rstrip("/"))
-        if os.path.exists(source_dir_rel):
-            os.remove(source_dir_rel)
-        os.symlink(source_dir, source_dir_rel)
+        if not os.path.isdir(source_dir):
+            source_dir_rel = os.path.basename(source_dir.rstrip("/"))
+            if os.path.exists(source_dir_rel):
+                os.remove(source_dir_rel)
+            os.symlink(source_dir, source_dir_rel)
 
     witnesses = mea.filter()
     if not options.dry_run:
