@@ -57,7 +57,8 @@ if __name__ == "__main__":
             TAG_DEBUG: options.debug,
             TAG_CLEAN: False,
             TAG_UNZIP: options.unzip,
-            TAG_DRY_RUN: options.dry_run
+            TAG_DRY_RUN: options.dry_run,
+            TAG_SOURCE_DIR: options.source_dir
         }
     }
 

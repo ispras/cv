@@ -45,6 +45,7 @@ TAG_CONVERSION_FUNCTION_ARGUMENTS = "conversion function arguments"
 TAG_CLEAN = "clean"
 TAG_UNZIP = "unzip"
 TAG_DRY_RUN = "dry run"
+TAG_SOURCE_DIR = "source dir"
 
 EXPORTING_CONVERTED_FUNCTIONS = {
     DEFAULT_CONVERSION_FUNCTION,
@@ -93,6 +94,7 @@ class MEA(Component):
         self.clean = self.__get_option_for_rule(TAG_CLEAN, True)
         self.unzip = self.__get_option_for_rule(TAG_UNZIP, True)
         self.dry_run = self.__get_option_for_rule(TAG_DRY_RUN, False)
+        self.source_dir = self.__get_option_for_rule(TAG_SOURCE_DIR, None)
 
         # Cache of filtered converted error traces.
         self.__cache = dict()
@@ -338,7 +340,7 @@ class MEA(Component):
         else:
             logger.setLevel(logging.ERROR)
         try:
-            json_error_trace = import_error_trace(logger, error_trace_file)
+            json_error_trace = import_error_trace(logger, error_trace_file, self.source_dir)
             if self.dry_run:
                 warnings = json_error_trace.get('warnings', [])
                 if warnings:
