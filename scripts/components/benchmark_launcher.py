@@ -62,16 +62,10 @@ class BenchmarkLauncher(Launcher):
             os.chdir(self.work_dir)
 
         self.logger.debug("Create a symbolic links for source directory {}".format(self.tasks_dir))
-        tasks_dir_rel = os.path.basename(self.tasks_dir)
-        if os.path.exists(tasks_dir_rel):
-            os.remove(tasks_dir_rel)
-        os.symlink(self.tasks_dir, tasks_dir_rel)
+        update_symlink(self.tasks_dir)
         for task_dir_in in glob.glob(os.path.join(self.tasks_dir, "*")):
             if os.path.isdir(task_dir_in):
-                tasks_dir_rel = os.path.basename(task_dir_in)
-                if os.path.exists(tasks_dir_rel):
-                    os.remove(tasks_dir_rel)
-                os.symlink(task_dir_in, tasks_dir_rel)
+                update_symlink(task_dir_in)
 
     def __process_single_launch_results(self, result: VerificationResults, launch_directory, queue, columns=None,
                                         source_file=None):
@@ -241,3 +235,6 @@ class BenchmarkLauncher(Launcher):
             self.logger.info("Clear working directories")
             for tmp_dir in glob.glob(os.path.join(self.output_dir, 'tmp*')):
                 shutil.rmtree(tmp_dir, ignore_errors=True)
+            clear_symlink(self.tasks_dir)
+            for task_dir_in in glob.glob(os.path.join(self.tasks_dir, "*")):
+                clear_symlink(task_dir_in)

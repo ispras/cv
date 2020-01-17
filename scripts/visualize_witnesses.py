@@ -80,17 +80,11 @@ if __name__ == "__main__":
 
     source_dir = options.source_dir
     if source_dir:
-        if not os.path.isdir(source_dir):
-            source_dir_rel = os.path.basename(source_dir.rstrip("/"))
-            if os.path.exists(source_dir_rel):
-                os.remove(source_dir_rel)
-            os.symlink(source_dir, source_dir_rel)
+        source_dir = os.path.normpath(os.path.abspath(options.source_dir.rstrip("/")))
+        update_symlink(source_dir)
 
     witnesses = mea.filter()
     if not options.dry_run:
         mea.logger.info("Successfully processed {} witnesses".format(len(witnesses)))
 
-    if source_dir:
-        source_dir_rel = os.path.basename(source_dir)
-        if os.path.exists(source_dir_rel):
-            os.remove(source_dir_rel)
+    clear_symlink(source_dir)

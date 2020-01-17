@@ -38,5 +38,23 @@ def kill_launches(processes):
     sys.exit(0)
 
 
+def update_symlink(abs_path: str):
+    rel_path = os.path.basename(abs_path)
+    # Remove old link.
+    if os.path.islink(rel_path):
+        os.remove(rel_path)
+    # Do not create link for current directory.
+    if not os.path.exists(rel_path):
+        os.symlink(abs_path, rel_path)
+
+
+def clear_symlink(abs_path: str):
+    if not abs_path:
+        return
+    rel_path = os.path.basename(abs_path)
+    if os.path.islink(rel_path):
+        os.remove(rel_path)
+
+
 class NestedLoop(Exception):
     pass
