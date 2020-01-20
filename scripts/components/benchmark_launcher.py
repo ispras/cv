@@ -72,9 +72,26 @@ class BenchmarkLauncher(Launcher):
 
     def __process_single_launch_results(self, result: VerificationResults, group_directory, queue, columns,
                                         source_file, task_name):
-        files = glob.glob(os.path.join(group_directory, "*.logfiles", "{}.{}*".
-                                       format(task_name, result.entrypoint))) + \
-                glob.glob(os.path.join(group_directory, "*.files", "{}.{}*".format(task_name, result.entrypoint), '*'))
+        files = list()
+        directories = glob.glob(os.path.join(group_directory, "benchmark.*files"))
+        format_id = 0
+        if not directories:
+            format_id = 1
+            directories = glob.glob(os.path.join(group_directory, "{}.*files".format(task_name)))
+        if not directories:
+            self.logger.error("Output directory '{}' format is not supported".format(group_directory))
+            sys.exit(0)
+        if format_id == 0:
+            pattern = "{}.{}".format(task_name, result.entrypoint)
+        elif format_id == 1:
+            pattern = "{}".format(result.entrypoint)
+        else:
+            pattern = ""
+        for directory in directories:
+            for name in ["{}.log".format(pattern), "{}.files".format(pattern), "{}".format(pattern)]:
+                name = os.path.join(directory, name)
+                if os.path.exists(name):
+                    files.append(name)
         launch_directory = self._copy_result_files(files, group_directory)
 
         result.work_dir = launch_directory
