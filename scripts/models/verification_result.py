@@ -230,7 +230,8 @@ class VerificationResults:
                     if self.rule == TERMINATION:
                         if re.search(r'The program will never terminate\.', line):
                             self.verdict = VERDICT_UNSAFE
-            shutil.move(log_file, "{}/{}".format(launch_dir, LOG_FILE))
+            if not parsed_columns:
+                shutil.move(log_file, "{}/{}".format(launch_dir, LOG_FILE))
         except IndexError:
             print("WARNING: log file was not found for entry point '{}'".format(self.entrypoint))
             pass
