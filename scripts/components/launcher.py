@@ -173,6 +173,7 @@ class Launcher(Component):
             self.benchmark_args = "{} --cloud --cloudMaster {} --cloudPriority {}".\
                 format(self.benchmark_args, cloud_master, cloud_priority)
         self.job_name_suffix = ""
+        self.export_safes = self.config.get(COMPONENT_EXPORTER, {}).get(TAG_ADD_VERIFIER_PROOFS, True)
 
     def _copy_result_files(self, files: list, group_directory: str) -> str:
         launch_dir = os.path.abspath(tempfile.mkdtemp(dir=group_directory))
@@ -181,6 +182,8 @@ class Launcher(Component):
                 for root, dirs, files_in in os.walk(file):
                     for name in files_in:
                         file = os.path.join(root, name)
+                        if not self.export_safes and WITNESS_CORRECTNESS in file:
+                            continue
                         shutil.copy(file, launch_dir)
             if file.endswith(".log"):
                 shutil.copy(file, os.path.join(launch_dir, LOG_FILE))

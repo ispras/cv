@@ -140,6 +140,8 @@ TAG_FUNCTION_COVERAGE = "function coverage"
 TAG_LINE_COVERAGE = "line coverage"
 TAG_STATISTICS = "statistics"
 
+TAG_ADD_VERIFIER_PROOFS = "add verifier proofs"
+
 COMMON_HEADER_FOR_RULES = "common.h"
 
 DEFAULT_CIL_FILE = "cil.i"

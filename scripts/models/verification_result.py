@@ -237,6 +237,9 @@ class VerificationResults:
 
         error_traces = glob.glob("{}/*{}".format(launch_dir, GRAPHML_EXTENSION))
         self.initial_traces = len(error_traces)
+        if self.verdict == VERDICT_SAFE and not \
+                self.config.get(COMPONENT_EXPORTER, {}).get(TAG_ADD_VERIFIER_PROOFS, True):
+            self.initial_traces = 0
         self.filtered_traces = self.initial_traces
 
         if not self.verdict == VERDICT_SAFE:

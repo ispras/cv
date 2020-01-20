@@ -55,6 +55,7 @@ class Exporter(Component):
         self.install_dir = install_dir
         self.version = self.component_config.get(TAG_VERSION)
         self.add_logs = self.component_config.get(TAG_ADD_VERIFIER_LOGS, True)
+        self.add_proofs = self.component_config.get(TAG_ADD_VERIFIER_PROOFS, True)
         self.lock = multiprocessing.Lock()
         self.global_coverage_element = dict()
         self.tool = tool
@@ -397,7 +398,7 @@ class Exporter(Component):
                                                                             ARCHIVE_EXTENSION))
                             if verdict == VERDICT_SAFE:
                                 verdict = "safe"
-                                if witnesses:
+                                if witnesses and self.add_proofs:
                                     # TODO: only one correctness witness is supported.
                                     if len(witnesses) > 1:
                                         self.logger.warning("Only one correctness witness is supported per "
