@@ -460,14 +460,18 @@ class Exporter(Component):
                                 if not is_cached:
                                     with zipfile.ZipFile(unknown_archive, mode='w', compression=zipfile.ZIP_DEFLATED) \
                                             as zfp:
-                                        with open(UNKNOWN_DESC_FILE, 'w') as fp, \
-                                                open(os.path.join(work_dir, "log.txt")) as f_log:
+                                        with open(UNKNOWN_DESC_FILE, 'w') as fp:
                                             fp.write("Termination reason: {}\n".format(text))
                                             if incomplete_result:
                                                 fp.write("Unsafe-incomplete\n")
                                             if self.add_logs:
-                                                for line in f_log.readlines():
-                                                    fp.write(line)
+                                                log_name = os.path.join(work_dir, "log.txt")
+                                                if os.path.exists(log_name):
+                                                    with open(log_name) as f_log:
+                                                        for line in f_log.readlines():
+                                                            fp.write(line)
+                                                else:
+                                                    self.logger.warning("Log file '{}' does not exist".format(log_name))
                                         zfp.write(UNKNOWN_DESC_FILE, arcname=UNKNOWN_DESC_FILE)
                                     if os.path.exists(UNKNOWN_DESC_FILE):
                                         os.remove(UNKNOWN_DESC_FILE)
