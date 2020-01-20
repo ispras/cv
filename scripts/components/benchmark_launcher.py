@@ -30,6 +30,7 @@ TAG_OUTPUT_DIR = "output dir"
 TAG_TASKS_DIR = "tasks dir"
 TAG_BENCHMARK_FILE = "benchmark file"
 TAG_TOOL_NAME = "tool"
+TAG_POLL_INTERVAL = "poll interval"
 
 
 class BenchmarkLauncher(Launcher):
@@ -53,6 +54,8 @@ class BenchmarkLauncher(Launcher):
         # Optional arguments.
         self.tool = self.component_config.get(TAG_TOOL_NAME, DEFAULT_VERIFIER_TOOL)
 
+        self.poll_interval = self.component_config.get(TAG_POLL_INTERVAL, BUSY_WAITING_INTERVAL)
+
         if is_launch:
             tools_dir = os.path.abspath(self.component_config[TAG_TOOL_DIR])
             self.logger.debug("Using tool directory {}".format(tools_dir))
@@ -67,8 +70,14 @@ class BenchmarkLauncher(Launcher):
             if os.path.isdir(task_dir_in):
                 update_symlink(task_dir_in)
 
-    def __process_single_launch_results(self, result: VerificationResults, launch_directory, queue, columns=None,
-                                        source_file=None):
+    def __process_single_launch_results(self, result: VerificationResults, group_directory, queue, columns,
+                                        source_file, task_name):
+        files = glob.glob(os.path.join(group_directory, "*.logfiles", "{}.{}*".
+                                       format(task_name, result.entrypoint))) + \
+                glob.glob(os.path.join(group_directory, "*.files", "{}.{}*".format(task_name, result.entrypoint), '*'))
+        launch_directory = self._copy_result_files(files, group_directory)
+
+        result.work_dir = launch_directory
         result.parse_output_dir(launch_directory, self.install_dir, self.result_dir_et, columns)
         self._process_coverage(result, launch_directory, [self.tasks_dir], source_file)
         if result.initial_traces > 1:
@@ -132,12 +141,6 @@ class BenchmarkLauncher(Launcher):
 
             columns = run.findall('./column')
 
-            files = glob.glob(os.path.join(group_directory, "*.logfiles", "{}.{}*".
-                                           format(task_name, file_name_base))) + \
-                    glob.glob(os.path.join(group_directory, "*.files", "{}.{}*".format(task_name, file_name_base), '*'))
-            launch_dir = self._copy_result_files(files, group_directory)
-
-            result.work_dir = launch_dir
             try:
                 while True:
                     for i in range(self.cpu_cores):
@@ -147,11 +150,11 @@ class BenchmarkLauncher(Launcher):
                         if not process_pool[i]:
                             process_pool[i] = multiprocessing.Process(target=self.__process_single_launch_results,
                                                                       name=result.entrypoint,
-                                                                      args=(result, launch_dir, queue, columns,
-                                                                            file_name))
+                                                                      args=(result, group_directory, queue, columns,
+                                                                            file_name, task_name))
                             process_pool[i].start()
                             raise NestedLoop
-                    time.sleep(BUSY_WAITING_INTERVAL)
+                    time.sleep(self.poll_interval)
             except NestedLoop:
                 self._get_from_queue_into_list(queue, results)
             except Exception as e:
