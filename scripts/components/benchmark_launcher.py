@@ -71,13 +71,13 @@ class BenchmarkLauncher(Launcher):
                 update_symlink(task_dir_in)
 
     def __process_single_launch_results(self, result: VerificationResults, group_directory, queue, columns,
-                                        source_file, task_name):
+                                        source_file, task_name, benchmark_name):
         files = list()
-        directories = glob.glob(os.path.join(group_directory, "benchmark.*files"))
+        directories = glob.glob(os.path.join(group_directory, "benchmark*files"))
         format_id = 0
         if not directories:
             format_id = 1
-            directories = glob.glob(os.path.join(group_directory, "{}.*files".format(task_name)))
+            directories = glob.glob(os.path.join(group_directory, "{}.*files".format(benchmark_name)))
         if not directories:
             self.logger.error("Output directory '{}' format is not supported".format(group_directory))
             sys.exit(0)
@@ -111,6 +111,7 @@ class BenchmarkLauncher(Launcher):
         global_spec = None
         is_spec = False
         task_name = root.attrib.get('name', '')
+        benchmark_name = root.attrib.get('benchmarkname', '')
         block_id = root.attrib.get('block', "NONE")
         memory_limit = root.attrib.get('memlimit', None)
         time_limit = root.attrib.get('timelimit', None)
@@ -168,7 +169,7 @@ class BenchmarkLauncher(Launcher):
                             process_pool[i] = multiprocessing.Process(target=self.__process_single_launch_results,
                                                                       name=result.entrypoint,
                                                                       args=(result, group_directory, queue, columns,
-                                                                            file_name, task_name))
+                                                                            file_name, task_name, benchmark_name))
                             process_pool[i].start()
                             raise NestedLoop
                     time.sleep(self.poll_interval)
