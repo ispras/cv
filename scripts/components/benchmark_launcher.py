@@ -213,9 +213,16 @@ class BenchmarkLauncher(Launcher):
                                                       coverage_resources[TAG_MEMORY_USAGE]))
 
         self.logger.info("Exporting results into archive: '{}'".format(result_archive))
+        upload_process = multiprocessing.Process(target=self.__upload, name="upload",
+                                                 args=(report_launches, report_resources, report_components,
+                                                       result_archive, config))
+        upload_process.start()
+        upload_process.join()
+        return result_archive
+
+    def __upload(self, report_launches, report_resources, report_components, result_archive, config):
         exporter = Exporter(self.config, DEFAULT_EXPORT_DIR, self.install_dir, tool=self.tool)
         exporter.export(report_launches, report_resources, report_components, result_archive, verifier_config=config)
-        return result_archive
 
     def launch_benchmark(self):
         if not self.scheduler or not self.scheduler == SCHEDULER_CLOUD:
