@@ -251,18 +251,22 @@ class BenchmarkLauncher(Launcher):
             self.logger.debug("Launching benchmark: {}".format(command))
             subprocess.check_call(command, shell=True, stderr=f_log, stdout=f_log)
 
+    def __clear_working_dir(self):
+        if not self.debug:
+            for tmp_dir in glob.glob(os.path.join(self.output_dir, 'tmp*')):
+                shutil.rmtree(tmp_dir, ignore_errors=True)
+
     def process_results(self):
         xml_files = glob.glob(os.path.join(self.output_dir, '*results.*.xml'))
         uploader_config = self.config.get(UPLOADER, {})
         is_upload = uploader_config and uploader_config.get(TAG_UPLOADER_UPLOAD_RESULTS, False)
         for file in xml_files:
+            self.__clear_working_dir()
             result_archive = self.__parse_result_file(file, self.output_dir)
             if is_upload and result_archive:
                 self._upload_results(uploader_config, result_archive)
+        self.__clear_working_dir()
         if not self.debug:
-            self.logger.info("Clear working directories")
-            for tmp_dir in glob.glob(os.path.join(self.output_dir, 'tmp*')):
-                shutil.rmtree(tmp_dir, ignore_errors=True)
             clear_symlink(self.tasks_dir)
             for task_dir_in in glob.glob(os.path.join(self.tasks_dir, "*")):
                 clear_symlink(task_dir_in)
