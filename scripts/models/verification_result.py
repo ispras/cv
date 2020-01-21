@@ -216,22 +216,17 @@ class VerificationResults:
 
         # Process verifier log file.
         try:
-            usual_log_files = glob.glob(os.path.join(launch_dir, 'benchmark*logfiles/*.log'))
-            if usual_log_files:
-                log_file = usual_log_files[0]
-            else:
+            if parsed_columns:
                 log_file = glob.glob(os.path.join(launch_dir, LOG_FILE))[0]
+            else:
+                log_file = glob.glob(os.path.join(launch_dir, 'benchmark*logfiles/*.log'))[0]
+                shutil.move(log_file, "{}/{}".format(launch_dir, LOG_FILE))
             with open(log_file, errors='ignore') as f_res:
                 for line in f_res.readlines():
                     res = re.search(r'Number of refinements:(\s+)(\d+)', line)
                     if res:
                         if int(res.group(2)) > 1:
                             self.relevant = True
-                    if self.rule == TERMINATION:
-                        if re.search(r'The program will never terminate\.', line):
-                            self.verdict = VERDICT_UNSAFE
-            if not parsed_columns:
-                shutil.move(log_file, "{}/{}".format(launch_dir, LOG_FILE))
         except IndexError:
             print("WARNING: log file was not found for entry point '{}'".format(self.entrypoint))
             pass
