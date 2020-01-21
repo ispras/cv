@@ -175,18 +175,24 @@ class Launcher(Component):
         self.job_name_suffix = ""
         self.export_safes = self.config.get(COMPONENT_EXPORTER, {}).get(TAG_ADD_VERIFIER_PROOFS, True)
 
+    def __check_result_files(self, file: str, launch_dir: str):
+        if file.endswith(".log"):
+            dst = LOG_FILE
+        else:
+            dst = os.path.basename(file)
+        if not self.export_safes and WITNESS_CORRECTNESS in file:
+            return
+        shutil.copy(file, os.path.join(launch_dir, dst))
+
     def _copy_result_files(self, files: list, group_directory: str) -> str:
         launch_dir = os.path.abspath(tempfile.mkdtemp(dir=group_directory))
         for file in files:
-            if file.endswith(".files") or file.endswith("output"):
-                for root, dirs, files_in in os.walk(file):
-                    for name in files_in:
-                        file = os.path.join(root, name)
-                        if not self.export_safes and WITNESS_CORRECTNESS in file:
-                            continue
-                        shutil.copy(file, launch_dir)
-            if file.endswith(".log"):
-                shutil.copy(file, os.path.join(launch_dir, LOG_FILE))
+            if os.path.isfile(file):
+                self.__check_result_files(file, launch_dir)
+            for root, dirs, files_in in os.walk(file):
+                for name in files_in:
+                    file = os.path.join(root, name)
+                    self.__check_result_files(file, launch_dir)
         return launch_dir
 
     def _process_coverage(self, result, launch_directory, source_dirs: list, default_source_file=None):
