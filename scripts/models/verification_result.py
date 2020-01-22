@@ -220,13 +220,14 @@ class VerificationResults:
                 log_file = glob.glob(os.path.join(launch_dir, LOG_FILE))[0]
             else:
                 log_file = glob.glob(os.path.join(launch_dir, 'benchmark*logfiles/*.log'))[0]
-                shutil.move(log_file, "{}/{}".format(launch_dir, LOG_FILE))
             with open(log_file, errors='ignore') as f_res:
                 for line in f_res.readlines():
                     res = re.search(r'Number of refinements:(\s+)(\d+)', line)
                     if res:
                         if int(res.group(2)) > 1:
                             self.relevant = True
+            if not parsed_columns:
+                shutil.move(log_file, "{}/{}".format(launch_dir, LOG_FILE))
         except IndexError:
             print("WARNING: log file was not found for entry point '{}'".format(self.entrypoint))
             pass
