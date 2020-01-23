@@ -65,6 +65,7 @@ TAG_UPLOADER_SERVER = "server"
 TAG_UPLOADER_USER = "user"
 TAG_UPLOADER_PASSWORD = "password"
 TAG_UPLOADER_PARENT_ID = "parent id"
+TAG_UPLOADER_REQUEST_SLEEP = "request sleep"
 TAG_SKIP = "skip"
 TAG_STATISTICS_TIME = "statistics time"
 TAG_BUILD_CONFIG = "build config"
@@ -231,6 +232,7 @@ class Launcher(Component):
         identifier = uploader_config.get(TAG_UPLOADER_IDENTIFIER)
         user = uploader_config.get(TAG_UPLOADER_USER)
         password = uploader_config.get(TAG_UPLOADER_PASSWORD)
+        request_sleep = uploader_config.get(TAG_UPLOADER_REQUEST_SLEEP)
         is_parent = uploader_config.get(TAG_UPLOADER_PARENT_ID, False)
         predefined_name = uploader_config.get(TAG_NAME, None)
         if not server:
@@ -264,6 +266,8 @@ class Launcher(Component):
         self.logger.debug("Using name '{}' for uploaded report".format(job_name))
         command = "PYTHONPATH={} {} '{}' --host='{}' --username='{}' --password='{}' --archive='{}' --name='{}'". \
             format(uploader_python_path, uploader, identifier, server, user, password, result_file, job_name)
+        if request_sleep:
+            command = "{} --request-sleep {}".format(command, request_sleep)
         if is_parent:
             command = "{} --copy".format(command)
         try:
