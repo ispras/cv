@@ -306,7 +306,7 @@ define build_cpa
 		echo "*** CPAchecker branch $1 is already build in file ${install_dir}/$1/${cpa_arch} ***" ; \
 	else \
 		echo "*** Building CPAchecker branch $1 ***" ; \
-		cd ${install_dir}/$1; ant build tar; mv CPAchecker-*.tar.bz2 ${cpa_arch} ; \
+		cd ${install_dir}/$1; flock /tmp/.cpa_build_lock -c ant; ant tar; mv CPAchecker-*.tar.bz2 ${cpa_arch} ; \
 	fi
 endef
 
