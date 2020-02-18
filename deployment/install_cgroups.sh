@@ -42,3 +42,5 @@ do
         chmod -R o+wt ${dir}
     fi
 done
+
+exit 0
