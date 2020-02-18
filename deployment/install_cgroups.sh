@@ -22,7 +22,7 @@ if cat /proc/mounts | grep "cgroup" &> /dev/null; then
     echo "Control groups are already installed"
 else
     echo "Installing control groups"
-    sudo mount -t cgroup none /sys/fs/cgroup
+    mount -t cgroup none /sys/fs/cgroup
 fi
 
 special_directories=(
@@ -39,6 +39,6 @@ for dir in ${special_directories[@]};
 do
     if [ -d "${dir}" ]; then
         echo "Changing directory '${dir}' permissions"
-        sudo chmod -R o+wt ${dir}
+        chmod -R o+wt ${dir}
     fi
 done
