@@ -52,7 +52,7 @@ case "$1" in
         for dir in ${special_directories[@]};
         do
             if [ -d "${dir}" ]; then
-                chmod o+wt ${dir}
+                chmod -R o+wt ${dir}
             fi
         done
 

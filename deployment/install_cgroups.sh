@@ -32,8 +32,6 @@ special_directories=(
 '/sys/fs/cgroup/cpu,cpuacct/'
 '/sys/fs/cgroup/cpuacct/'
 '/sys/fs/cgroup/memory/'
-'/sys/fs/cgroup/cpu,cpuacct/user.slice'
-'/sys/fs/cgroup/memory/user.slice'
 '/sys/fs/cgroup'
 )
 
@@ -41,6 +39,6 @@ for dir in ${special_directories[@]};
 do
     if [ -d "${dir}" ]; then
         echo "Changing directory '${dir}' permissions"
-        sudo chmod o+wt ${dir}
+        sudo chmod -R o+wt ${dir}
     fi
 done
