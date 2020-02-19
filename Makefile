@@ -229,9 +229,11 @@ install-benchmark-visualizer: install-witness-visualizer
 	@cp ${klever_dir}/core/core/*.py ${DEPLOY_DIR}/${klever_dir}/core/core/
 
 install: check-deploy-dir install-klever install-benchexec install-cil $(install-cpa) install-scripts
+	@$(call verify_installation,${DEPLOY_DIR})
 	@echo "*** Successfully installed into the directory ${DEPLOY_DIR}' ***"
 
 install-with-cloud: check-deploy-dir install-klever install-benchexec install-cil install-cpa-with-cloud-links install-scripts
+	@$(call verify_installation,${DEPLOY_DIR})
 	@echo "*** Successfully installed into the directory ${DEPLOY_DIR}' with access to verification cloud ***"
 
 install-cpa-with-cloud-links: | check-deploy-dir $(install-cpa)
@@ -267,6 +269,8 @@ clean:
 	@rm -rf ${install_dir}
 	@git checkout -- ${install_dir}/
 
+verify-installation: check-deploy-dir
+	@$(call verify_installation,${DEPLOY_DIR})
 
 # download_tool(name, path, repository)
 define download_tool
@@ -348,4 +352,17 @@ define check_dir
 		echo "Required variable '$2' was not specified"; \
 		false; \
 	fi
+endef
+
+# $1 - deploy directory
+define verify_installation
+	echo "Verifying installation in directory '$1'"
+	for tool in ${cpa_modes} ${benchexec} ${klever}; do \
+		if [ -d "${1}/${install_dir}/$${tool}" ]; then \
+			echo "Tool '$${tool}' is installed" ; \
+		else \
+			echo "Something went wrong during installation: tool '$${tool}' is not found in directory '${1}/${install_dir}."; \
+			exit 1; \
+		fi ; \
+	done
 endef
