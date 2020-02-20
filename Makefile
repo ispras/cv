@@ -52,20 +52,25 @@ cif_compiled_link="https://github.com/17451k/cif/releases/download/2019-03-12/ci
 cpa_trunk_repo="https://svn.sosy-lab.org/software/cpachecker/trunk"
 cpa_branches_repo="https://svn.sosy-lab.org/software/cpachecker/branches"
 
+# Aux constants.
+cvwi_branch=cv-v2.0
+benchexec_branch=1.16
+cif_revision=ca907524
+
 include $(root_dir)/cpa.config
 
 
 download-klever:
 	@$(call download_tool,${klever},${klever_dir},${klever_repo})
-	@cd ${klever_dir}; git checkout cv-v2.0; git pull
+	@cd ${klever_dir}; git checkout ${cvwi_branch}; git pull
 
 download-benchexec:
 	@$(call download_tool,${benchexec},${benchexec_dir},${benchexec_repo})
-	@cd ${benchexec_dir}; git checkout 1.16
+	@cd ${benchexec_dir}; git checkout ${benchexec_branch}
 
 download-cif:
 	@$(call download_tool,${cif},${cif_dir},${cif_repo})
-	@cd ${cif_dir}; git checkout ca907524; git submodule update
+	@cd ${cif_dir}; git checkout ${cif_revision}; git submodule update
 
 download-cif-compiled:
 	@rm -f ${compiled_cif_arch}
