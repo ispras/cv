@@ -55,6 +55,13 @@ case "$1" in
                 chmod -R o+wt ${dir}
             fi
         done
+        while inotifywait -e create -r --exclude benchmark_* /sys/fs/cgroup/; do
+            for dir in ${special_directories[@]}; do
+                if [ -d "${dir}" ]; then
+                    chmod -R o+wt ${dir}
+                fi
+            done
+        done
 
         ;;
     stop)
