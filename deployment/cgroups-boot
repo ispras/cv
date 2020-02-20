@@ -44,8 +44,6 @@ case "$1" in
             '/sys/fs/cgroup/cpu,cpuacct/'
             '/sys/fs/cgroup/cpuacct/'
             '/sys/fs/cgroup/memory/'
-            '/sys/fs/cgroup/cpu,cpuacct/user.slice'
-            '/sys/fs/cgroup/memory/user.slice'
             '/sys/fs/cgroup'
         )
 
