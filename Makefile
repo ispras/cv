@@ -295,12 +295,14 @@ define download_cpa
 	else \
 		echo "*** Downloading CPAchecker branch $1 into directory ${install_dir}/$1 ***" ; \
 		if [ $(word 1,$($1)) != 'trunk' ]; then \
-			svn co ${cpa_branches_repo}/$(word 1,$($1)) ${install_dir}/$1; \
+			svn co ${cpa_branches_repo}/$(word 1,$($1)) ${install_dir}/$1 || \
+				{ echo "ERROR: Cannot download CPAchecker from repository ${cpa_branches_repo}/$(word 1,$($1))"; exit 1; } \
 		else \
-			svn co ${cpa_trunk_repo} ${install_dir}/$1; \
+			svn co ${cpa_trunk_repo} ${install_dir}/$1 || \
+				{ echo "ERROR: Cannot download CPAchecker from repository ${cpa_trunk_repo}"; exit 1; } \
 		fi ; \
 	fi
-	cd ${install_dir}/$1; svn cleanup; svn up -r $(word 2,$($1)); svn revert -R . ; \
+	cd ${install_dir}/$1 && svn cleanup && svn up -r $(word 2,$($1)) && svn revert -R . ; \
 	for patch in ../../patches/tools/cpachecker/$1.patch ../../plugin/*/patches/tools/cpachecker/$1.patch; do  \
 		if [ -e "$${patch}" ]; then \
 			echo "Applying patch '$${patch}'" ; \
@@ -315,7 +317,7 @@ define build_cpa
 		echo "*** CPAchecker branch $1 is already build in file ${install_dir}/$1/${cpa_arch} ***" ; \
 	else \
 		echo "*** Building CPAchecker branch $1 ***" ; \
-		cd ${install_dir}/$1; flock /tmp/.cpa_build_lock -c ant; ant tar; mv CPAchecker-*.tar.bz2 ${cpa_arch} ; \
+		cd ${install_dir}/$1 && flock /tmp/.cpa_build_lock -c ant && ant tar && mv CPAchecker-*.tar.bz2 ${cpa_arch} ; \
 	fi
 endef
 
