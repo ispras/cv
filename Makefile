@@ -146,6 +146,7 @@ install-klever: build-klever check-deploy-dir
 	@mkdir -p ${DEPLOY_DIR}/${install_dir}
 	@rm -rf ${DEPLOY_DIR}/${klever_dir}
 	@cp -r ${klever_dir} ${DEPLOY_DIR}/${klever_dir}
+	@mkdir -p ${DEPLOY_DIR}/scripts/aux
 	@cp -r ${mea_lib} ${DEPLOY_DIR}/scripts/aux/mea.py
 
 deploy-klever-cv: build-klever check-deploy-dir
