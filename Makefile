@@ -108,7 +108,7 @@ build-cil:
 	@cd ${install_dir}; tar -xf cil.xz
 
 build-astraver-cil:
-	@echo "*** Building ${astraver-cil} ***"
+	@echo "*** Building ${astraver_cil} ***"
 	@rm -rf ${astraver_cil_dir}
 	@cd ${install_dir}; tar -xf astraver-cil.xz
 
@@ -173,7 +173,7 @@ install-cil: build-cil check-deploy-dir
 	@cp -r ${cil_dir} ${DEPLOY_DIR}/${cil_dir}
 
 install-astraver-cil: build-astraver-cil check-deploy-dir
-	@echo "*** Installing ${astraver-cil} ***"
+	@echo "*** Installing ${astraver_cil} ***"
 	@mkdir -p ${DEPLOY_DIR}/${install_dir}
 	@rm -rf ${DEPLOY_DIR}/${astraver_cil_dir}
 	@cp -r ${astraver_cil_dir} ${DEPLOY_DIR}/${astraver_cil_dir}
