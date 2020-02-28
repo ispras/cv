@@ -1,29 +1,42 @@
-Index: config/includes/lockator/lockator-core.properties
-===================================================================
---- config/includes/lockator/lockator-core.properties	(revision 30474)
-+++ config/includes/lockator/lockator-core.properties	(working copy)
-@@ -11,6 +11,7 @@
- cpa.arg.export = false
- counterexample.export.enabled = false
- cpa.bam.exportARGs = false
-+cpa.bam.exportBlockPath=
- cpa.bam.argFile=
- cpa.bam.simplifiedArgFile=
- report.export = false
-Index: config/includes/lockator/lockStatistics-predicate.properties
-===================================================================
---- config/includes/lockator/lockStatistics-predicate.properties	(revision 30474)
-+++ config/includes/lockator/lockStatistics-predicate.properties	(working copy)
-@@ -8,17 +8,17 @@
+diff --git a/build/build-compile.xml b/build/build-compile.xml
+index eb879fa..e3254d2 100644
+--- a/build/build-compile.xml
++++ b/build/build-compile.xml
+@@ -58,7 +58,6 @@
+             <compilerarg value="-Xlint:-fallthrough"/> <!-- checked by error-prone, too, and javac does not recognized $FALL-THROUGH$ -->
+             <compilerarg value="-Xlint:-processing"/>
+             <compilerarg value="-Xlint:-options"/> <!-- suppress warning about bootclasspath on newer JDK -->
+-            <compilerarg value="-Werror"/>
+             <compilerarg value="-XDcompilePolicy=simple"/> <!-- necessary for error-prone -->
+             <compilerarg value="-Xplugin:ErrorProne -XepDisableWarningsInGeneratedCode ${errorprone.options}" unless:set="errorprone.disable"/>
+             <compilerarg value="-s"/><compilerarg value="${source.generated.dir}"/>
+@@ -75,12 +74,6 @@
+         <mkdir dir="${source.generated.dir}"/>
+ 
+         <copy file=".settings/org.eclipse.jdt.core.prefs" tofile="${ivy.lib.dir}/build/org.eclipse.jdt.core.prefs">
+-            <!-- Convert all compiler warnings to errors. -->
+-            <filterchain>
+-                <replacetokens begintoken="=" endtoken="g">
+-                    <token key="warnin" value="=error"/>
+-                </replacetokens>
+-            </filterchain>
+         </copy>
+ 
+         <javac debug="true"
+diff --git a/config/includes/lockator/lockStatistics-predicate.properties b/config/includes/lockator/lockStatistics-predicate.properties
+index 406079b..871087b 100644
+--- a/config/includes/lockator/lockStatistics-predicate.properties
++++ b/config/includes/lockator/lockStatistics-predicate.properties
+@@ -8,17 +8,17 @@ cpa.usage.refinement.refinementChain = IdentifierIterator, PointIterator, UsageI
  solver.solver = SMTINTERPOL
  analysis.algorithm.CEGAR = true
-
+ 
 -cpa.usage.printOnlyTrueUnsafes = true
 +cpa.usage.printOnlyTrueUnsafes = false
  cpa.usage.refinement.iterationLimit = 2
 -cpa.lock.refinement = true
 +cpa.lock.refinement = false
-
+ 
  [cegar]
  refiner = cpa.usage.refinement.IdentifierIterator
  globalRefinement = true
@@ -36,11 +49,23 @@ Index: config/includes/lockator/lockStatistics-predicate.properties
  encodeBitvectorAs = INTEGER
  encodeFloatAs = RATIONAL
  useArraysForHeap = false
-Index: scripts/benchmark/vcloud.py
-===================================================================
---- scripts/benchmark/vcloud.py	(revision 31463)
-+++ scripts/benchmark/vcloud.py	(working copy)
-@@ -112,6 +112,10 @@
+diff --git a/config/includes/lockator/lockator-core.properties b/config/includes/lockator/lockator-core.properties
+index 768e05e..2dbbb79 100644
+--- a/config/includes/lockator/lockator-core.properties
++++ b/config/includes/lockator/lockator-core.properties
+@@ -11,6 +11,7 @@ cfa.callgraph.export = false
+ cpa.arg.export = false
+ counterexample.export.enabled = false
+ cpa.bam.exportARGs = false
++cpa.bam.exportBlockPath=
+ cpa.bam.argFile=
+ cpa.bam.simplifiedArgFile=
+ report.export = false
+diff --git a/scripts/benchmark/vcloud.py b/scripts/benchmark/vcloud.py
+index d2aba7b..e30fdb8 100644
+--- a/scripts/benchmark/vcloud.py
++++ b/scripts/benchmark/vcloud.py
+@@ -112,6 +112,10 @@ def execute_benchmark(benchmark, output_handler):
              logLevel = "INFO"
          # heuristic for heap size: 100 MB and 100 kB per run
          heapSize = benchmark.config.cloudClientHeap + numberOfRuns // 10
@@ -51,13 +76,13 @@ Index: scripts/benchmark/vcloud.py
          lib = os.path.join(_ROOT_DIR, "lib", "java-benchmark", "vcloud.jar")
          cmdLine = [
              "java",
-Index: src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java
-===================================================================
---- src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java	(revision 29939)
-+++ src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java	(working copy)
-@@ -191,9 +191,10 @@
+diff --git a/src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java b/src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java
+index 57e0ad2..a44af4b 100644
+--- a/src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java
++++ b/src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java
+@@ -191,9 +191,10 @@ public class CFASecondPassBuilder {
              + actualParameters + " parameter(s)", edge);
-
+ 
        case C:
 -        throw new CParserException("Method " + functionName + " takes "
 +        return;
@@ -65,14 +90,14 @@ Index: src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java
              + declaredParameters + " parameter(s) but is called with "
 -            + actualParameters + " parameter(s)", edge);
 +            + actualParameters + " parameter(s)", edge);*/
-
+ 
        default:
          throw new AssertionError("Unhandled language " + language);
-Index: src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java
-===================================================================
---- src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java	(revision 29939)
-+++ src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java	(working copy)
-@@ -387,8 +387,7 @@
+diff --git a/src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java b/src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java
+index 3ebc916..223b549 100644
+--- a/src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java
++++ b/src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java
+@@ -387,8 +387,7 @@ class CFABuilder extends ASTVisitor {
      String functionName = startNode.getFunctionName();
  
      if (cfas.containsKey(functionName)) {
@@ -82,11 +107,25 @@ Index: src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java
      }
      cfas.put(functionName, startNode);
      cfaNodes.putAll(functionName, functionBuilder.getCfaNodes());
-Index: src/org/sosy_lab/cpachecker/cfa/postprocessing/function/ThreadCreateTransformer.java
-===================================================================
---- src/org/sosy_lab/cpachecker/cfa/postprocessing/function/ThreadCreateTransformer.java	(revision 29939)
-+++ src/org/sosy_lab/cpachecker/cfa/postprocessing/function/ThreadCreateTransformer.java	(working copy)
-@@ -51,6 +51,7 @@
+diff --git a/src/org/sosy_lab/cpachecker/cfa/postprocessing/function/ThreadCreateTransformer.java b/src/org/sosy_lab/cpachecker/cfa/postprocessing/function/ThreadCreateTransformer.java
+index ab6b63e..8dd3377 100644
+--- a/src/org/sosy_lab/cpachecker/cfa/postprocessing/function/ThreadCreateTransformer.java
++++ b/src/org/sosy_lab/cpachecker/cfa/postprocessing/function/ThreadCreateTransformer.java
+@@ -23,13 +23,11 @@
+  */
+ package org.sosy_lab.cpachecker.cfa.postprocessing.function;
+ 
+-import com.google.common.collect.ImmutableSet;
+ import com.google.common.collect.Lists;
+ import java.util.HashMap;
+ import java.util.List;
+ import java.util.Map;
+ import java.util.Map.Entry;
+-import java.util.Set;
+ import java.util.logging.Level;
+ import org.sosy_lab.common.configuration.Configuration;
+ import org.sosy_lab.common.configuration.InvalidConfigurationException;
+@@ -53,6 +51,7 @@ import org.sosy_lab.cpachecker.cfa.ast.c.CFunctionDeclaration;
  import org.sosy_lab.cpachecker.cfa.ast.c.CIdExpression;
  import org.sosy_lab.cpachecker.cfa.ast.c.CIntegerLiteralExpression;
  import org.sosy_lab.cpachecker.cfa.ast.c.CLeftHandSide;
@@ -94,7 +133,25 @@ Index: src/org/sosy_lab/cpachecker/cfa/postprocessing/function/ThreadCreateTrans
  import org.sosy_lab.cpachecker.cfa.ast.c.CRightHandSide;
  import org.sosy_lab.cpachecker.cfa.ast.c.CSimpleDeclaration;
  import org.sosy_lab.cpachecker.cfa.ast.c.CStatement;
-@@ -167,7 +168,7 @@
+@@ -80,7 +79,7 @@ public class ThreadCreateTransformer {
+     name = "cfa.threads.threadCreate",
+     description = "A name of thread_create function"
+   )
+-  private Set<String> threadCreate = ImmutableSet.of("pthread_create");
++  private String threadCreate = "pthread_create";
+ 
+   @Option(
+     secure = true,
+@@ -134,7 +133,7 @@ public class ThreadCreateTransformer {
+ 
+     private void checkFunctionExpression(CFAEdge edge, CFunctionCallExpression exp) {
+       String fName = exp.getFunctionNameExpression().toString();
+-      if (threadCreate.contains(fName) || fName.equals(threadCreateN)) {
++      if (fName.equals(threadCreate) || fName.equals(threadCreateN)) {
+         threadCreates.put(edge, exp);
+       } else if (fName.equals(threadJoin) || fName.equals(threadJoinN)) {
+         threadJoins.put(edge, exp);
+@@ -169,15 +168,16 @@ public class ThreadCreateTransformer {
          throw new UnsupportedOperationException("More arguments expected: " + fCall);
        }
  
@@ -103,7 +160,6 @@ Index: src/org/sosy_lab/cpachecker/cfa/postprocessing/function/ThreadCreateTrans
        CExpression calledFunction = args.get(2);
        CIdExpression functionNameExpression = getFunctionName(calledFunction);
        List<CExpression> functionParameters = Lists.newArrayList(args.get(3));
-@@ -174,8 +175,9 @@
        String newThreadName = functionNameExpression.getName();
        CFunctionEntryNode entryNode = (CFunctionEntryNode) cfa.getFunctionHead(newThreadName);
        if (entryNode == null) {
@@ -115,8 +171,12 @@ Index: src/org/sosy_lab/cpachecker/cfa/postprocessing/function/ThreadCreateTrans
        }
  
        CFunctionDeclaration functionDeclaration = entryNode.getFunctionDefinition();
-@@ -192,7 +194,10 @@
-       boolean isSelfParallel = !fName.equals(threadCreate);
+@@ -191,10 +191,13 @@ public class ThreadCreateTransformer {
+               functionParameters,
+               functionDeclaration);
+ 
+-      boolean isSelfParallel = fName.equals(threadCreateN);
++      boolean isSelfParallel = !fName.equals(threadCreate);
        CFunctionCallStatement pFunctionCall =
            new CThreadCreateStatement(
 -              pFileLocation, pFunctionCallExpression, isSelfParallel, varName.getName());
@@ -127,7 +187,7 @@ Index: src/org/sosy_lab/cpachecker/cfa/postprocessing/function/ThreadCreateTrans
  
        if (edge instanceof CStatementEdge) {
          CStatement stmnt = ((CStatementEdge) edge).getStatement();
-@@ -247,13 +252,13 @@
+@@ -249,13 +252,13 @@ public class ThreadCreateTransformer {
      for (Entry<CFAEdge, CFunctionCallExpression> entry : threadVisitor.threadJoins.entrySet()) {
        CFAEdge edge = entry.getKey();
        CFunctionCallExpression fCall = entry.getValue();
@@ -143,7 +203,7 @@ Index: src/org/sosy_lab/cpachecker/cfa/postprocessing/function/ThreadCreateTrans
  
        replaceEdgeWith(edge, pFunctionCall);
      }
-@@ -316,7 +321,7 @@
+@@ -318,7 +321,7 @@ public class ThreadCreateTransformer {
      }
    }
  
@@ -152,7 +212,7 @@ Index: src/org/sosy_lab/cpachecker/cfa/postprocessing/function/ThreadCreateTrans
      CExpression var = fCall.getParameterExpressions().get(0);
  
      while (!(var instanceof CIdExpression)) {
-@@ -326,10 +331,13 @@
+@@ -328,10 +331,13 @@ public class ThreadCreateTransformer {
        } else if (var instanceof CCastExpression) {
          // (void *(*)(void * ))(& ldv_factory_scenario_4)
          var = ((CCastExpression) var).getOperand();
@@ -168,44 +228,18 @@ Index: src/org/sosy_lab/cpachecker/cfa/postprocessing/function/ThreadCreateTrans
 +    return ((CIdExpression) var).getName();
    }
  }
-
-Index: src/org/sosy_lab/cpachecker/cmdline/ForceTerminationOnShutdown.java
-===================================================================
---- src/org/sosy_lab/cpachecker/cmdline/ForceTerminationOnShutdown.java	(revision 29939)
-+++ src/org/sosy_lab/cpachecker/cmdline/ForceTerminationOnShutdown.java	(working copy)
-@@ -46,8 +46,8 @@
+diff --git a/src/org/sosy_lab/cpachecker/cmdline/ForceTerminationOnShutdown.java b/src/org/sosy_lab/cpachecker/cmdline/ForceTerminationOnShutdown.java
+index cf38ce6..20de030 100644
+--- a/src/org/sosy_lab/cpachecker/cmdline/ForceTerminationOnShutdown.java
++++ b/src/org/sosy_lab/cpachecker/cmdline/ForceTerminationOnShutdown.java
+@@ -46,8 +46,8 @@ class ForceTerminationOnShutdown implements Runnable {
    private static final AtomicReference<Thread> forceTerminationOnShutdownThread = new AtomicReference<>();
-
+ 
    // Time that a shutdown may last before we kill the program.
 -  private static final int SHUTDOWN_GRACE_PERIOD = 10; // seconds
 -  private static final int SHUTDOWN_GRACE_PERIOD_2 = 1; // seconds
 +  private static final int SHUTDOWN_GRACE_PERIOD = 100; // seconds
 +  private static final int SHUTDOWN_GRACE_PERIOD_2 = 10; // seconds
-
+ 
    private final LogManager logger;
    private final Thread mainThread;
-Index: build/build-compile.xml
-===================================================================
---- build/build-compile.xml	(revision 31532)
-+++ build/build-compile.xml	(working copy)
-@@ -58,7 +58,6 @@
-             <compilerarg value="-Xlint:-fallthrough"/> <!-- checked by error-prone, too, and javac does not recognized $FALL-THROUGH$ -->
-             <compilerarg value="-Xlint:-processing"/>
-             <compilerarg value="-Xlint:-options"/> <!-- suppress warning about bootclasspath on newer JDK -->
--            <compilerarg value="-Werror"/>
-             <compilerarg value="-XDcompilePolicy=simple"/> <!-- necessary for error-prone -->
-             <compilerarg value="-Xplugin:ErrorProne -XepDisableWarningsInGeneratedCode ${errorprone.options}" unless:set="errorprone.disable"/>
-             <compilerarg value="-s"/><compilerarg value="${source.generated.dir}"/>
-@@ -75,12 +74,6 @@
-         <mkdir dir="${source.generated.dir}"/>
-
-         <copy file=".settings/org.eclipse.jdt.core.prefs" tofile="${ivy.lib.dir}/build/org.eclipse.jdt.core.prefs">
--            <!-- Convert all compiler warnings to errors. -->
--            <filterchain>
--                <replacetokens begintoken="=" endtoken="g">
--                    <token key="warnin" value="=error"/>
--                </replacetokens>
--            </filterchain>
-         </copy>
-
-         <javac debug="true"

@@ -1,1 +1,223 @@
-unreach.patch
+diff --git a/build/build-compile.xml b/build/build-compile.xml
+index de248bf..e9fcba6 100644
+--- a/build/build-compile.xml
++++ b/build/build-compile.xml
+@@ -74,12 +74,6 @@
+         <mkdir dir="${source.generated.dir}"/>
+ 
+         <copy file=".settings/org.eclipse.jdt.core.prefs" tofile="${ivy.lib.dir}/build/org.eclipse.jdt.core.prefs">
+-            <!-- Convert all compiler warnings to errors. -->
+-            <filterchain>
+-                <replacetokens begintoken="=" endtoken="g">
+-                    <token key="warnin" value="=error"/>
+-                </replacetokens>
+-            </filterchain>
+         </copy>
+ 
+         <javac debug="true"
+diff --git a/scripts/benchmark/vcloud.py b/scripts/benchmark/vcloud.py
+index 47d9e39..cc9e901 100644
+--- a/scripts/benchmark/vcloud.py
++++ b/scripts/benchmark/vcloud.py
+@@ -94,6 +94,10 @@ def execute_benchmark(benchmark, output_handler):
+         else:
+             logLevel = "INFO"
+         heapSize = benchmark.config.cloudClientHeap + numberOfRuns//10 # 100 MB and 100 kB per run
++        if heapSize < 256:
++            heapSize = 256
++        if heapSize > 1024:
++            heapSize = 1024
+         lib = os.path.join(_ROOT_DIR, "lib", "java-benchmark", "vcloud.jar")
+         cmdLine = ["java", "-Xmx"+str(heapSize)+"m", "-jar", lib, "benchmark", "--loglevel", logLevel, \
+                    "--run-collection-meta-information", meta_information, \
+diff --git a/src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java b/src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java
+index 57e0ad2..a44af4b 100644
+--- a/src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java
++++ b/src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java
+@@ -191,9 +191,10 @@ public class CFASecondPassBuilder {
+             + actualParameters + " parameter(s)", edge);
+ 
+       case C:
+-        throw new CParserException("Method " + functionName + " takes "
++        return;
++        /*throw new CParserException("Method " + functionName + " takes "
+             + declaredParameters + " parameter(s) but is called with "
+-            + actualParameters + " parameter(s)", edge);
++            + actualParameters + " parameter(s)", edge);*/
+ 
+       default:
+         throw new AssertionError("Unhandled language " + language);
+diff --git a/src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java b/src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java
+index 594b092..c8936d9 100644
+--- a/src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java
++++ b/src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java
+@@ -387,8 +387,7 @@ class CFABuilder extends ASTVisitor {
+     String functionName = startNode.getFunctionName();
+ 
+     if (cfas.containsKey(functionName)) {
+-      throw new CFAGenerationRuntimeException("Duplicate function " + functionName
+-          + " in " + startNode.getFileLocation() + " and " + cfas.get(functionName).getFileLocation());
++      return;
+     }
+     cfas.put(functionName, startNode);
+     cfaNodes.putAll(functionName, functionBuilder.getCfaNodes());
+diff --git a/src/org/sosy_lab/cpachecker/cmdline/ForceTerminationOnShutdown.java b/src/org/sosy_lab/cpachecker/cmdline/ForceTerminationOnShutdown.java
+index cf38ce6..20de030 100644
+--- a/src/org/sosy_lab/cpachecker/cmdline/ForceTerminationOnShutdown.java
++++ b/src/org/sosy_lab/cpachecker/cmdline/ForceTerminationOnShutdown.java
+@@ -46,8 +46,8 @@ class ForceTerminationOnShutdown implements Runnable {
+   private static final AtomicReference<Thread> forceTerminationOnShutdownThread = new AtomicReference<>();
+ 
+   // Time that a shutdown may last before we kill the program.
+-  private static final int SHUTDOWN_GRACE_PERIOD = 10; // seconds
+-  private static final int SHUTDOWN_GRACE_PERIOD_2 = 1; // seconds
++  private static final int SHUTDOWN_GRACE_PERIOD = 100; // seconds
++  private static final int SHUTDOWN_GRACE_PERIOD_2 = 10; // seconds
+ 
+   private final LogManager logger;
+   private final Thread mainThread;
+diff --git a/src/org/sosy_lab/cpachecker/cpa/automaton/AutomatonExpressionArguments.java b/src/org/sosy_lab/cpachecker/cpa/automaton/AutomatonExpressionArguments.java
+index 54704db..abe0530 100644
+--- a/src/org/sosy_lab/cpachecker/cpa/automaton/AutomatonExpressionArguments.java
++++ b/src/org/sosy_lab/cpachecker/cpa/automaton/AutomatonExpressionArguments.java
+@@ -24,6 +24,7 @@
+ package org.sosy_lab.cpachecker.cpa.automaton;
+ 
+ import com.google.common.collect.ImmutableList;
++import com.google.common.collect.Maps;
+ import java.math.BigInteger;
+ import java.util.Collections;
+ import java.util.HashMap;
+@@ -60,6 +61,8 @@ class AutomatonExpressionArguments {
+   private AutomatonState state;
+   private CFAEdge cfaEdge;
+   private LogManager logger;
++  private String curArgSign = null;
++  private static Map<AAstNode, String> cache = Maps.newHashMap();
+ 
+   /**
+    * In this String all print messages of the Transition are collected.
+@@ -161,7 +164,7 @@ class AutomatonExpressionArguments {
+           this.getLogger().log(Level.WARNING, "could not replace the transition variable $" + varKey + " (not found).");
+           return null;
+         } else {
+-          result.append(var.toASTString());
++          result.append(process(var));
+         }
+       } catch (NumberFormatException e) {
+         this.getLogger().log(Level.WARNING, "could not parse the int in " + matcher.group() + " , leaving it untouched");
+@@ -189,6 +192,52 @@ class AutomatonExpressionArguments {
+     return result.toString();
+   }
+ 
++  private CAstNode findSubstituteArgSign(CAstNode pNode) {
++    // System.out.println(pNode + " : " + pNode.getClass());
++    if (pNode instanceof CIdExpression) {
++      curArgSign = ((CIdExpression) pNode).getName();
++      return null;
++    } else if (pNode instanceof CArraySubscriptExpression) {
++      // Take value of automata set variables in CArraySubscriptExpression.
++      CArraySubscriptExpression expr = (CArraySubscriptExpression) pNode;
++      return findSubstituteArgSign(expr.getArrayExpression());
++    } else if (pNode instanceof CFieldReference) {
++      // Execute operations for automata variables, which are encoded in field reference.
++      CFieldReference expr = (CFieldReference) pNode;
++      String argSign =
++          expr.getFieldName() + "_of_" + expr.getFieldOwner().getExpressionType().toString();
++      argSign = argSign.replace("(", "").replace(")", "").replace("*", "").replace(" ", "_");
++      curArgSign = argSign;
++      return null;
++      // return new CStringLiteralExpression(pNode.getFileLocation(), CNumericTypes.INT, argSign);
++    }
++    // Do not substitute pNode.
++    return null;
++  }
++
++  private String process(AAstNode var) {
++    if (cache.containsKey(var)) {
++      return cache.get(var);
++    }
++    SubstitutingCAstNodeVisitor visitor =
++        new SubstitutingCAstNodeVisitor(this::findSubstituteArgSign);
++    String result;
++    if (var instanceof CExpression) {
++      curArgSign = null;
++      CExpression substitutedExpr = (CExpression) ((CExpression) var).accept(visitor);
++      if (curArgSign != null) {
++        result = curArgSign;
++      } else {
++        result = substitutedExpr.toASTString();
++      }
++    } else {
++      result = var.toASTString();
++    }
++    // System.out.println("Result " + result + " for " + var);
++    cache.put(var, result);
++    return result;
++  }
++
+   public AutomatonState getState() {
+     return state;
+   }
+@@ -252,7 +301,7 @@ class AutomatonExpressionArguments {
+           String name = subscriptExpr;
+           CAstNode transitionVariable = getTransitionVariable(subscriptExpr);
+           if (transitionVariable != null) {
+-            name = transitionVariable.toASTString();
++            name = process(transitionVariable);
+           }
+           return new CIntegerLiteralExpression(
+               pNode.getFileLocation(),
+diff --git a/src/org/sosy_lab/cpachecker/cpa/predicate/BAMPredicateAbstractionRefinementStrategy.java b/src/org/sosy_lab/cpachecker/cpa/predicate/BAMPredicateAbstractionRefinementStrategy.java
+index e956e90..7e8de6f 100644
+--- a/src/org/sosy_lab/cpachecker/cpa/predicate/BAMPredicateAbstractionRefinementStrategy.java
++++ b/src/org/sosy_lab/cpachecker/cpa/predicate/BAMPredicateAbstractionRefinementStrategy.java
+@@ -85,6 +85,7 @@ public class BAMPredicateAbstractionRefinementStrategy extends PredicateAbstract
+     // (with 'aggressive caching').
+     // -- to have an imprecise predicate-reduce-operator, which can be refined.
+ 
++    pRepeatedCounterexample = false;
+     // use flags to wait for the second repeated CEX
+     if (!pRepeatedCounterexample) {
+       pRepeatedCounterexample = false;
+diff --git a/src/org/sosy_lab/cpachecker/util/predicates/pathformula/SSAMap.java b/src/org/sosy_lab/cpachecker/util/predicates/pathformula/SSAMap.java
+index d2392ba..ad968bb 100644
+--- a/src/org/sosy_lab/cpachecker/util/predicates/pathformula/SSAMap.java
++++ b/src/org/sosy_lab/cpachecker/util/predicates/pathformula/SSAMap.java
+@@ -62,14 +62,12 @@ public class SSAMap implements Serializable {
+       new MergeConflictHandler<String, CType>() {
+         @Override
+         public CType resolveConflict(String name, CType type1, CType type2) {
+-          Preconditions.checkArgument(
+-              (type1 instanceof CFunctionType && type2 instanceof CFunctionType)
+-                  || (isEnumPointerType(type1) && isEnumPointerType(type2))
+-                  || type1.equals(type2),
+-              "Cannot change type of variable %s in SSAMap from %s to %s",
+-              name,
+-              type1,
+-              type2);
++          /*
++           * Preconditions.checkArgument( (type1 instanceof CFunctionType && type2 instanceof
++           * CFunctionType) || (isEnumPointerType(type1) && isEnumPointerType(type2)) ||
++           * type1.equals(type2), "Cannot change type of variable %s in SSAMap from %s to %s", name,
++           * type1, type2);
++           */
+ 
+           return type1;
+         }
+diff --git a/src/org/sosy_lab/cpachecker/util/refinement/UseDefRelation.java b/src/org/sosy_lab/cpachecker/util/refinement/UseDefRelation.java
+index 33f3c8c..1f06a05 100644
+--- a/src/org/sosy_lab/cpachecker/util/refinement/UseDefRelation.java
++++ b/src/org/sosy_lab/cpachecker/util/refinement/UseDefRelation.java
+@@ -425,10 +425,9 @@ public class UseDefRelation {
+     final Set<ASimpleDeclaration> allLeftHandSideVariables = acceptAll(leftHandSide);
+     final Set<ASimpleDeclaration> leftHandSideUses = new HashSet<>(filter(allLeftHandSideVariables, not(in(assignedVariables))));
+ 
+-    if(assignedVariables.size() > 1) {
++    if(assignedVariables.size() > 1 || assignedVariables.size() == 0) {
+       return;
+     }
+-
+ /*
+     // hack to handle assignments of structs, which keeps the whole struct in "use" all the time,
+     // until is is reassigned, and not only a single field

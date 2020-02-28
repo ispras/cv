@@ -1,60 +1,51 @@
-Index: scripts/benchmark/vcloud.py
-===================================================================
---- scripts/benchmark/vcloud.py	(revision 29088)
-+++ scripts/benchmark/vcloud.py	(working copy)
-@@ -94,6 +94,10 @@
-         else:
+diff --git a/build/build-compile.xml b/build/build-compile.xml
+index eb879fa..e3254d2 100644
+--- a/build/build-compile.xml
++++ b/build/build-compile.xml
+@@ -58,7 +58,6 @@
+             <compilerarg value="-Xlint:-fallthrough"/> <!-- checked by error-prone, too, and javac does not recognized $FALL-THROUGH$ -->
+             <compilerarg value="-Xlint:-processing"/>
+             <compilerarg value="-Xlint:-options"/> <!-- suppress warning about bootclasspath on newer JDK -->
+-            <compilerarg value="-Werror"/>
+             <compilerarg value="-XDcompilePolicy=simple"/> <!-- necessary for error-prone -->
+             <compilerarg value="-Xplugin:ErrorProne -XepDisableWarningsInGeneratedCode ${errorprone.options}" unless:set="errorprone.disable"/>
+             <compilerarg value="-s"/><compilerarg value="${source.generated.dir}"/>
+@@ -75,12 +74,6 @@
+         <mkdir dir="${source.generated.dir}"/>
+ 
+         <copy file=".settings/org.eclipse.jdt.core.prefs" tofile="${ivy.lib.dir}/build/org.eclipse.jdt.core.prefs">
+-            <!-- Convert all compiler warnings to errors. -->
+-            <filterchain>
+-                <replacetokens begintoken="=" endtoken="g">
+-                    <token key="warnin" value="=error"/>
+-                </replacetokens>
+-            </filterchain>
+         </copy>
+ 
+         <javac debug="true"
+diff --git a/scripts/benchmark/vcloud.py b/scripts/benchmark/vcloud.py
+index d2aba7b..83f634a 100644
+--- a/scripts/benchmark/vcloud.py
++++ b/scripts/benchmark/vcloud.py
+@@ -112,6 +112,11 @@ def execute_benchmark(benchmark, output_handler):
              logLevel = "INFO"
-         heapSize = benchmark.config.cloudClientHeap + numberOfRuns//10 # 100 MB and 100 kB per run
+         # heuristic for heap size: 100 MB and 100 kB per run
+         heapSize = benchmark.config.cloudClientHeap + numberOfRuns // 10
 +        if heapSize < 256:
 +            heapSize = 256
 +        if heapSize > 1024:
 +            heapSize = 1024
++
          lib = os.path.join(_ROOT_DIR, "lib", "java-benchmark", "vcloud.jar")
-         cmdLine = ["java", "-Xmx"+str(heapSize)+"m", "-jar", lib, "benchmark", "--loglevel", logLevel, \
-                    "--run-collection-meta-information", meta_information, \
---- src/org/sosy_lab/cpachecker/util/predicates/pathformula/SSAMap.java	(revision 29066)
-+++ src/org/sosy_lab/cpachecker/util/predicates/pathformula/SSAMap.java	(working copy)
-@@ -62,14 +61,12 @@
-       new MergeConflictHandler<String, CType>() {
-         @Override
-         public CType resolveConflict(String name, CType type1, CType type2) {
--          Preconditions.checkArgument(
--              (type1 instanceof CFunctionType && type2 instanceof CFunctionType)
--                  || (isEnumPointerType(type1) && isEnumPointerType(type2))
--                  || type1.equals(type2),
--              "Cannot change type of variable %s in SSAMap from %s to %s",
--              name,
--              type1,
--              type2);
-+          /*
-+           * Preconditions.checkArgument( (type1 instanceof CFunctionType && type2 instanceof
-+           * CFunctionType) || (isEnumPointerType(type1) && isEnumPointerType(type2)) ||
-+           * type1.equals(type2), "Cannot change type of variable %s in SSAMap from %s to %s", name,
-+           * type1, type2);
-+           */
-
-           return type1;
-         }
-Index: src/org/sosy_lab/cpachecker/util/refinement/UseDefRelation.java
-===================================================================
---- src/org/sosy_lab/cpachecker/util/refinement/UseDefRelation.java	(revision 27049)
-+++ src/org/sosy_lab/cpachecker/util/refinement/UseDefRelation.java	(working copy)
-@@ -427,7 +425,7 @@
-     final Set<ASimpleDeclaration> allLeftHandSideVariables = acceptAll(leftHandSide);
-     final Set<ASimpleDeclaration> leftHandSideUses = new HashSet<>(filter(allLeftHandSideVariables, not(in(assignedVariables))));
-
--    if(assignedVariables.size() > 1) {
-+    if(assignedVariables.size() > 1 || assignedVariables.size() == 0) {
-       return;
-     }
-Index: src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java
-===================================================================
---- src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java	(revision 29088)
-+++ src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java	(working copy)
-@@ -191,9 +191,10 @@
+         cmdLine = [
+             "java",
+diff --git a/src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java b/src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java
+index 57e0ad2..a44af4b 100644
+--- a/src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java
++++ b/src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java
+@@ -191,9 +191,10 @@ public class CFASecondPassBuilder {
              + actualParameters + " parameter(s)", edge);
-
+ 
        case C:
 -        throw new CParserException("Method " + functionName + " takes "
 +        return;
@@ -62,16 +53,16 @@ Index: src/org/sosy_lab/cpachecker/cfa/CFASecondPassBuilder.java
              + declaredParameters + " parameter(s) but is called with "
 -            + actualParameters + " parameter(s)", edge);
 +            + actualParameters + " parameter(s)", edge);*/
-
+ 
        default:
          throw new AssertionError("Unhandled language " + language);
-Index: src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java
-===================================================================
---- src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java	(revision 29088)
-+++ src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java	(working copy)
-@@ -387,8 +387,7 @@
+diff --git a/src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java b/src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java
+index 3ebc916..223b549 100644
+--- a/src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java
++++ b/src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java
+@@ -387,8 +387,7 @@ class CFABuilder extends ASTVisitor {
      String functionName = startNode.getFunctionName();
-
+ 
      if (cfas.containsKey(functionName)) {
 -      throw new CFAGenerationRuntimeException("Duplicate function " + functionName
 -          + " in " + startNode.getFileLocation() + " and " + cfas.get(functionName).getFileLocation());
@@ -79,23 +70,25 @@ Index: src/org/sosy_lab/cpachecker/cfa/parser/eclipse/c/CFABuilder.java
      }
      cfas.put(functionName, startNode);
      cfaNodes.putAll(functionName, functionBuilder.getCfaNodes());
-
-Index: src/org/sosy_lab/cpachecker/cpa/predicate/BAMPredicateAbstractionRefinementStrategy.java
-===================================================================
---- src/org/sosy_lab/cpachecker/cpa/predicate/BAMPredicateAbstractionRefinementStrategy.java	(revision 29687)
-+++ src/org/sosy_lab/cpachecker/cpa/predicate/BAMPredicateAbstractionRefinementStrategy.java	(working copy)
-@@ -85,6 +85,7 @@
-     // (with 'aggressive caching').
-     // -- to have an imprecise predicate-reduce-operator, which can be refined.
-
-+    pRepeatedCounterexample = false;
-     // use flags to wait for the second repeated CEX
-     if (!pRepeatedCounterexample) {
-       pRepeatedCounterexample = false;
-Index: src/org/sosy_lab/cpachecker/cpa/automaton/AutomatonExpressionArguments.java
-===================================================================
---- src/org/sosy_lab/cpachecker/cpa/automaton/AutomatonExpressionArguments.java	(revision 28904)
-+++ src/org/sosy_lab/cpachecker/cpa/automaton/AutomatonExpressionArguments.java	(working copy)
+diff --git a/src/org/sosy_lab/cpachecker/cmdline/ForceTerminationOnShutdown.java b/src/org/sosy_lab/cpachecker/cmdline/ForceTerminationOnShutdown.java
+index cf38ce6..20de030 100644
+--- a/src/org/sosy_lab/cpachecker/cmdline/ForceTerminationOnShutdown.java
++++ b/src/org/sosy_lab/cpachecker/cmdline/ForceTerminationOnShutdown.java
+@@ -46,8 +46,8 @@ class ForceTerminationOnShutdown implements Runnable {
+   private static final AtomicReference<Thread> forceTerminationOnShutdownThread = new AtomicReference<>();
+ 
+   // Time that a shutdown may last before we kill the program.
+-  private static final int SHUTDOWN_GRACE_PERIOD = 10; // seconds
+-  private static final int SHUTDOWN_GRACE_PERIOD_2 = 1; // seconds
++  private static final int SHUTDOWN_GRACE_PERIOD = 100; // seconds
++  private static final int SHUTDOWN_GRACE_PERIOD_2 = 10; // seconds
+ 
+   private final LogManager logger;
+   private final Thread mainThread;
+diff --git a/src/org/sosy_lab/cpachecker/cpa/automaton/AutomatonExpressionArguments.java b/src/org/sosy_lab/cpachecker/cpa/automaton/AutomatonExpressionArguments.java
+index 54704db..abe0530 100644
+--- a/src/org/sosy_lab/cpachecker/cpa/automaton/AutomatonExpressionArguments.java
++++ b/src/org/sosy_lab/cpachecker/cpa/automaton/AutomatonExpressionArguments.java
 @@ -24,6 +24,7 @@
  package org.sosy_lab.cpachecker.cpa.automaton;
  
@@ -104,7 +97,7 @@ Index: src/org/sosy_lab/cpachecker/cpa/automaton/AutomatonExpressionArguments.ja
  import java.math.BigInteger;
  import java.util.Collections;
  import java.util.HashMap;
-@@ -60,6 +61,8 @@
+@@ -60,6 +61,8 @@ class AutomatonExpressionArguments {
    private AutomatonState state;
    private CFAEdge cfaEdge;
    private LogManager logger;
@@ -113,7 +106,7 @@ Index: src/org/sosy_lab/cpachecker/cpa/automaton/AutomatonExpressionArguments.ja
  
    /**
     * In this String all print messages of the Transition are collected.
-@@ -161,7 +164,7 @@
+@@ -161,7 +164,7 @@ class AutomatonExpressionArguments {
            this.getLogger().log(Level.WARNING, "could not replace the transition variable $" + varKey + " (not found).");
            return null;
          } else {
@@ -122,7 +115,7 @@ Index: src/org/sosy_lab/cpachecker/cpa/automaton/AutomatonExpressionArguments.ja
          }
        } catch (NumberFormatException e) {
          this.getLogger().log(Level.WARNING, "could not parse the int in " + matcher.group() + " , leaving it untouched");
-@@ -189,6 +192,52 @@
+@@ -189,6 +192,52 @@ class AutomatonExpressionArguments {
      return result.toString();
    }
  
@@ -175,7 +168,7 @@ Index: src/org/sosy_lab/cpachecker/cpa/automaton/AutomatonExpressionArguments.ja
    public AutomatonState getState() {
      return state;
    }
-@@ -252,7 +301,7 @@
+@@ -252,7 +301,7 @@ class AutomatonExpressionArguments {
            String name = subscriptExpr;
            CAstNode transitionVariable = getTransitionVariable(subscriptExpr);
            if (transitionVariable != null) {
@@ -184,43 +177,56 @@ Index: src/org/sosy_lab/cpachecker/cpa/automaton/AutomatonExpressionArguments.ja
            }
            return new CIntegerLiteralExpression(
                pNode.getFileLocation(),
-Index: src/org/sosy_lab/cpachecker/cmdline/ForceTerminationOnShutdown.java
-===================================================================
---- src/org/sosy_lab/cpachecker/cmdline/ForceTerminationOnShutdown.java	(revision 31463)
-+++ src/org/sosy_lab/cpachecker/cmdline/ForceTerminationOnShutdown.java	(working copy)
-@@ -46,8 +46,8 @@
-   private static final AtomicReference<Thread> forceTerminationOnShutdownThread = new AtomicReference<>();
-
-   // Time that a shutdown may last before we kill the program.
--  private static final int SHUTDOWN_GRACE_PERIOD = 10; // seconds
--  private static final int SHUTDOWN_GRACE_PERIOD_2 = 1; // seconds
-+  private static final int SHUTDOWN_GRACE_PERIOD = 100; // seconds
-+  private static final int SHUTDOWN_GRACE_PERIOD_2 = 10; // seconds
-
-   private final LogManager logger;
-   private final Thread mainThread;
-Index: build/build-compile.xml
-===================================================================
---- build/build-compile.xml	(revision 31532)
-+++ build/build-compile.xml	(working copy)
-@@ -58,7 +58,6 @@
-             <compilerarg value="-Xlint:-fallthrough"/> <!-- checked by error-prone, too, and javac does not recognized $FALL-THROUGH$ -->
-             <compilerarg value="-Xlint:-processing"/>
-             <compilerarg value="-Xlint:-options"/> <!-- suppress warning about bootclasspath on newer JDK -->
--            <compilerarg value="-Werror"/>
-             <compilerarg value="-XDcompilePolicy=simple"/> <!-- necessary for error-prone -->
-             <compilerarg value="-Xplugin:ErrorProne -XepDisableWarningsInGeneratedCode ${errorprone.options}" unless:set="errorprone.disable"/>
-             <compilerarg value="-s"/><compilerarg value="${source.generated.dir}"/>
-@@ -75,12 +74,6 @@
-         <mkdir dir="${source.generated.dir}"/>
-
-         <copy file=".settings/org.eclipse.jdt.core.prefs" tofile="${ivy.lib.dir}/build/org.eclipse.jdt.core.prefs">
--            <!-- Convert all compiler warnings to errors. -->
--            <filterchain>
--                <replacetokens begintoken="=" endtoken="g">
--                    <token key="warnin" value="=error"/>
--                </replacetokens>
--            </filterchain>
-         </copy>
-
-         <javac debug="true"
+diff --git a/src/org/sosy_lab/cpachecker/cpa/predicate/BAMPredicateAbstractionRefinementStrategy.java b/src/org/sosy_lab/cpachecker/cpa/predicate/BAMPredicateAbstractionRefinementStrategy.java
+index 0bb7957..4325664 100644
+--- a/src/org/sosy_lab/cpachecker/cpa/predicate/BAMPredicateAbstractionRefinementStrategy.java
++++ b/src/org/sosy_lab/cpachecker/cpa/predicate/BAMPredicateAbstractionRefinementStrategy.java
+@@ -65,6 +65,7 @@ public class BAMPredicateAbstractionRefinementStrategy extends PredicateAbstract
+     // (with 'aggressive caching').
+     // -- to have an imprecise predicate-reduce-operator, which can be refined.
+ 
++    pRepeatedCounterexample = false;
+     // use flags to wait for the second repeated CEX
+     if (!pRepeatedCounterexample) {
+       pRepeatedCounterexample = false;
+diff --git a/src/org/sosy_lab/cpachecker/util/predicates/pathformula/SSAMap.java b/src/org/sosy_lab/cpachecker/util/predicates/pathformula/SSAMap.java
+index d2392ba..ad968bb 100644
+--- a/src/org/sosy_lab/cpachecker/util/predicates/pathformula/SSAMap.java
++++ b/src/org/sosy_lab/cpachecker/util/predicates/pathformula/SSAMap.java
+@@ -62,14 +62,12 @@ public class SSAMap implements Serializable {
+       new MergeConflictHandler<String, CType>() {
+         @Override
+         public CType resolveConflict(String name, CType type1, CType type2) {
+-          Preconditions.checkArgument(
+-              (type1 instanceof CFunctionType && type2 instanceof CFunctionType)
+-                  || (isEnumPointerType(type1) && isEnumPointerType(type2))
+-                  || type1.equals(type2),
+-              "Cannot change type of variable %s in SSAMap from %s to %s",
+-              name,
+-              type1,
+-              type2);
++          /*
++           * Preconditions.checkArgument( (type1 instanceof CFunctionType && type2 instanceof
++           * CFunctionType) || (isEnumPointerType(type1) && isEnumPointerType(type2)) ||
++           * type1.equals(type2), "Cannot change type of variable %s in SSAMap from %s to %s", name,
++           * type1, type2);
++           */
+ 
+           return type1;
+         }
+diff --git a/src/org/sosy_lab/cpachecker/util/refinement/UseDefRelation.java b/src/org/sosy_lab/cpachecker/util/refinement/UseDefRelation.java
+index 33f3c8c..1f06a05 100644
+--- a/src/org/sosy_lab/cpachecker/util/refinement/UseDefRelation.java
++++ b/src/org/sosy_lab/cpachecker/util/refinement/UseDefRelation.java
+@@ -425,10 +425,9 @@ public class UseDefRelation {
+     final Set<ASimpleDeclaration> allLeftHandSideVariables = acceptAll(leftHandSide);
+     final Set<ASimpleDeclaration> leftHandSideUses = new HashSet<>(filter(allLeftHandSideVariables, not(in(assignedVariables))));
+ 
+-    if(assignedVariables.size() > 1) {
++    if(assignedVariables.size() > 1 || assignedVariables.size() == 0) {
+       return;
+     }
+-
+ /*
+     // hack to handle assignments of structs, which keeps the whole struct in "use" all the time,
+     // until is is reassigned, and not only a single field

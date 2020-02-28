@@ -51,6 +51,7 @@ cif_repo="https://forge.ispras.ru/git/cif.git"
 cif_compiled_link="https://github.com/17451k/cif/releases/download/2019-03-12/cif-20190312-linux-x64.tar.xz"
 cpa_trunk_repo="https://svn.sosy-lab.org/software/cpachecker/trunk"
 cpa_branches_repo="https://svn.sosy-lab.org/software/cpachecker/branches"
+cpachecker_repo="https://github.com/sosy-lab/cpachecker.git"
 
 # Aux constants.
 cvwi_branch=cv-v2.0
@@ -78,7 +79,7 @@ download-cif-compiled:
 
 download-cpa := $(addprefix download-cpa-,$(cpa_modes))
 $(download-cpa):
-	@$(call download_cpa,$(patsubst download-cpa-%,%,$@))
+	@$(call download_cpa_git,$(patsubst download-cpa-%,%,$@))
 	
 download: download-klever download-benchexec download-cif $(download-cpa)
 	@echo "*** Downloading has been completed ***"
@@ -292,7 +293,7 @@ define download_tool
 endef
 
 # $1 - directory name, $(word 1,$($1)) - branch, $(word 2,$($1)) - revision
-define download_cpa
+define download_cpa_svn
 	if [ -d "${install_dir}/$1" ]; then \
 		echo "*** CPAchecker mode $1 is already downloaded in directory ${install_dir}/$1 ***" ; \
 	else \
@@ -327,7 +328,7 @@ endef
 # $1 - branch
 define clean_cpa
 	echo "*** Cleaning CPAchecker branch $1 ***"
-	rm -rf ${install_dir}/$1/*; cd ${install_dir}/$1; svn revert -R .
+	cd ${install_dir}/$1 && git reset --hard && git clean -f
 endef
 
 # $1 - branch
@@ -381,4 +382,23 @@ endef
 define shrink_installation
 	echo "Removing aux files in directory '$1'"
 	@cd ${DEPLOY_DIR}/${klever_dir} && rm -rf presets/ .git bridge/reports/test_files/
+endef
+
+# $1 - directory name, $(word 1,$($1)) - branch, $(word 2,$($1)) - revision
+define download_cpa_git
+	if [ -d "${install_dir}/$1" ]; then \
+		echo "*** CPAchecker mode $1 is already downloaded in directory ${install_dir}/$1 ***" ; \
+	else \
+		echo "*** Downloading CPAchecker branch $1 into directory ${install_dir}/$1 ***" ; \
+		git clone -b $(word 1,$($1)) --single-branch ${cpachecker_repo} ${install_dir}/$1 || \
+			{ echo "ERROR: Cannot download CPAchecker repository ${cpachecker_repo}"; exit 1; } ; \
+	fi
+	cd ${install_dir}/$1 && git reset --hard && git clean -f && git checkout `git log --grep='$(word 1,$($1))@$(word 2,$($1)) ' --oneline  --pretty=format:"%h"` || \
+		{ echo "ERROR: Cannot checkout to revision $(word 2,$($1))" ; exit 1; } ; \
+	for patch in ../../patches/tools/cpachecker/$1.patch ../../plugin/*/patches/tools/cpachecker/$1.patch; do  \
+		if [ -e "$${patch}" ]; then \
+			echo "Applying patch '$${patch}'" ; \
+			git apply --ignore-space-change --ignore-whitespace "$${patch}"; \
+		fi ; \
+	done
 endef
