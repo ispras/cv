@@ -216,10 +216,12 @@ class VerificationResults:
 
         # Process verifier log file.
         try:
-            if parsed_columns:
-                log_file = glob.glob(os.path.join(launch_dir, LOG_FILE))[0]
+            cur_dir_logs = glob.glob(os.path.join(launch_dir, LOG_FILE))
+            if cur_dir_logs:
+                log_file = cur_dir_logs[0]
             else:
                 log_file = glob.glob(os.path.join(launch_dir, 'benchmark*logfiles/*.log'))[0]
+
             with open(log_file, errors='ignore') as f_res:
                 for line in f_res.readlines():
                     res = re.search(r'Number of refinements:(\s+)(\d+)', line)
