@@ -23,7 +23,7 @@ index 47d9e39..7a9af23 100644
 
  _justReprocessResults = False
 
-+HASH_CODE_CACHE_PATH = os.path.join(os.path.expanduser("~"), ".verifiercloud/cache/hashCodeCache")
++HASH_CODE_CACHE_PATH = os.path.join(os.path.expanduser("~"), ".verifiercloud/client/cache/hashCodeCache")
 +
  def init(config, benchmark):
      global _justReprocessResults
