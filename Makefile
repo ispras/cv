@@ -149,7 +149,7 @@ install-klever: build-klever check-deploy-dir
 	@cp -r ${klever_dir} ${DEPLOY_DIR}/${klever_dir}
 	@mkdir -p ${DEPLOY_DIR}/scripts/aux
 	@cp -r ${mea_lib} ${DEPLOY_DIR}/scripts/aux/mea.py
-	@$(call shrink_installation,${DEPLOY_DIR})
+	@$(call shrink_installation,${DEPLOY_DIR}/${klever_dir})
 
 deploy-klever-cv: build-klever check-deploy-dir
 	@echo "*** Deploying ${klever}-CV web-interface ***"
@@ -381,7 +381,7 @@ endef
 # $1 - deploy directory
 define shrink_installation
 	echo "Removing aux files in directory '$1'"
-	@cd ${DEPLOY_DIR}/${klever_dir} && rm -rf presets/ .git bridge/reports/test_files/
+	@cd ${1} && rm -rf presets/ .git bridge/reports/test_files/
 endef
 
 # $1 - directory name, $(word 1,$($1)) - branch, $(word 2,$($1)) - revision
