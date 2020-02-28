@@ -16,10 +16,19 @@ index de248bf..e9fcba6 100644
  
          <javac debug="true"
 diff --git a/scripts/benchmark/vcloud.py b/scripts/benchmark/vcloud.py
-index 47d9e39..cc9e901 100644
+index 47d9e39..7a9af23 100644
 --- a/scripts/benchmark/vcloud.py
 +++ b/scripts/benchmark/vcloud.py
-@@ -94,6 +94,10 @@ def execute_benchmark(benchmark, output_handler):
+@@ -52,6 +52,8 @@ _ROOT_DIR=os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.
+
+ _justReprocessResults = False
+
++HASH_CODE_CACHE_PATH = os.path.join(os.path.expanduser("~"), ".verifiercloud/cache/hashCodeCache")
++
+ def init(config, benchmark):
+     global _justReprocessResults
+     _justReprocessResults = config.reprocessResults
+@@ -94,6 +96,13 @@ def execute_benchmark(benchmark, output_handler):
          else:
              logLevel = "INFO"
          heapSize = benchmark.config.cloudClientHeap + numberOfRuns//10 # 100 MB and 100 kB per run
@@ -27,6 +36,9 @@ index 47d9e39..cc9e901 100644
 +            heapSize = 256
 +        if heapSize > 1024:
 +            heapSize = 1024
++        if os.path.exists(HASH_CODE_CACHE_PATH):
++            os.remove(HASH_CODE_CACHE_PATH)
++
          lib = os.path.join(_ROOT_DIR, "lib", "java-benchmark", "vcloud.jar")
          cmdLine = ["java", "-Xmx"+str(heapSize)+"m", "-jar", lib, "benchmark", "--loglevel", logLevel, \
                     "--run-collection-meta-information", meta_information, \

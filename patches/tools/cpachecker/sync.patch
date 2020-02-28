@@ -62,10 +62,18 @@ index 768e05e..2dbbb79 100644
  cpa.bam.simplifiedArgFile=
  report.export = false
 diff --git a/scripts/benchmark/vcloud.py b/scripts/benchmark/vcloud.py
-index d2aba7b..e30fdb8 100644
+index d2aba7b..1483448 100644
 --- a/scripts/benchmark/vcloud.py
 +++ b/scripts/benchmark/vcloud.py
-@@ -112,6 +112,10 @@ def execute_benchmark(benchmark, output_handler):
+@@ -56,6 +56,7 @@ _ROOT_DIR = os.path.abspath(
+
+ _justReprocessResults = False
+
++HASH_CODE_CACHE_PATH = os.path.join(os.path.expanduser("~"), ".verifiercloud/cache/hashCodeCache")
+
+ def init(config, benchmark):
+     global _justReprocessResults
+@@ -112,6 +113,12 @@ def execute_benchmark(benchmark, output_handler):
              logLevel = "INFO"
          # heuristic for heap size: 100 MB and 100 kB per run
          heapSize = benchmark.config.cloudClientHeap + numberOfRuns // 10
@@ -73,6 +81,8 @@ index d2aba7b..e30fdb8 100644
 +            heapSize = 256
 +        if heapSize > 1024:
 +            heapSize = 1024
++        if os.path.exists(HASH_CODE_CACHE_PATH):
++            os.remove(HASH_CODE_CACHE_PATH)
          lib = os.path.join(_ROOT_DIR, "lib", "java-benchmark", "vcloud.jar")
          cmdLine = [
              "java",
