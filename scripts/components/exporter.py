@@ -550,8 +550,11 @@ class Exporter(Component):
 
                 # TODO: those sources may be duplicated.
                 with zipfile.ZipFile(DEFAULT_COVERAGE_SOURCES_ARCH, mode='w', compression=zipfile.ZIP_DEFLATED) as zfp:
+                    src_paths = set()
                     for src_file, arch_path in coverage_sources.items():
-                        zfp.write(src_file, arcname=arch_path)
+                        if arch_path not in src_paths:
+                            zfp.write(src_file, arcname=arch_path)
+                            src_paths.add(arch_path)
                 final_zip.write(DEFAULT_COVERAGE_SOURCES_ARCH)
                 os.remove(DEFAULT_COVERAGE_SOURCES_ARCH)
 
