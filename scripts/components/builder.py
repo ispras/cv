@@ -38,6 +38,7 @@ REPOSITORY_TYPES = [REPOSITORY_GIT, REPOSITORY_SVN, REPOSITORY_NONE]
 TAG_ENVIRON_VARS = "environment variables"
 TAG_CLEAN_SOURCES = "clean sources"
 DEFAULT_MAKE_CLEAN = "make clean"
+TAG_MAKE_TARGET_DIR = "make target dir"
 DEFAULT_MAKE = "make"
 CLADE_BASIC_CONFIG = {
   "CC.which_list": [".*?gcc$"],
@@ -71,6 +72,7 @@ class Builder(Component):
 
         self.make_command = builder_config.get(TAG_MAKE_COMMAND, DEFAULT_MAKE)
         self.make_clean_command = builder_config.get(TAG_MAKE_CLEAN_COMMAND, DEFAULT_MAKE_CLEAN)
+        self.make_target_dir = builder_config.get(TAG_MAKE_TARGET_DIR, "")
         self.fail_if_failure = builder_config.get(TAG_FAIL_IF_FAILURE, True)
         self.clean_sources = builder_config.get(TAG_CLEAN_SOURCES, False)
         self.env = self.component_config.get(TAG_ENVIRON_VARS, {})
@@ -212,6 +214,8 @@ class Builder(Component):
         tmp_path = os.path.join(self.source_dir, CLADE_BASE_FILE)
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
+        if self.make_target_dir:
+            os.chdir(self.make_target_dir)
         if self.command_caller(self.make_clean_command):
             self.logger.warning("Make clean failed")
 
@@ -230,6 +234,8 @@ class Builder(Component):
                 identifier = cmd['id']
                 cmd['command'] = c.get_cmd_raw(identifier)[0]
                 cmd['opts'] = c.get_cmd_opts(identifier)
+            if self.make_target_dir:
+                os.chdir(self.source_dir)
             with open(build_commands_file, "w") as fd:
                 json.dump(cmds, fd, sort_keys=True, indent="\t")
         except Exception:
