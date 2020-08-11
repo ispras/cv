@@ -54,6 +54,8 @@ ADDED_PREFIX = "ldv_"
 
 DEFAULT_PREP_RESULT = "build_commands.json"
 
+EMPTY_ASPECT_TEXT = "before: file (\"$this\")\n{\n}"
+
 
 class Preparator(Component):
     """
@@ -269,6 +271,12 @@ class Preparator(Component):
 
         if self.use_cif:
             # Use CIF as a compiler.
+            if not self.aspect:
+                self.aspect = os.path.abspath(DEFAULT_CIF_FILE)
+                self.logger.warning("Aspect file was not specified for CIF, using empty aspect '{}'".
+                                    format(self.aspect))
+                with open(self.aspect, "w", encoding='utf8') as fa:
+                    fa.write(EMPTY_ASPECT_TEXT)
             cif_args = [self.compiler,
                         "--in", cif_in,
                         "--aspect", self.aspect,
