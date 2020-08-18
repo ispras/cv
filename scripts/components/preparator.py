@@ -309,7 +309,8 @@ class Preparator(Component):
 
         os.chdir(source_dir)
         # Redirecting output into Pipe fails on some CIF calls
-        ret = self.command_caller(cif_args, self.preprocessing_dir)
+        # TODO: workaround to operate with '\"'
+        ret = self.command_caller(" ".join(cif_args), self.preprocessing_dir)
 
         # Add file even it will fail
         processed_files.append(cif_out)
