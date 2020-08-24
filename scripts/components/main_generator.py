@@ -40,6 +40,7 @@ TAG_TYPE = "type"
 TAG_RENAME = "rename"
 TAG_SED_COMMANDS = "sed commands"
 TAG_CAST = "cast"
+TAG_IGNORE_PTHREAD_ATTR = "ignore pthread_attr_t"
 
 # Config tags.
 TAG_STRATEGIES = "strategies"
@@ -78,6 +79,7 @@ class MainGenerator(Component):
 
         # Config.
         self.ignore_types = self.component_config.get(TAG_IGNORE_TYPES, False)
+        self.ignore_pthread_attr_t = self.component_config.get(TAG_IGNORE_PTHREAD_ATTR, False)
         self.print_prototypes = self.component_config.get(TAG_PRINT_PROTOTYPES, True)
         self.specified_strategies = self.component_config.get(TAG_STRATEGIES, {})
         for rule, strategy in self.specified_strategies.items():
@@ -197,12 +199,13 @@ class MainGenerator(Component):
                 for header in self.metadata.get(TAG_INCLUDE, []):
                     fp.write("#include \"{}\"\n".format(header))
             if strategy in [THREADED_STRATEGY, THREADED_STRATEGY_NONDET, SIMPLIFIED_THREADED_STRATEGY]:
-                fp.write("typedef unsigned long int pthread_t;\n"
-                         "union pthread_attr_t {\n"
-                         "  char __size[56];\n"
-                         "  long int __align;\n"
-                         "};\ntypedef union pthread_attr_t pthread_attr_t;\n\n"
-                         "int ldv_thread_create(pthread_t *thread, pthread_attr_t const *attr,"
+                fp.write("typedef unsigned long int pthread_t;\n")
+                if not self.ignore_pthread_attr_t:
+                    fp.write("union pthread_attr_t {\n"
+                             "  char __size[56];\n"
+                             "  long int __align;\n"
+                             "};\ntypedef union pthread_attr_t pthread_attr_t;\n\n")
+                fp.write("int ldv_thread_create(pthread_t *thread, pthread_attr_t const *attr,"
                          "                      void *(*start_routine)(void *), void *arg);\n\n"
                          "int ldv_thread_join(pthread_t thread, void **retval);\n\n"
                          "int ldv_thread_create_N(pthread_t **thread, pthread_attr_t const *attr,"
