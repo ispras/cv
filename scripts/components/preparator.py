@@ -297,7 +297,8 @@ class Preparator(Component):
         opts = command["opts"][:]
         opts.extend(self.extra_opts)
         opts = [re.sub(r'\"', r'\\"', opt) for opt in opts]
-        cif_unsupported_opts = preprocessor_deps_opts + self.preparation_config.get(CONF_UNSUPPORTED_OPTIONS, [])
+        cif_unsupported_opts = preprocessor_deps_opts + self.preparation_config.get(CONF_UNSUPPORTED_OPTIONS, []) +\
+                               self.component_config.get(CONF_UNSUPPORTED_OPTIONS, [])
         opts = filter_opts(opts, cif_unsupported_opts)
         if self.use_cif:
             # noinspection PyUnresolvedReferences
