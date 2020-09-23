@@ -348,7 +348,7 @@ class MEA(Component):
                     for warning in warnings:
                         print(warning)
                 else:
-                    self.logger.info("There are no missing elements for witness {}:".format(error_trace_file))
+                    self.logger.info("There are no missing elements for witness {}".format(error_trace_file))
                 return {}
             witness_type = json_error_trace.get('type')
             if witness_type not in supported_types:
