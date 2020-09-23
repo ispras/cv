@@ -44,11 +44,13 @@ After deployment Witness Visualizer can be used to convert witnesses from the `<
 scripts/visualize_witnesses.py OPTIONS
 ```
 
-Mandatory options:
+Primary options:
 * `-w` WITNESS, `--witness` WITNESS: path to the witness to be visualized;
 * `-d` DIRECTORY, `--directory` DIRECTORY: directory with witnesses to be visualized (either `-w` or `-d` option must be specified);
 * `-r` RESULT_DIR, `--result-dir` RESULT_DIR: directory, in which visualized witnesses will be placed in html format;
-* `-s` SOURCE_DIR, `--source-dir` SOURCE_DIR: source files directory.
+* `-s` SOURCE_DIR, `--source-dir` SOURCE_DIR: source files directory;
+* `--dry-run`: do not visualize witnesses, only check their quality;
+* `-u`, `--unzip`: unzip archives with visualized witnesses.
 
 For example:
 
