@@ -28,6 +28,12 @@ astraver_cil="astraver-cil"
 benchexec="benchexec"
 cif="cif"
 
+# Scripts
+bv_script="process_benchmark.py"
+wv_script="visualize_witnesses.py"
+launch_script="launch.py"
+auto_script="auto_check.py"
+
 # Directories
 root_dir=$(shell pwd)
 install_dir=tools
@@ -203,6 +209,8 @@ install-scripts: check-deploy-dir
 	cp -r ${root_dir}/entrypoints/ . ; \
 	cp -r ${root_dir}/configs/ . ; \
 	cp -r ${root_dir}/scripts/ . ; \
+	rm -f scripts/${bv_script} ; \
+	rm -f scripts/${wv_script} ; \
 	cp -r ${root_dir}/plugin/ . ; \
 	mkdir -p buildbot
 
@@ -230,11 +238,15 @@ install-witness-visualizer: check-deploy-dir build-klever
 	@rm -rf ${DEPLOY_DIR}/${klever_dir}/bridge/static/js/population.js
 	@cd ${DEPLOY_DIR} ; \
 	cp -r ${root_dir}/scripts/ . ; \
+	rm -f scripts/${launch_script} ; \
+	rm -f scripts/${auto_script} ; \
+	rm -f scripts/${bv_script} ; \
 	cp ${klever_dir}/bridge/reports/mea/core.py scripts/aux/mea.py
 	@echo "*** Witness Visualizer has been successfully installed into the directory ${DEPLOY_DIR} ***"
 
 install-benchmark-visualizer: install-witness-visualizer
 	@cp -r ${klever_dir}/utils/ ${DEPLOY_DIR}/${klever_dir}/
+	@cp -f ${root_dir}/scripts/${bv_script} ${DEPLOY_DIR}/scripts/
 	@cp ${klever_dir}/core/core/*.py ${DEPLOY_DIR}/${klever_dir}/core/core/
 
 install: check-deploy-dir install-klever install-benchexec install-cil $(install-cpa) install-scripts
