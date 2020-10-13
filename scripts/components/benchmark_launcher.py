@@ -31,6 +31,8 @@ TAG_TASKS_DIR = "tasks dir"
 TAG_BENCHMARK_FILE = "benchmark file"
 TAG_TOOL_NAME = "tool"
 TAG_POLL_INTERVAL = "poll interval"
+TAG_PROCESS_WITNESSES_ONLY = "process witnesses only"
+TAG_SPECIFIED_PROPERTY = "specified property"
 
 
 class BenchmarkLauncher(Launcher):
@@ -56,6 +58,9 @@ class BenchmarkLauncher(Launcher):
 
         self.poll_interval = self.component_config.get(TAG_POLL_INTERVAL, BUSY_WAITING_INTERVAL)
 
+        self.process_witnesses_only = self.component_config.get(TAG_PROCESS_WITNESSES_ONLY, False)
+        self.specified_property = self.component_config.get(TAG_SPECIFIED_PROPERTY, "unknown")
+
         self.is_launch = is_launch
         self.process_dir = None
         if is_launch:
@@ -78,8 +83,11 @@ class BenchmarkLauncher(Launcher):
         files = list()
         directories = glob.glob(os.path.join(group_directory, "{}.*files".format(benchmark_name)))
         if not directories:
-            self.logger.error("Output directory '{}' format is not supported".format(group_directory))
-            sys.exit(0)
+            if self.process_witnesses_only:
+                files.append(source_file)
+            else:
+                self.logger.error("Output directory '{}' format is not supported".format(group_directory))
+                sys.exit(0)
         for directory in directories:
             for pattern in ["{}.{}".format(task_name, result.entrypoint), "{}".format(result.entrypoint)]:
                 for name in ["{}.log".format(pattern), "{}.files".format(pattern), "{}".format(pattern)]:
@@ -245,10 +253,112 @@ class BenchmarkLauncher(Launcher):
             self.logger.debug("Launching benchmark: {}".format(command))
             subprocess.check_call(command, shell=True, stderr=f_log, stdout=f_log)
 
+    def __get_entry_point_from_witness(self, witness: str) -> str:
+        base_name = os.path.basename(witness)
+        rel_path = os.path.dirname(witness.replace(self.output_dir + os.sep, ""))
+        potential_name = witness.replace(self.output_dir, "").replace(base_name, "").replace("output", "").\
+            replace(os.sep, "")
+        if potential_name:
+            # Example: benchmark.*.logfiles/<source_file>.files/output/witness.graphml
+            return potential_name.replace(".files", "")
+        potential_name = base_name.replace(".graphml", "").replace("witness", "").replace(".", "")
+        if potential_name:
+            # Example: witness.<id>.graphml
+            return rel_path.replace(base_name, "").replace("output", "") + potential_name
+        return rel_path
+
+    def __process_witnesses_only(self, uploader_config, is_upload):
+        witnesses = subprocess.check_output("find {} -name *graphml".format(self.output_dir), shell=True).\
+            decode(errors='ignore').rstrip().split("\n")
+        queue = multiprocessing.Queue()
+        process_pool = []
+        results = list()
+        if COMPONENT_MEA not in self.config:
+            self.config[COMPONENT_MEA] = {}
+        self.config[COMPONENT_MEA][TAG_SOURCE_DIR] = self.tasks_dir
+        self.process_dir = os.path.abspath(tempfile.mkdtemp(dir=self.work_dir))
+        for i in range(self.cpu_cores):
+            process_pool.append(None)
+        for witness in witnesses:
+            result = VerificationResults(None, self.config)
+            result.entrypoint = self.__get_entry_point_from_witness(witness)
+            result.rule = self.specified_property
+            result.id = "."
+            result.termination_reason = TERMINATION_SUCCESS
+
+            try:
+                while True:
+                    for i in range(self.cpu_cores):
+                        if process_pool[i] and not process_pool[i].is_alive():
+                            process_pool[i].join()
+                            process_pool[i] = None
+                        if not process_pool[i]:
+                            process_pool[i] = multiprocessing.Process(
+                                target=self.__process_single_launch_results,
+                                name=result.entrypoint,
+                                args=(result, self.output_dir, queue, None, witness, "", ""))
+                            process_pool[i].start()
+                            raise NestedLoop
+                    time.sleep(self.poll_interval)
+            except NestedLoop:
+                self._get_from_queue_into_list(queue, results)
+            except Exception as e:
+                self.logger.error("Error during processing results: {}".format(e), exc_info=True)
+                kill_launches(process_pool)
+        wait_for_launches(process_pool)
+        self._get_from_queue_into_list(queue, results)
+        self.logger.debug("Processing results")
+
+        coverage_resources = {TAG_CPU_TIME: 0.0, TAG_WALL_TIME: 0.0, TAG_MEMORY_USAGE: 0}
+        mea_resources = {TAG_CPU_TIME: 0.0, TAG_WALL_TIME: 0.0, TAG_MEMORY_USAGE: 0}
+        for result in results:
+            coverage_resources[TAG_MEMORY_USAGE] = max(coverage_resources[TAG_MEMORY_USAGE],
+                                                       result.coverage_resources.get(TAG_MEMORY_USAGE, 0))
+            mea_resources[TAG_MEMORY_USAGE] = max(mea_resources[TAG_MEMORY_USAGE],
+                                                  result.mea_resources.get(TAG_MEMORY_USAGE, 0))
+            coverage_resources[TAG_CPU_TIME] += result.coverage_resources.get(TAG_CPU_TIME, 0.0)
+            coverage_resources[TAG_WALL_TIME] += result.coverage_resources.get(TAG_WALL_TIME, 0.0)
+            mea_resources[TAG_CPU_TIME] += result.mea_resources.get(TAG_CPU_TIME, 0.0)
+            mea_resources[TAG_WALL_TIME] += result.mea_resources.get(TAG_WALL_TIME, 0.0)
+        report_launches, result_archive, report_components, _, report_resources = self._get_results_names()
+        self._print_launches_report(report_launches, report_resources, results)
+        overall_cpu_time = time.process_time() - self.start_cpu_time
+        overall_wall_time = time.time() - self.start_time
+        self.logger.info("Preparing report on components into file: '{}'".format(report_components))
+        with open(report_components, "w") as f_report:
+            f_report.write("Name;CPU;Wall;Memory\n")  # Header.
+            f_report.write("{0};{1};{2};{3}\n".format(COMPONENT_BENCHMARK_LAUNCHER,
+                                                      round(overall_cpu_time, ROUND_DIGITS),
+                                                      round(overall_wall_time, ROUND_DIGITS),
+                                                      int(resource.getrusage(
+                                                          resource.RUSAGE_SELF).ru_maxrss) * 1024))
+            f_report.write(
+                "{0};{1};{2};{3}\n".format(COMPONENT_MEA, round(mea_resources[TAG_CPU_TIME], ROUND_DIGITS),
+                                           round(mea_resources[TAG_WALL_TIME], ROUND_DIGITS),
+                                           mea_resources[TAG_MEMORY_USAGE]))
+            f_report.write("{0};{1};{2};{3}\n".format(COMPONENT_COVERAGE,
+                                                      round(coverage_resources[TAG_CPU_TIME], ROUND_DIGITS),
+                                                      round(coverage_resources[TAG_WALL_TIME], ROUND_DIGITS),
+                                                      coverage_resources[TAG_MEMORY_USAGE]))
+
+        self.logger.info("Exporting results into archive: '{}'".format(result_archive))
+        upload_process = multiprocessing.Process(target=self.__upload, name="upload",
+                                                 args=(report_launches, report_resources, report_components,
+                                                       result_archive, {}))
+        upload_process.start()
+        upload_process.join()
+        if is_upload:
+            self._upload_results(uploader_config, result_archive)
+        if not self.debug:
+            shutil.rmtree(self.process_dir, ignore_errors=True)
+
     def process_results(self):
         xml_files = glob.glob(os.path.join(self.output_dir, '*results.*.xml'))
         uploader_config = self.config.get(UPLOADER, {})
         is_upload = uploader_config and uploader_config.get(TAG_UPLOADER_UPLOAD_RESULTS, False)
+        if not xml_files and self.process_witnesses_only:
+            self.__process_witnesses_only(uploader_config, is_upload)
+
         for file in xml_files:
             self.process_dir = os.path.abspath(tempfile.mkdtemp(dir=self.work_dir))
             result_archive = self.__parse_result_file(file, self.output_dir)

@@ -256,6 +256,8 @@ class VerificationResults:
                 if witness_type == WITNESS_VIOLATION:
                     # Change global verdict to Unsafe, if there is at least one correct violation witness.
                     self.verdict = VERDICT_UNSAFE
+                if witness_type == WITNESS_CORRECTNESS:
+                    self.verdict = VERDICT_SAFE
             else:
                 # Trace is bad, most likely verifier was killed during its printing, so just delete it.
                 if self.verdict == VERDICT_UNSAFE and witness_type == WITNESS_VIOLATION:
