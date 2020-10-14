@@ -356,16 +356,16 @@ class BenchmarkLauncher(Launcher):
         xml_files = glob.glob(os.path.join(self.output_dir, '*results.*.xml'))
         uploader_config = self.config.get(UPLOADER, {})
         is_upload = uploader_config and uploader_config.get(TAG_UPLOADER_UPLOAD_RESULTS, False)
-        if not xml_files and self.process_witnesses_only:
+        if self.process_witnesses_only:
             self.__process_witnesses_only(uploader_config, is_upload)
-
-        for file in xml_files:
-            self.process_dir = os.path.abspath(tempfile.mkdtemp(dir=self.work_dir))
-            result_archive = self.__parse_result_file(file, self.output_dir)
-            if is_upload and result_archive:
-                self._upload_results(uploader_config, result_archive)
-            if not self.debug:
-                shutil.rmtree(self.process_dir, ignore_errors=True)
+        else:
+            for file in xml_files:
+                self.process_dir = os.path.abspath(tempfile.mkdtemp(dir=self.work_dir))
+                result_archive = self.__parse_result_file(file, self.output_dir)
+                if is_upload and result_archive:
+                    self._upload_results(uploader_config, result_archive)
+                if not self.debug:
+                    shutil.rmtree(self.process_dir, ignore_errors=True)
         if not self.debug:
             clear_symlink(self.tasks_dir)
             for task_dir_in in glob.glob(os.path.join(self.tasks_dir, "*")):
