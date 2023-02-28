@@ -176,12 +176,16 @@ class MainGenerator(Component):
         # Apply sed commands for the whole subsystem.
         for regexp in self.metadata.get(TAG_SED_COMMANDS, []):
             for source_dir in source_dirs:
-                subsystem_dir = os.path.join(source_dir, self.metadata.get(TAG_SUBSYSTEM, "."))
-                if os.path.isdir(subsystem_dir):
-                    for root, dirs, files_in in os.walk(subsystem_dir):
-                        for name in files_in:
-                            file = os.path.join(root, name)
-                            self.exec_sed_cmd(regexp, file)
+                subsystems = self.metadata.get(TAG_SUBSYSTEM, ".")
+                if type(subsystems) == str:
+                    subsystems = [subsystems]
+                for subsystem in subsystems:
+                    subsystem_dir = os.path.join(source_dir, subsystem)
+                    if os.path.isdir(subsystem_dir):
+                        for root, dirs, files_in in os.walk(subsystem_dir):
+                            for name in files_in:
+                                file = os.path.join(root, name)
+                                self.exec_sed_cmd(regexp, file)
 
     def generate_main(self, strategy: str, output_file: str) -> list:
         """

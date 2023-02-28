@@ -200,8 +200,16 @@ class Preparator(Component):
         if file in self.build_commands:
             self.build_commands[file][0] = True
         if self.subdirectory_pattern:
-            if not re.search(self.subdirectory_pattern, file):
-                # Exclude files for none-specified subdir.
+            if type(self.subdirectory_pattern) is list:
+                is_ignore_file = True
+                for subsystem in self.subdirectory_pattern:
+                    if re.search(subsystem, file):
+                        is_ignore_file = False
+                if is_ignore_file:
+                        self.subsystem_filter_build_commands += 1
+                        return True
+            elif not re.search(self.subdirectory_pattern, file):
+                # Exclude files for none-specified subdir
                 self.subsystem_filter_build_commands += 1
                 return True
         if file in self.build_commands:
