@@ -427,7 +427,7 @@ class Exporter(Component):
                                     ])
                                 ]
                                 # TODO: how to determine relevancy there?
-                                if rule not in [RULE_RACES] + DEADLOCK_SUB_PROPERTIES:
+                                if rule not in [RULE_RACES, RULE_SIGNALS] + DEADLOCK_SUB_PROPERTIES:
                                     attrs.append(self.__format_attr("Relevancy", relevancy))
                             else:
                                 if rule == RULE_TERMINATION and verdict == VERDICT_UNSAFE:

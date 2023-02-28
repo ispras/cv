@@ -177,7 +177,7 @@ class FullLauncher(Launcher):
 
         # Since output directory is hardcoded in races.
         cur_cwd = os.getcwd()
-        if launch.mode in [RACES, DEADLOCK]:
+        if launch.mode in [RACES, DEADLOCK, SIGNALS]:
             shutil.move(benchmark_name, launch_directory)
             benchmark_name = os.path.basename(benchmark_name)
             os.chdir(launch_directory)
@@ -188,7 +188,7 @@ class FullLauncher(Launcher):
                               shell=True, stderr=self.output_desc, stdout=self.output_desc)
 
         # Make output directory similar to the other rules.
-        if launch.mode in [RACES, DEADLOCK]:
+        if launch.mode in [RACES, DEADLOCK, SIGNALS]:
             if os.path.exists(HARDCODED_RACES_OUTPUT_DIR):
                 for file in glob.glob("{}/witness*".format(HARDCODED_RACES_OUTPUT_DIR)):
                     shutil.move(file, launch_directory)
@@ -210,7 +210,7 @@ class FullLauncher(Launcher):
             mode = MEMSAFETY
         elif rule == RULE_RACES:
             mode = RACES
-        elif rule in DEADLOCK_SUB_PROPERTIES:
+        elif rule in DEADLOCK_SUB_PROPERTIES or rule == RULE_SIGNALS:
             mode = rule
         elif rule == RULE_TERMINATION:
             mode = TERMINATION
@@ -224,7 +224,7 @@ class FullLauncher(Launcher):
             mode = COVERAGE
         elif rule == RULE_MEMSAFETY:
             mode = MEMSAFETY
-        elif rule == RULE_RACES:
+        elif rule == RULE_RACES or rule == RULE_SIGNALS:
             mode = RACES
         elif rule == RULE_DEADLOCK:
             mode = DEADLOCK
@@ -713,11 +713,11 @@ class FullLauncher(Launcher):
                 self.logger.debug("Adding auxiliary rule 'cov' to find coverage")
                 is_other = False
                 for rule in rules:
-                    if rule not in [RULE_RACES, RULE_DEADLOCK]:
+                    if rule not in [RULE_RACES, RULE_DEADLOCK, RULE_SIGNALS]:
                         is_other = True
                 if is_other:
                     rules.append(RULE_COV_AUX_OTHER)
-                if RULE_RACES in rules or RULE_DEADLOCK in rules:
+                if RULE_RACES in rules or RULE_SIGNALS in rules or RULE_DEADLOCK in rules:
                     rules.append(RULE_COV_AUX_RACES)
 
         rules = sorted(set(rules))
@@ -798,7 +798,7 @@ class FullLauncher(Launcher):
                         for rule_aux in DEADLOCK_SUB_PROPERTIES:
                             launches.append(VerificationTask(entry_desc, rule_aux, entrypoint, path_to_verifier,
                                                              cil_file))
-                    elif rule == RULE_RACES:
+                    elif rule == RULE_RACES or rule == RULE_SIGNALS:
                         launches.append(VerificationTask(entry_desc, rule, entrypoint, path_to_verifier, cil_file))
                     else:
                         # Either take only specified callers or all of them.

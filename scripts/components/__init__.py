@@ -27,6 +27,7 @@ UNREACHABILITY = "unreachability"
 MEMSAFETY = "memsafety"
 COVERAGE = "coverage"
 RACES = "races"
+SIGNALS = "sync:signals"
 DEADLOCK_AUX_DISPATCH_SPIN = "sync:deadlocks:dispatch:spin"
 DEADLOCK_AUX_DISPATCH_MUTEX = "sync:deadlocks:dispatch:mutex"
 DEADLOCK_AUX_CIRCULAR_MS = "sync:deadlocks:circular:mutex&spin"
@@ -51,7 +52,8 @@ DEFAULT_TOOL_PATH = {
         MEMSAFETY: "smg/scripts",
         COVERAGE: "unreach/scripts",
         RACES: "sync/scripts",
-        DEADLOCK: "sync/scripts"
+        DEADLOCK: "sync/scripts",
+        SIGNALS: "sync/scripts"
     },
     CIF: "cif/bin",
 }
@@ -60,11 +62,12 @@ DEFAULT_CPACHECKER_CLOUD = {
     MEMSAFETY: "smg",
     COVERAGE: "unreach",
     RACES: "sync",
+    SIGNALS: "sync",
     DEADLOCK_AUX_DISPATCH_MUTEX: "sync",
     DEADLOCK_AUX_DISPATCH_SPIN: "sync",
     DEADLOCK_AUX_CIRCULAR_MS: "sync",
 }
-VERIFIER_MODES = [UNREACHABILITY, MEMSAFETY, COVERAGE, RACES, TERMINATION] + DEADLOCK_SUB_PROPERTIES
+VERIFIER_MODES = [UNREACHABILITY, MEMSAFETY, COVERAGE, RACES, TERMINATION, SIGNALS] + DEADLOCK_SUB_PROPERTIES
 
 # Components.
 COMPONENT_MAIN_GENERATOR = "Generator"
@@ -80,6 +83,7 @@ COMPONENT_COVERAGE = "Coverage"
 # Preset rules
 RULE_COVERAGE = "cov"
 RULE_RACES = "sync:races"
+RULE_SIGNALS = "sync:signals"
 RULE_DEADLOCK = "sync:deadlocks"
 RULE_MEMSAFETY = "smg"
 RULE_TERMINATION = "termination"  # aux rule so far.

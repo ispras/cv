@@ -116,7 +116,7 @@ class MainGenerator(Component):
             strategy = PARTIAL_STRATEGY
         elif rule == RULE_MEMSAFETY:
             strategy = PARTIAL_STRATEGY
-        elif rule == RULE_RACES:
+        elif rule == RULE_RACES or rule == RULE_SIGNALS:
             strategy = THREADED_STRATEGY
         elif rule == RULE_DEADLOCK:
             strategy = THREADED_STRATEGY
