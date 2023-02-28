@@ -183,7 +183,7 @@ class FullLauncher(Launcher):
             os.chdir(launch_directory)
 
         # Verifier launch.
-        subprocess.check_call("benchexec --no-compress-results -o {0} {1} {2}".
+        subprocess.check_call("benchexec --no-compress-results --no-container -o {0} {1} {2}".
                               format(launch_directory, benchmark_name, self.benchmark_args),
                               shell=True, stderr=self.output_desc, stdout=self.output_desc)
 
