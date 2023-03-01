@@ -46,7 +46,6 @@ cif_dir=${install_dir}/${cif}
 plugin_dir="plugin"
 deployment_dir="deployment"
 
-cpa_arch="build.tar.bz2"
 compiled_cif_arch="cif.xz"
 
 # Repositories
@@ -55,16 +54,11 @@ clade_repo="https://github.com/mutilin/clade.git"
 benchexec_repo="https://github.com/sosy-lab/benchexec.git"
 cif_repo="https://forge.ispras.ru/git/cif.git"
 cif_compiled_link="https://github.com/17451k/cif/releases/download/2019-03-12/cif-20190312-linux-x64.tar.xz"
-cpa_trunk_repo="https://svn.sosy-lab.org/software/cpachecker/trunk"
-cpa_branches_repo="https://svn.sosy-lab.org/software/cpachecker/branches"
-cpachecker_repo="https://github.com/sosy-lab/cpachecker.git"
 
 # Aux constants.
 cvwi_branch=cv-v2.0
 benchexec_branch=1.16
 cif_revision=ca907524
-
-include $(root_dir)/cpa.config
 
 
 download-klever:
@@ -83,13 +77,8 @@ download-cif-compiled:
 	@rm -f ${compiled_cif_arch}
 	@cd ${install_dir}; wget ${cif_compiled_link} -O ${compiled_cif_arch}
 
-download-cpa := $(addprefix download-cpa-,$(cpa_modes))
-$(download-cpa):
-	@$(call download_cpa_git,$(patsubst download-cpa-%,%,$@))
-	
-download: download-klever download-benchexec download-cif $(download-cpa)
+download: download-klever download-benchexec download-cif
 	@echo "*** Downloading has been completed ***"
-
 
 build-klever: download-klever
 	@echo "*** Building ${klever} ***"
@@ -119,30 +108,20 @@ build-astraver-cil:
 	@rm -rf ${astraver_cil_dir}
 	@cd ${install_dir}; tar -xf astraver-cil.xz
 
-build-cpa := $(addprefix build-cpa-,$(cpa_modes))
-$(build-cpa):
-	@make download-cpa-$(patsubst build-cpa-%,%,$@)
-	@$(call build_cpa,$(patsubst build-cpa-%,%,$@))
-
-build: build-klever build-benchexec build-cif build-cil $(build-cpa)
+build: build-klever build-benchexec build-cil build-cpa
 	@echo "*** Building has been completed ***"
 
-clean-cpa := $(addprefix clean-cpa-,$(cpa_modes))
-$(clean-cpa):
-	@$(call clean_cpa,$(patsubst clean-cpa-%,%,$@))
+clean-cpa:
+	@./build_cpa.py -c -m custom
 
-rebuild-cpa := $(addprefix rebuild-cpa-,$(cpa_modes))
-$(rebuild-cpa):
-	@make clean-cpa-$(patsubst rebuild-cpa-%,%,$@)
-	@make build-cpa-$(patsubst rebuild-cpa-%,%,$@)
+custom-build-cpa:
+	@./build_cpa.py -m custom
 
-rebuild-cpa: $(rebuild-cpa)
-build-cpa: $(build-cpa)
+build-cpa:
+	@./build_cpa.py
 
-install-cpa := $(addprefix install-cpa-,$(cpa_modes))
-$(install-cpa):
-	@make build-cpa-$(patsubst install-cpa-%,%,$@)
-	@$(call install_cpa,$(patsubst install-cpa-%,%,$@))
+install-cpa:
+	@./build_cpa.py
 
 check-deploy-dir:
 	@$(call check_dir,${DEPLOY_DIR},DEPLOY_DIR)
@@ -249,7 +228,7 @@ install-benchmark-visualizer: install-witness-visualizer
 	@cp -f ${root_dir}/scripts/${bv_script} ${DEPLOY_DIR}/scripts/
 	@cp ${klever_dir}/core/core/*.py ${DEPLOY_DIR}/${klever_dir}/core/core/
 
-install: check-deploy-dir install-klever install-benchexec install-cil $(install-cpa) install-scripts
+install: check-deploy-dir install-klever install-benchexec install-cil install-cpa install-scripts
 	@$(call verify_installation,${DEPLOY_DIR})
 	@echo "*** Successfully installed into the directory ${DEPLOY_DIR}' ***"
 
@@ -257,13 +236,13 @@ install-with-cloud: check-deploy-dir install-klever install-benchexec install-ci
 	@$(call verify_installation,${DEPLOY_DIR})
 	@echo "*** Successfully installed into the directory ${DEPLOY_DIR}' with access to verification cloud ***"
 
-install-cpa-with-cloud-links: | check-deploy-dir $(install-cpa)
+install-cpa-with-cloud-links: | check-deploy-dir install-cpa
 	@$(call check_dir,${VCLOUD_DIR},"VCLOUD_DIR","is_exist")
-	@for cpa in ${cpa_modes}; do \
-		cd "${DEPLOY_DIR}/${install_dir}/$${cpa}" ; \
-		mkdir -p lib/java-benchmark/ ; \
-		cp ${VCLOUD_DIR}/vcloud.jar lib/java-benchmark/ ; \
-	done
+#	@for cpa in ${cpa_modes}; do \
+#		cd "${DEPLOY_DIR}/${install_dir}/$${cpa}" ; \
+#		mkdir -p lib/java-benchmark/ ; \
+#		cp ${VCLOUD_DIR}/vcloud.jar lib/java-benchmark/ ; \
+#	done
 	@echo "*** Successfully created links for verification cloud in CPAchecker installation directories ***"
 
 install-plugin:
@@ -304,55 +283,6 @@ define download_tool
 	cd $2; git fetch
 endef
 
-# $1 - directory name, $(word 1,$($1)) - branch, $(word 2,$($1)) - revision
-define download_cpa_svn
-	if [ -d "${install_dir}/$1" ]; then \
-		echo "*** CPAchecker mode $1 is already downloaded in directory ${install_dir}/$1 ***" ; \
-	else \
-		echo "*** Downloading CPAchecker branch $1 into directory ${install_dir}/$1 ***" ; \
-		if [ $(word 1,$($1)) != 'trunk' ]; then \
-			svn co ${cpa_branches_repo}/$(word 1,$($1)) ${install_dir}/$1 || \
-				{ echo "ERROR: Cannot download CPAchecker from repository ${cpa_branches_repo}/$(word 1,$($1))"; exit 1; } \
-		else \
-			svn co ${cpa_trunk_repo} ${install_dir}/$1 || \
-				{ echo "ERROR: Cannot download CPAchecker from repository ${cpa_trunk_repo}"; exit 1; } \
-		fi ; \
-	fi
-	cd ${install_dir}/$1 && svn cleanup && svn up -r $(word 2,$($1)) && svn revert -R . ; \
-	for patch in ../../patches/tools/cpachecker/$1.patch ../../plugin/*/patches/tools/cpachecker/$1.patch; do  \
-		if [ -e "$${patch}" ]; then \
-			echo "Applying patch '$${patch}'" ; \
-			svn patch "$${patch}";\
-		fi ; \
-	done
-endef
-
-# $1 - branch
-define build_cpa
-	if [ -e "${install_dir}/$1/${cpa_arch}" ]; then \
-		echo "*** CPAchecker branch $1 is already build in file ${install_dir}/$1/${cpa_arch} ***" ; \
-	else \
-		echo "*** Building CPAchecker branch $1 ***" ; \
-		cd ${install_dir}/$1 && flock /tmp/.cpa_build_lock -c ant && ant tar && mv CPAchecker-*.tar.bz2 ${cpa_arch} ; \
-	fi
-endef
-
-# $1 - branch
-define clean_cpa
-	echo "*** Cleaning CPAchecker branch $1 ***"
-	cd ${install_dir}/$1 && git reset --hard && git clean -f
-endef
-
-# $1 - branch
-define install_cpa
-	echo "*** Installing CPAchecker branch $1 ***"
-	cd ${install_dir}/$1; \
-	tar -xf ${cpa_arch} ; \
-	mkdir -p ${DEPLOY_DIR}/${install_dir} ; \
-	rm -rf ${DEPLOY_DIR}/${install_dir}/$1 ; \
-	mv CPAchecker-*/ ${DEPLOY_DIR}/${install_dir}/$1
-endef
-
 # $1 - absolute directory path, $2 - env variable name, $3 - aux options
 define check_dir
 	if [ -n "$1" ]; then \
@@ -380,7 +310,7 @@ endef
 # $1 - deploy directory
 define verify_installation
 	echo "Verifying installation in directory '$1'"
-	for tool in ${cpa_modes} ${benchexec} ${klever}; do \
+	for tool in ${benchexec} ${klever}; do \
 		if [ -d "${1}/${install_dir}/$${tool}" ]; then \
 			echo "Tool '$${tool}' is installed" ; \
 		else \
@@ -394,23 +324,4 @@ endef
 define shrink_installation
 	echo "Removing aux files in directory '$1'"
 	@cd ${1} && rm -rf presets/ .git bridge/reports/test_files/
-endef
-
-# $1 - directory name, $(word 1,$($1)) - branch, $(word 2,$($1)) - revision
-define download_cpa_git
-	if [ -d "${install_dir}/$1" ]; then \
-		echo "*** CPAchecker mode $1 is already downloaded in directory ${install_dir}/$1 ***" ; \
-	else \
-		echo "*** Downloading CPAchecker branch $1 into directory ${install_dir}/$1 ***" ; \
-		git clone -b $(word 1,$($1)) --single-branch ${cpachecker_repo} ${install_dir}/$1 || \
-			{ echo "ERROR: Cannot download CPAchecker repository ${cpachecker_repo}"; exit 1; } ; \
-	fi
-	cd ${install_dir}/$1 && git reset --hard && git clean -f && git checkout `git log --grep='$(word 1,$($1))@$(word 2,$($1)) ' --oneline  --pretty=format:"%h"` || \
-		{ echo "ERROR: Cannot checkout to revision $(word 2,$($1))" ; exit 1; } ; \
-	for patch in ../../patches/tools/cpachecker/$1.patch ../../plugin/*/patches/tools/cpachecker/$1.patch; do  \
-		if [ -e "$${patch}" ]; then \
-			echo "Applying patch '$${patch}'" ; \
-			git apply --ignore-space-change --ignore-whitespace "$${patch}"; \
-		fi ; \
-	done
 endef
