@@ -22,7 +22,6 @@ cpu_cores=$(shell nproc)
 
 # Additional tools.
 klever="klever"
-clade="clade"
 cil="cil"
 astraver_cil="astraver-cil"
 benchexec="benchexec"
@@ -50,14 +49,13 @@ compiled_cif_arch="cif.xz"
 
 # Repositories
 klever_repo="https://github.com/mutilin/klever.git"
-clade_repo="https://github.com/mutilin/clade.git"
 benchexec_repo="https://github.com/sosy-lab/benchexec.git"
 cif_repo="https://forge.ispras.ru/git/cif.git"
 cif_compiled_link="https://github.com/17451k/cif/releases/download/2019-03-12/cif-20190312-linux-x64.tar.xz"
 
 # Aux constants.
 cvwi_branch=cv-v2.0
-benchexec_branch=1.16
+benchexec_branch=cgroupsv2
 cif_revision=ca907524
 
 
@@ -77,7 +75,7 @@ download-cif-compiled:
 	@rm -f ${compiled_cif_arch}
 	@cd ${install_dir}; wget ${cif_compiled_link} -O ${compiled_cif_arch}
 
-download: download-klever download-benchexec download-cif
+download: download-klever download-benchexec download-cif download-cpa
 	@echo "*** Downloading has been completed ***"
 
 build-klever: download-klever
@@ -112,16 +110,19 @@ build: build-klever build-benchexec build-cil build-cpa
 	@echo "*** Building has been completed ***"
 
 clean-cpa:
-	@./build_cpa.py -c -m custom
+	@./build_cpa.py -m clean
 
 custom-build-cpa:
 	@./build_cpa.py -m custom
 
 build-cpa:
-	@./build_cpa.py
+	@./build_cpa.py -m build
+
+download-cpa:
+	@./build_cpa.py -m download
 
 install-cpa:
-	@./build_cpa.py
+	@./build_cpa.py -m install -i ${DEPLOY_DIR}
 
 check-deploy-dir:
 	@$(call check_dir,${DEPLOY_DIR},DEPLOY_DIR)
@@ -142,12 +143,6 @@ deploy-klever-cv: build-klever check-deploy-dir
 	@rm -rf ${DEPLOY_DIR}
 	@cp -r ${klever_dir} ${DEPLOY_DIR}
 	@$(call shrink_installation,${DEPLOY_DIR})
-
-install-clade: check-deploy-dir
-	@echo "*** Installing ${clade} into directory ${DEPLOY_DIR} ***"
-	@$(call download_tool,${clade},${DEPLOY_DIR},${clade_repo})
-	@rm -f ~/.local/lib/python*/site-packages/clade.egg-link
-	@cd ${DEPLOY_DIR}; git checkout master; sudo python3 -m pip install -e .
 
 install-benchexec: build-benchexec check-deploy-dir
 	@echo "*** Installing ${benchexec} ***"
@@ -228,7 +223,7 @@ install-benchmark-visualizer: install-witness-visualizer
 	@cp -f ${root_dir}/scripts/${bv_script} ${DEPLOY_DIR}/scripts/
 	@cp ${klever_dir}/core/core/*.py ${DEPLOY_DIR}/${klever_dir}/core/core/
 
-install: check-deploy-dir install-klever install-benchexec install-cil install-cpa install-scripts
+install: check-deploy-dir install-klever install-benchexec install-cil install-cpa install-scripts install-cpa
 	@$(call verify_installation,${DEPLOY_DIR})
 	@echo "*** Successfully installed into the directory ${DEPLOY_DIR}' ***"
 

@@ -29,9 +29,16 @@ CV_DIR = os.path.dirname(os.path.realpath(sys.argv[0]))
 PLUGINS_DIR = os.path.join(CV_DIR, "plugins")
 CPA_CONFIG_FILE = "cpa.config"
 INSTALL_DIR = os.path.join(CV_DIR, "tools")
+DEPLOY_DIR = "tools"
 MODE_INSTALL = "install"  # default mode - download if needed and build
 MODE_BUILD_CUSTOM = "custom"  # custom build with uncommited changes
-SCRIPT_MODES = [MODE_INSTALL, MODE_BUILD_CUSTOM]
+MODE_DOWNLOAD = "download"
+MODE_BUILD = "build"
+MODE_CLEAN = "clean"
+SCRIPT_MODES = [MODE_INSTALL, MODE_BUILD_CUSTOM, MODE_DOWNLOAD, MODE_BUILD, MODE_CLEAN]
+CPA_WILDCARD_ARCH = "CPAchecker-*.tar.bz2"
+CPA_WILDCARD_DIR = "CPAchecker-*/"
+CPA_ARCH = "build.tar.bz2"
 
 cpa_configs = {}
 is_debug = False
@@ -54,7 +61,8 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--mode", default=MODE_INSTALL, choices=SCRIPT_MODES, type=str,
                         help="script mode: install - download if needed and build, "
-                             "custom - build with uncommited changes")
+                             "custom - build with uncommited changes, download, build, clean")
+    parser.add_argument("-i", "--install-dir", type=str, dest="install_dir", help="path to install directory")
     parser.add_argument("-d", "--debug", action='store_true')
     parser.add_argument("-c", "--clear", help="clear existed directory", action='store_true')
     parsed_options = parser.parse_args()
@@ -77,7 +85,9 @@ def command_caller(cmd: str, error_msg: str, cwd=CV_DIR):
         subprocess.run(cmd, shell=True, cwd=cwd, capture_output=(not is_debug), check=True)
     except subprocess.CalledProcessError as e:
         cmd = str(e.cmd)
-        output = e.output.decode("utf-8", errors='ignore').rstrip()
+        output = ""
+        if e.output:
+            output = e.output.decode("utf-8", errors='ignore').rstrip()
         sys.exit("{}:failed command '{}' error '{}'".format(error_msg, cmd, output))
 
 
@@ -99,9 +109,34 @@ def delete():
 def build():
     for mode, vals in cpa_configs.items():
         if __is_installed(mode):
-            command_caller("ant build && ant jar", "Cannot build CPAchecker",
+            command_caller("ant build dist-unix-tar", "Cannot build CPAchecker",
                            cwd=__get_tool_dir_name(mode))
+            try:
+                cpa_arch_old = glob.glob(os.path.join(__get_tool_dir_name(mode), CPA_WILDCARD_ARCH))[0]
+                cpa_arch_new = os.path.join(__get_tool_dir_name(mode), CPA_ARCH)
+                os.rename(cpa_arch_old, cpa_arch_new)
+            except ValueError:
+                sys.exit("Cannot find CPAchecker build arch for mode {}".format(mode))
             print("Tool {} has successfully been built".format(mode))
+
+
+def deploy(deploy_dir: str):
+    if not deploy_dir or not os.path.exists(deploy_dir):
+        sys.exit("Deploy directory {} does not exist".format(deploy_dir))
+    for mode, vals in cpa_configs.items():
+        deploy_dir_full = os.path.join(deploy_dir, DEPLOY_DIR, mode)
+        tools_dir_full = os.path.join(deploy_dir, DEPLOY_DIR)
+        if __is_installed(mode):
+            cpa_arch = os.path.join(__get_tool_dir_name(mode), CPA_ARCH)
+            command_caller("tar -xf {}".format(cpa_arch), "Cannot extract build arch", cwd=__get_tool_dir_name(mode))
+            os.makedirs(tools_dir_full, exist_ok=True)
+            command_caller("rm -rf {}".format(deploy_dir_full), "Cannot clear old deploy directory")
+            try:
+                cpa_dir_old = glob.glob(os.path.join(__get_tool_dir_name(mode), CPA_WILDCARD_DIR))[0]
+                shutil.move(cpa_dir_old, deploy_dir_full)
+            except ValueError:
+                sys.exit("Cannot find CPAchecker build arch for mode {}".format(mode))
+        print("Tool {} has successfully been deployed into {}".format(mode, deploy_dir_full))
 
 
 def download():
@@ -131,11 +166,20 @@ if __name__ == "__main__":
     is_debug = options.debug
     is_clear = options.clear
     script_mode = options.mode
-    if is_clear:
-        delete()
+    install_dir = options.install_dir
     if script_mode == MODE_INSTALL:
-        download()
+        if not install_dir or not os.path.exists(install_dir):
+            sys.exit("Deploy directory was not specified")
+    if is_clear or script_mode == MODE_CLEAN:
+        delete()
+    if script_mode == MODE_CLEAN:
+        exit(0)
+    download()
+    if script_mode == MODE_DOWNLOAD:
+        exit(0)
+    if not script_mode == MODE_BUILD_CUSTOM:
         update()
-        build()
-    elif script_mode == MODE_BUILD_CUSTOM:
-        build()
+    build()
+    if script_mode == MODE_BUILD:
+        exit(0)
+    deploy(install_dir)
