@@ -403,7 +403,8 @@ class FullLauncher(Launcher):
         benchmark_cur = ElementTree.Element("benchmark", {
             "tool": CPACHECKER,
             "timelimit": str(time_limit),
-            "memlimit": str(memory_limit) + "GB",
+            # TODO: memlimit does not work with Ubuntu 22
+            # "memlimit": str(memory_limit) + "GB",
             "cpuCores": str(core_limit)
         })
         ElementTree.SubElement(benchmark_cur, "resultfiles").text = "**/*"
@@ -970,8 +971,9 @@ class FullLauncher(Launcher):
             # Specify resource limitations.
             benchmark[mode] = ElementTree.Element("benchmark", {
                 "tool": CPACHECKER,
-                "timelimit": str(time_limit),
-                "memlimit": str(memory_limit) + "GB",
+                "timelimit": str(time_limit)
+                # TODO: memlimit does not work with Ubunut 22
+                # "memlimit": str(memory_limit) + "GB",
                 # TODO: option 'cpuCores' does not work in BenchExec
             })
             rundefinition = ElementTree.SubElement(benchmark[mode], "rundefinition")
