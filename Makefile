@@ -55,8 +55,8 @@ cif_compiled_link="https://github.com/17451k/cif/releases/download/2019-03-12/ci
 
 # Aux constants.
 cvwi_branch=cv-v2.0
-benchexec_branch=cgroupsv2
-cif_revision=ca907524
+benchexec_branch=3.16
+cif_revision=ca907524  # TODO: fix versions
 
 
 download-klever:
