@@ -75,7 +75,7 @@ download-cif-compiled:
 	@rm -f ${compiled_cif_arch}
 	@cd ${install_dir}; wget ${cif_compiled_link} -O ${compiled_cif_arch}
 
-download: download-klever download-benchexec download-cif download-cpa
+download: download-klever download-benchexec download-cpa
 	@echo "*** Downloading has been completed ***"
 
 build-klever: download-klever
