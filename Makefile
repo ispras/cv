@@ -247,8 +247,8 @@ install-plugin:
 	@if [ -d "${plugin_dir}/${PLUGIN_ID}" ]; then \
 		echo "*** Removing old plugin installation '${plugin_dir}/${PLUGIN_ID}' ***" ; \
 	fi
-	@mkdir -p ${plugin_dir}/${PLUGIN_ID}
-	@cp -r ${PLUGIN_DIR}/* ${plugin_dir}/${PLUGIN_ID}
+	@mkdir -p ${plugin_dir}
+	@ln -s ${PLUGIN_DIR} ${plugin_dir}/${PLUGIN_ID}
 
 install-control-groups-daemon:
 	@sudo cp ${deployment_dir}/cgroups-boot /etc/init.d/
