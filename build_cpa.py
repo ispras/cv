@@ -26,9 +26,10 @@ import subprocess
 import sys
 
 CV_DIR = os.path.dirname(os.path.realpath(sys.argv[0]))
-PLUGINS_DIR = os.path.join(CV_DIR, "plugins")
+PLUGINS_DIR = os.path.join(CV_DIR, "plugin")
 CPA_CONFIG_FILE = "cpa.config"
 INSTALL_DIR = os.path.join(CV_DIR, "tools")
+PATCH_DIR = os.path.join("patches", "tools", "cpachecker")
 DEPLOY_DIR = "tools"
 MODE_INSTALL = "install"  # default mode - download if needed and build
 MODE_BUILD_CUSTOM = "custom"  # custom build with uncommited changes
@@ -80,15 +81,20 @@ def parse_args():
     return parsed_options
 
 
-def command_caller(cmd: str, error_msg: str, cwd=CV_DIR):
+def command_caller(cmd: str, error_msg: str, cwd=CV_DIR, is_check=True):
     try:
         subprocess.run(cmd, shell=True, cwd=cwd, capture_output=(not is_debug), check=True)
     except subprocess.CalledProcessError as e:
         cmd = str(e.cmd)
         output = ""
+        error_str = "{}: failed command '{}'".format(error_msg, cmd)
         if e.output:
             output = e.output.decode("utf-8", errors='ignore').rstrip()
-        sys.exit("{}:failed command '{}' error '{}'".format(error_msg, cmd, output))
+            error_str = "{}, error: {}".format(error_str, output)
+        if is_check:
+            sys.exit(error_str)
+        else:
+            print(error_str)
 
 
 def __get_tool_dir_name(mode: str) -> str:
@@ -153,11 +159,23 @@ def download():
 def update():
     for mode, vals in cpa_configs.items():
         (repo, branch, commit) = vals
+
+        command_caller("git reset --hard", "Cannot reset branch", cwd=__get_tool_dir_name(mode))
+        command_caller("git clean -f", "Cannot clean repository", cwd=__get_tool_dir_name(mode))
         command_caller("git fetch origin", "Cannot fetch origin", cwd=__get_tool_dir_name(mode))
         command_caller("git checkout {}".format(branch), "Cannot switch branch", cwd=__get_tool_dir_name(mode))
         if commit:
             command_caller("git checkout {}".format(commit), "Cannot checkout commit",
                            cwd=__get_tool_dir_name(mode))
+        patches = [os.path.join(CV_DIR, PATCH_DIR, "{}.patch".format(mode))] + \
+                  glob.glob(os.path.join(PLUGINS_DIR, "*", PATCH_DIR, "{}.patch".format(mode)))
+        for patch in patches:
+            if not os.path.exists(patch):
+                print("Patch {} does not exist".format(patch))
+                continue
+            print("Applying patch {} for tool {}".format(patch, mode))
+            command_caller("git apply --ignore-space-change --ignore-whitespace {}".format(patch),
+                           "Cannot apply patch", cwd=__get_tool_dir_name(mode), is_check=False)
         print("Tool {} has successfully been updated".format(mode))
 
 
