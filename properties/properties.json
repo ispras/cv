@@ -1,0 +1,58 @@
+{
+  "smg":{
+    "mode": "unreach",
+    "specification automaton": "memsafety.spc",
+    "options": {
+      "-smg-ldv-mea": [],
+      "-setprop": [
+        "cpa.smg.guessSize = 3000",
+        "cpa.arg.witness.handleTMPVariableAsEpsilonForWitness = false",
+        "cpa.arg.witness.removeInsufficientEdges = false",
+        "counterexample.export.graphml=",
+        "counterexample.export.extendedWitnessFile=witness.%d.graphml",
+        "counterexample.export.exportExtendedWitness=true"
+      ]
+    },
+    "main generation strategy": "partial",
+    "coverage strategy": "partial",
+    "model files": ""
+  },
+  "common": {
+    "mode": "unreach",
+    "options": {
+      "-skipRecursion": [],
+      "-stack": ["10m"],
+      "-setprop": [
+        "parser.readLineDirectives=true",
+        "output.disable=true",
+        "cpa.predicate.abortOnLargeArrays=false",
+        "cpa.arg.proofWitness=witness.correctness.graphml",
+        "cpa.arg.export=true",
+        "cpa.arg.compressWitness=false",
+        "counterexample.export.compressWitness=false",
+        "counterexample.export.file=",
+        "counterexample.export.enabled=true",
+        "counterexample.export.graphml=witness.%d.graphml",
+        "coverage.enabled=true",
+        "coverage.file=coverage.info",
+        "cpa.arg.witness.exportSourcecode=true"
+      ]
+    }
+  },
+  "coverage": {
+    "mode": "unreach",
+    "options": {
+      "-ldv-bam": []
+    },
+    "main generation strategy": "partial",
+    "coverage strategy": "partial"
+  },
+  "termination": {
+    "mode": "unreach",
+    "options": {
+      "-ldv-bam-optimized": []
+    },
+    "main generation strategy": "partial",
+    "coverage strategy": "partial"
+  }
+}

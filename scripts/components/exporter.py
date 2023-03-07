@@ -49,7 +49,7 @@ GLOBAL_COVERAGE_REAL = "real"
 
 
 class Exporter(Component):
-    def __init__(self, config, work_dir: str, install_dir: str, tool=DEFAULT_VERIFIER_TOOL):
+    def __init__(self, config, work_dir: str, install_dir: str, properties_desc={}, tool=DEFAULT_VERIFIER_TOOL):
         super(Exporter, self).__init__(COMPONENT_EXPORTER, config)
         self.work_dir = work_dir
         self.install_dir = install_dir
@@ -59,6 +59,7 @@ class Exporter(Component):
         self.lock = multiprocessing.Lock()
         self.global_coverage_element = dict()
         self.tool = tool
+        self.properties_desc = properties_desc
 
     def __format_attr(self, name: str, value, compare=False):
         if isinstance(value, int):
@@ -332,7 +333,7 @@ class Exporter(Component):
                         for i, add_res in enumerate(ADDITIONAL_RESOURCES):
                             verification_element['resources'][add_res] = res_data[i + 1]
                         id_counter += 1
-                        if rule == RULE_COVERAGE:
+                        if rule == PROPERTY_COVERAGE:
                             global_cov_files[GLOBAL_COVERAGE_MAX].add(work_dir)
                             self.__process_coverage(final_zip, verifier_counter, work_dir, coverage_sources, True)
                             if not if_coverage_sources_written:
@@ -360,7 +361,7 @@ class Exporter(Component):
                             unsafe_element['parent id'] = "/{}_{}".format(self.tool, verifier_counter)
                             unsafe_element['type'] = "unsafe"
                             found_all_traces = not incomplete_result
-                            if rule == RULE_RACES:
+                            if self.properties_desc.get(rule, {}).get(PROPERTY_IS_ALL_TRACES_FOUND, False):
                                 found_all_traces = True
                             attrs = [
                                 self.__format_attr("Traces", [
@@ -427,10 +428,12 @@ class Exporter(Component):
                                     ])
                                 ]
                                 # TODO: how to determine relevancy there?
-                                if rule not in [RULE_RACES, RULE_SIGNALS] + DEADLOCK_SUB_PROPERTIES:
+                                if self.properties_desc.get(rule, {}).get(PROPERTY_IS_RELEVANCE, True):
                                     attrs.append(self.__format_attr("Relevancy", relevancy))
                             else:
-                                if rule == RULE_TERMINATION and verdict == VERDICT_UNSAFE:
+                                specific_termination_reason = self.properties_desc.get(rule, {}).\
+                                    get(PROPERTY_TERMINATION_REASON, None)
+                                if specific_termination_reason and verdict == VERDICT_UNSAFE:
                                     text = "Program never terminates"
                                 else:
                                     text = termination_reason

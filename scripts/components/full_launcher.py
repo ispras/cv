@@ -43,8 +43,7 @@ class FullLauncher(Launcher):
             exit(1)
 
         self.entrypoints_dir = os.path.join(self.root_dir, DEFAULT_ENTRYPOINTS_DIR)
-        self.rules_dir = os.path.join(self.root_dir, DEFAULT_RULES_DIR)
-        self.options_dir = os.path.join(self.root_dir, VERIFIER_FILES_DIR, VERIFIER_OPTIONS_DIR)
+        self.models_dir = os.path.join(self.root_dir, DEFAULT_PROPERTIES_DIR, DEFAULT_MODELS_DIR)
         self.patches_dir = os.path.join(self.root_dir, DEFAULT_SOURCE_PATCHES_DIR)
         self.plugin_dir = os.path.join(self.root_dir, DEFAULT_PLUGIN_DIR)
 
@@ -53,6 +52,23 @@ class FullLauncher(Launcher):
 
         # Map of verifier modes to files with specific options.
         self.verifier_options = {}
+
+        self.__parse_property_desc_file()
+
+    def __parse_property_desc_file(self):
+        self.property_desc = {}
+        desc_files = [os.path.join(DEFAULT_PROPERTIES_DIR, DEFAULT_PROPERTIES_DESC_FILE)] + \
+                     glob.glob(os.path.join(DEFAULT_PLUGIN_DIR, "*", DEFAULT_PROPERTIES_DIR,
+                                            DEFAULT_PROPERTIES_DESC_FILE))
+        for file in desc_files:
+            self.logger.debug("Parsing property file {}".format(file))
+            with open(file, "r", errors='ignore') as fd:
+                content = json.load(fd)
+                for prop, desc in content.items():
+                    self.property_desc[prop] = desc
+                    if PROPERTY_MODE not in desc:
+                        sys.exit("Property file is incorrect: property {} is missing {} attribute".
+                                 format(prop, PROPERTY_MODE))
 
     def __perform_filtering(self, result: VerificationResults, queue: multiprocessing.Queue,
                             resource_queue_filter: multiprocessing.Queue):
@@ -175,9 +191,10 @@ class FullLauncher(Launcher):
         result = VerificationResults(launch, self.config)
         result.work_dir = launch_directory
 
-        # Since output directory is hardcoded in races.
+        # If output directory is hardcoded in a verifier, then we need to move it.
+        is_move_output_dir = self.property_desc.get(result.rule, {}).get(PROPERTY_IS_MOVE_OUTPUT, False)
         cur_cwd = os.getcwd()
-        if launch.mode in [RACES, DEADLOCK, SIGNALS]:
+        if is_move_output_dir:
             shutil.move(benchmark_name, launch_directory)
             benchmark_name = os.path.basename(benchmark_name)
             os.chdir(launch_directory)
@@ -187,8 +204,8 @@ class FullLauncher(Launcher):
                               format(launch_directory, benchmark_name, self.benchmark_args),
                               shell=True, stderr=self.output_desc, stdout=self.output_desc)
 
-        # Make output directory similar to the other rules.
-        if launch.mode in [RACES, DEADLOCK, SIGNALS]:
+        # Make output directory similar to the other properties.
+        if is_move_output_dir:
             if os.path.exists(HARDCODED_RACES_OUTPUT_DIR):
                 for file in glob.glob("{}/witness*".format(HARDCODED_RACES_OUTPUT_DIR)):
                     shutil.move(file, launch_directory)
@@ -202,35 +219,9 @@ class FullLauncher(Launcher):
 
         self.__process_single_launch_results(result, launch_directory, queue)
 
-    def __get_config_mode(self, rule):
-        # Determine, which configuration options should be used for this rule.
-        if rule == RULE_COVERAGE:
-            mode = COVERAGE
-        elif rule == RULE_MEMSAFETY:
-            mode = MEMSAFETY
-        elif rule == RULE_RACES:
-            mode = RACES
-        elif rule in DEADLOCK_SUB_PROPERTIES or rule == RULE_SIGNALS:
-            mode = rule
-        elif rule == RULE_TERMINATION:
-            mode = TERMINATION
-        else:
-            mode = UNREACHABILITY
-        return mode
-
-    def __get_tool(self, rule):
-        # Determine, which tool should be used for this rule.
-        if rule == RULE_COVERAGE:
-            mode = COVERAGE
-        elif rule == RULE_MEMSAFETY:
-            mode = MEMSAFETY
-        elif rule == RULE_RACES or rule == RULE_SIGNALS:
-            mode = RACES
-        elif rule == RULE_DEADLOCK:
-            mode = DEADLOCK
-        else:
-            mode = UNREACHABILITY
-        return mode
+    def __get_preset_property_info(self):
+        # Get from basic/plugin config
+        pass
 
     def __prepare_sources(self, sources_queue: multiprocessing.Queue):
         """
@@ -352,53 +343,69 @@ class FullLauncher(Launcher):
         })
         sys.exit(0)
 
-    def __get_verifier_options_file_name(self, file_name: str) -> str:
-        abs_path = self.__get_file_for_system(self.options_dir, re.sub("\W", "_", file_name) + JSON_EXTENSION)
-        if not os.path.exists(abs_path):
-            # Some rule may not be needed for for systems.
-            return ""
-        return abs_path
-
     def __resolve_property_file(self, rundefinition: ElementTree.Element, launch: VerificationTask) -> None:
         """
         Property file is resolved in the following way:
          - rule specific automaton (*.spc file);
-         - based on launch mode (only for unreachability and memsafety).
         Note, that any manually specified property files in options file will be added as well.
         :param rundefinition: definition of a single run in BenchExec format;
         :param launch: verification task to be checked;
         """
-        automaton_file = self.__get_file_for_system(os.path.join(self.root_dir, VERIFIER_FILES_DIR,
-                                                                 VERIFIER_PROPERTIES_DIR), launch.rule + ".spc")
+        # TODO: support several properties here
+        # Use specified automaton file.
+        automaton_file = self.property_desc[launch.rule].get(PROPERTY_SPECIFICATION_AUTOMATON, "")
         if automaton_file:
-            automaton_file = os.path.join(VERIFIER_PROPERTIES_DIR, os.path.basename(automaton_file))
+            automaton_file = self.__get_file_for_system(
+                os.path.join(self.root_dir, DEFAULT_PROPERTIES_DIR, DEFAULT_AUTOMATA_DIR), automaton_file)
+        else:
+            # Use default automaton file.
+            automaton_file = self.__get_file_for_system(
+                os.path.join(self.root_dir, DEFAULT_PROPERTIES_DIR, DEFAULT_AUTOMATA_DIR), launch.rule + ".spc")
+        if os.path.exists(automaton_file):
+            automaton_file = os.path.join(DEFAULT_AUTOMATA_DIR, os.path.basename(automaton_file))
             ElementTree.SubElement(rundefinition, "option", {"name": "-spec"}).text = automaton_file
-        else:
-            if launch.mode == MEMSAFETY:
-                ElementTree.SubElement(rundefinition, "option", {"name": "-spec"}).text = DEFAULT_PROPERTY_MEMSAFETY
-            if launch.mode == UNREACHABILITY:
-                ElementTree.SubElement(rundefinition, "option", {"name": "-spec"}).text = \
-                    DEFAULT_PROPERTY_UNREACHABILITY
 
-    def __parse_verifier_options(self, file_name: str, rundefinition: ElementTree.Element) -> None:
-        if file_name in self.verifier_options.keys():
-            abs_path = self.verifier_options[file_name]
-        else:
-            abs_path = self.__get_verifier_options_file_name(file_name)
-        if not os.path.exists(abs_path):
-            # No new options for specific rule and system id.
-            return
-        with open(abs_path, "r", errors='ignore') as fh:
-            content = json.load(fh)
+    def __get_property_arg(self, prop: str, arg: str):
+        property_desc = self.property_desc.get(prop, {})
+        if not property_desc:
+            self.logger.debug("Property {} was not in a description".format(prop))
+        default_arg = ""
+        if arg == PROPERTY_IS_MOVE_OUTPUT:
+            default_arg = False
+        if arg == PROPERTY_OPTIONS:
+            default_arg = {}
+        return property_desc.get(arg, default_arg)
+
+    def __parse_verifier_options(self, prop: str, rundefinition: ElementTree.Element) -> None:
+        parsed_options = {}
+
+        def parse_options(content: dict):
             for name, values in content.items():
                 if values:
                     for value in values:
-                        ElementTree.SubElement(rundefinition, "option", {"name": name}).text = value
+                        if name == "-config":
+                            potential_abs_path = os.path.join(self.install_dir, self.__get_property_arg(
+                                prop, PROPERTY_MODE), value)
+                            if os.path.exists(potential_abs_path):
+                                value = potential_abs_path
+                        if name == "-setprop":
+                            (key, val) = str(value).split("=")
+                            parsed_options[key] = val
+                        else:
+                            ElementTree.SubElement(rundefinition, "option", {"name": name}).text = value
                 else:
                     ElementTree.SubElement(rundefinition, "option", {"name": name})
+        common_options = self.__get_property_arg(PROPERTY_COMMON, PROPERTY_OPTIONS)
+        specific_options = self.__get_property_arg(prop, PROPERTY_OPTIONS)
+
+        parse_options(common_options)
+        parse_options(specific_options)
+        for key, val in parsed_options.items():
+            ElementTree.SubElement(rundefinition, "option", {"name": "-setprop"}).text = "{}={}".format(key, val)
 
     def __process_single_group(self, mode, launches, time_limit, memory_limit, core_limit, heap_limit,
                                internal_time_limit, queue):
+        # TODO: This is for vcloud only - not supported!
         # Prepare benchmark file for the whole group.
         benchmark_cur = ElementTree.Element("benchmark", {
             "tool": CPACHECKER,
@@ -416,12 +423,7 @@ class FullLauncher(Launcher):
             ElementTree.SubElement(rundefinition, "option", {"name": "-timelimit"}).text = str(
                 internal_time_limit)
             self.__resolve_property_file(rundefinition, launch)
-            self.__parse_verifier_options(VERIFIER_OPTIONS_COMMON, rundefinition)
-            if launch.rule in DEADLOCK_SUB_PROPERTIES:
-                mode_for_options = launch.rule
-            else:
-                mode_for_options = launch.mode
-            self.__parse_verifier_options(mode_for_options, rundefinition)
+            self.__parse_verifier_options(launch.rule, rundefinition)
             ElementTree.SubElement(rundefinition, "option", {"name": "-entryfunction"}).text = \
                 launch.entrypoint
             if not launch.entry_desc.optimize:
@@ -438,14 +440,14 @@ class FullLauncher(Launcher):
 
         # Creating links.
         cil_abs_dir = os.path.join(os.getcwd(), DEFAULT_CIL_DIR)
-        properties_abs_dir = os.path.join(self.work_dir, VERIFIER_PROPERTIES_DIR)
+        properties_abs_dir = os.path.join(self.work_dir, DEFAULT_AUTOMATA_DIR)
         benchmark_abs_dir = os.path.abspath(benchmark_name)
         cil_rel_dir = DEFAULT_CIL_DIR
-        properties_rel_dir = VERIFIER_PROPERTIES_DIR
+        properties_rel_dir = DEFAULT_AUTOMATA_DIR
         benchmark_rel_dir = os.path.basename(benchmark_name)
 
         # Launch from CPAchecker directory
-        verifier_dir = os.path.join(self.install_dir, DEFAULT_CPACHECKER_CLOUD[mode])
+        verifier_dir = os.path.join(self.install_dir, mode)
         cur_dir = os.getcwd()
         os.chdir(verifier_dir)
 
@@ -557,6 +559,12 @@ class FullLauncher(Launcher):
                           .format(pattern, prefix, plugin_dir))
         return []
 
+    def __get_mode(self, prop: str) -> str:
+        mode = self.property_desc[prop].get(PROPERTY_MODE, None)
+        if not mode:
+            sys.exit("Mode was not specified for property {}".format(prop))
+        return mode
+
     def launch(self):
         # Process common directories.
 
@@ -575,8 +583,8 @@ class FullLauncher(Launcher):
             if not backup_read:
                 shutil.rmtree(DEFAULT_LAUNCHES_DIR, ignore_errors=True)
             shutil.rmtree(DEFAULT_EXPORT_DIR, ignore_errors=True)
-            shutil.rmtree(VERIFIER_PROPERTIES_DIR, ignore_errors=True)
-        os.makedirs(VERIFIER_PROPERTIES_DIR, exist_ok=True)
+            shutil.rmtree(DEFAULT_AUTOMATA_DIR, ignore_errors=True)
+        os.makedirs(DEFAULT_AUTOMATA_DIR, exist_ok=True)
         os.makedirs(DEFAULT_CIL_DIR, exist_ok=True)
         os.makedirs(DEFAULT_MAIN_DIR, exist_ok=True)
         os.makedirs(DEFAULT_LAUNCHES_DIR, exist_ok=True)
@@ -640,9 +648,9 @@ class FullLauncher(Launcher):
                           "{1} seconds of CPU time and {2} CPU cores".format(memory_limit, time_limit, core_limit))
 
         # We need to perform sanity checks before complex operation of building.
-        rules = self.config.get("rules")
+        rules = self.config.get("properties")
         if not rules:
-            sys.exit("No rules to be checked were specified")
+            sys.exit("No properties to be checked were specified")
 
         ep_desc_files = self.config.get(TAG_ENTRYPOINTS_DESC)
         entrypoints_desc = set()
@@ -662,16 +670,6 @@ class FullLauncher(Launcher):
                     entrypoints_desc.add(EntryPointDesc(file, identifier))
             if not entrypoints_desc:
                 sys.exit("No file with description of entry points to be checked were found")
-
-        for mode, file in self.component_config.get(TAG_VERIFIER_OPTIONS, {}).items():
-            if mode not in VERIFIER_MODES:
-                sys.exit("Cannot set options for verifier mode '{}'".format(mode))
-            path = self.__get_verifier_options_file_name(str(file))
-            if path:
-                self.verifier_options[mode] = path
-                self.logger.debug("Using verifier options from file '{}' for verification mode '{}'".format(path, mode))
-            else:
-                sys.exit("File with verifier options '{}' for verification mode '{}' does not exist".format(file, mode))
 
         # Process sources in separate process.
         sources_queue = multiprocessing.Queue()
@@ -706,6 +704,8 @@ class FullLauncher(Launcher):
         self.logger.debug("Starting scheduler for verification tasks preparation with {} processes".
                           format(preparator_processes))
 
+        #TODO: coverage
+        '''
         find_coverage = self.config.get(COMPONENT_COVERAGE, {}).get(TAG_MAX_COVERAGE, False)
         if find_coverage:
             if RULE_COVERAGE in rules and len(rules) > 1:
@@ -720,6 +720,7 @@ class FullLauncher(Launcher):
                     rules.append(RULE_COV_AUX_OTHER)
                 if RULE_RACES in rules or RULE_SIGNALS in rules or RULE_DEADLOCK in rules:
                     rules.append(RULE_COV_AUX_RACES)
+        '''
 
         rules = sorted(set(rules))
         preparator_start_wall = time.time()
@@ -749,19 +750,19 @@ class FullLauncher(Launcher):
                     self.logger.debug("Skipping subsystem '{}' because it does not relate with the checking commits".
                                       format(entry_desc.subsystem))
                     continue
-            main_generator = MainGenerator(self.config, entry_desc.file)
+            main_generator = MainGenerator(self.config, entry_desc.file, self.property_desc)
             main_generator.process_sources()
             for rule in rules:
                 strategy = main_generator.get_strategy(rule)
+                '''
                 if rule in [RULE_COV_AUX_OTHER, RULE_COV_AUX_RACES]:
                     rule = RULE_COVERAGE
-                mode = self.__get_tool(rule)
+                '''
+                mode = self.__get_mode(rule)
                 main_file_name = os.path.join(DEFAULT_MAIN_DIR, "{0}_{1}.c".format(entry_desc.short_name, strategy))
                 entrypoints = main_generator.generate_main(strategy, main_file_name)
-                model = self.__get_file_for_system(self.rules_dir, "{0}.c".format(rule))
-                if not model:
-                    self.logger.debug("There is no model file for rule {}".format(rule))
-                common_file = self.__get_file_for_system(self.rules_dir, COMMON_HEADER_FOR_RULES)
+                model = self.__get_file_for_system(self.models_dir, "{0}.c".format(rule))
+                common_file = self.__get_file_for_system(self.models_dir, COMMON_HEADER_FOR_RULES)
                 cil_file = os.path.abspath(os.path.join(DEFAULT_CIL_DIR, "{0}_{1}_{2}.i".format(entry_desc.short_name,
                                                                                                 rule, strategy)))
                 try:
@@ -792,21 +793,13 @@ class FullLauncher(Launcher):
                     self.logger.error("Could not prepare verification task:", exc_info=True)
                     kill_launches(process_pool)
                 for entrypoint in entrypoints:
-                    path_to_verifier = self.get_tool_path(DEFAULT_TOOL_PATH[CPACHECKER][mode],
-                                                          self.config.get(TAG_TOOLS, {}).get(CPACHECKER, {}).get(mode))
-                    if rule == RULE_DEADLOCK:
-                        # Here we perform several launches per each entry_desc.
-                        for rule_aux in DEADLOCK_SUB_PROPERTIES:
-                            launches.append(VerificationTask(entry_desc, rule_aux, entrypoint, path_to_verifier,
-                                                             cil_file))
-                    elif rule == RULE_RACES or rule == RULE_SIGNALS:
-                        launches.append(VerificationTask(entry_desc, rule, entrypoint, path_to_verifier, cil_file))
-                    else:
-                        # Either take only specified callers or all of them.
-                        if not specific_functions or \
-                                entrypoint.replace(ENTRY_POINT_SUFFIX, "") in specific_functions or \
-                                entrypoint == DEFAULT_MAIN:
-                            launches.append(VerificationTask(entry_desc, rule, entrypoint, path_to_verifier, cil_file))
+                    path_to_verifier = self.get_tool_path(os.path.join(mode, DEFAULT_CPACHECKER_SCRIPTS_PATH))
+
+                    if not specific_functions or \
+                            entrypoint.replace(ENTRY_POINT_SUFFIX, "") in specific_functions or \
+                            entrypoint == DEFAULT_MAIN:
+                        launches.append(VerificationTask(entry_desc, rule, self.__get_mode(rule), entrypoint,
+                                                         path_to_verifier, cil_file))
         wait_for_launches(process_pool)
 
         # Filter problem launches
@@ -923,13 +916,14 @@ class FullLauncher(Launcher):
             if counter > preparator_processes:
                 break
 
+        '''
         if find_coverage:
             for rule in [RULE_COV_AUX_OTHER, RULE_COV_AUX_RACES]:
                 if rule in rules:
                     rules.remove(rule)
             if RULE_COVERAGE not in rules:
                 rules.append(RULE_COVERAGE)
-
+        '''
         if backup_read:
             self.logger.info("Restoring from backup copy")
             backup_files = glob.glob(os.path.join(self.work_dir, "{}*".format(DEFAULT_BACKUP_PREFIX)))
@@ -967,32 +961,31 @@ class FullLauncher(Launcher):
         self.logger.debug("Using BenchExec, found in: '{0}'".format(path_to_benchexec))
         os.environ["PATH"] += os.pathsep + path_to_benchexec
         benchmark = {}
-        for mode in VERIFIER_MODES:
+        for prop in self.property_desc.keys():
             # Specify resource limitations.
-            benchmark[mode] = ElementTree.Element("benchmark", {
+            benchmark[prop] = ElementTree.Element("benchmark", {
                 "tool": CPACHECKER,
                 "timelimit": str(time_limit)
                 # TODO: memlimit does not work with Ubunut 22
                 # "memlimit": str(memory_limit) + "GB",
                 # TODO: option 'cpuCores' does not work in BenchExec
             })
-            rundefinition = ElementTree.SubElement(benchmark[mode], "rundefinition")
+            rundefinition = ElementTree.SubElement(benchmark[prop], "rundefinition")
             ElementTree.SubElement(rundefinition, "option", {"name": "-heap"}).text = "{}m".format(heap_limit)
             ElementTree.SubElement(rundefinition, "option", {"name": "-timelimit"}).text = str(internal_time_limit)
 
             # Create links to the properties.
-            for file in glob.glob(os.path.join(self.root_dir, VERIFIER_FILES_DIR, VERIFIER_PROPERTIES_DIR, "*")):
+            for file in glob.glob(os.path.join(self.root_dir, DEFAULT_PROPERTIES_DIR, DEFAULT_AUTOMATA_DIR, "*")):
                 if os.path.isfile(file):
-                    shutil.copy(file, VERIFIER_PROPERTIES_DIR)
+                    shutil.copy(file, DEFAULT_AUTOMATA_DIR)
             if self.system_id:
-                for file in glob.glob(os.path.join(self.plugin_dir, self.system_id, VERIFIER_FILES_DIR,
-                                                   VERIFIER_PROPERTIES_DIR, "*")):
+                for file in glob.glob(os.path.join(self.plugin_dir, self.system_id, DEFAULT_PROPERTIES_DIR,
+                                                   DEFAULT_AUTOMATA_DIR, "*")):
                     if os.path.isfile(file):
-                        shutil.copy(file, VERIFIER_PROPERTIES_DIR)
+                        shutil.copy(file, DEFAULT_AUTOMATA_DIR)
 
             # Get options from files.
-            self.__parse_verifier_options(VERIFIER_OPTIONS_COMMON, rundefinition)
-            self.__parse_verifier_options(mode, rundefinition)
+            self.__parse_verifier_options(prop, rundefinition)
 
         self.logger.debug("Starting scheduler for verifier launches with {} processes".format(number_of_processes))
         counter = 1
@@ -1013,11 +1006,8 @@ class FullLauncher(Launcher):
         if self.scheduler == SCHEDULER_CLOUD:
             launch_groups = dict()
             for launch in launches:
-                mode = self.__get_config_mode(launch.rule)
-                if mode == COVERAGE:
-                    mode = COVERAGE
-                if mode in DEADLOCK_SUB_PROPERTIES:
-                    mode = RACES
+                # TODO: here we need to unify by pairs (mode, options)
+                mode = self.__get_mode(launch.rule)
                 if mode in launch_groups:
                     launch_groups[mode].append(launch)
                 else:
@@ -1067,9 +1057,8 @@ class FullLauncher(Launcher):
                                              "({3}% remains)".format(launch.entry_desc.subsystem, launch.rule,
                                                                      launch.entrypoint, round(percent, 2)))
                             counter += 1
-                            mode = self.__get_config_mode(launch.rule)
                             process_pool[i] = multiprocessing.Process(target=self.local_launch, name=launch.name,
-                                                                      args=(launch, benchmark[mode], queue))
+                                                                      args=(launch, benchmark[launch.rule], queue))
                             process_pool[i].start()
                             if len(launches) == 0:
                                 raise NestedLoop
@@ -1118,20 +1107,16 @@ class FullLauncher(Launcher):
         wall_cov = 0
         cov_mem_array = list()
         for rule in rules:
-            if rule == RULE_COVERAGE:
+            if rule == PROPERTY_COVERAGE:
                 continue
             stats_by_rules[rule] = GlobalStatistics()
         for result in results:
-            if result.rule == RULE_COVERAGE:
+            if result.rule == PROPERTY_COVERAGE:
                 key = self._get_none_rule_key(result)
                 cov_lines[key] = result.cov_lines
                 cov_funcs[key] = result.cov_funcs
             else:
-                if result.rule in DEADLOCK_SUB_PROPERTIES:
-                    rule = RULE_DEADLOCK
-                else:
-                    rule = result.rule
-                stats_by_rules[rule].add_result(result)
+                stats_by_rules[result.rule].add_result(result)
                 mea_cpu += result.mea_resources.get(TAG_CPU_TIME, 0.0)
                 cov_cpu += result.coverage_resources.get(TAG_CPU_TIME, 0)
                 wall_cov += result.coverage_resources.get(TAG_WALL_TIME, 0)
@@ -1189,7 +1174,7 @@ class FullLauncher(Launcher):
             TAG_CONFIG_CPU_TIME_LIMIT: time_limit,
             TAG_CONFIG_CPU_CORES_LIMIT: core_limit
         }
-        exporter = Exporter(self.config, DEFAULT_EXPORT_DIR, self.install_dir)
+        exporter = Exporter(self.config, DEFAULT_EXPORT_DIR, self.install_dir, properties_desc=self.property_desc)
         exporter.export(report_launches, report_resources, report_components, result_archive,
                         unknown_desc={COMPONENT_PREPARATOR: preparator_unknowns}, component_attrs=component_attrs,
                         verifier_config=config)
@@ -1200,10 +1185,13 @@ class FullLauncher(Launcher):
 
         if not self.debug:
             self.logger.info("Cleaning working directories")
+            # TODO: cloud
+            '''
             for mode, path in DEFAULT_CPACHECKER_CLOUD.items():
                 cpa_path = self.get_tool_path(path)
                 shutil.rmtree(os.path.join(cpa_path, DEFAULT_CIL_DIR), ignore_errors=True)
-                shutil.rmtree(os.path.join(cpa_path, VERIFIER_PROPERTIES_DIR), ignore_errors=True)
+                shutil.rmtree(os.path.join(cpa_path, DEFAULT_AUTOMATA_DIR), ignore_errors=True)
+            '''
             shutil.rmtree(DEFAULT_MAIN_DIR, ignore_errors=True)
             shutil.rmtree(DEFAULT_EXPORT_DIR, ignore_errors=True)
             if self.backup and os.path.exists(self.backup):

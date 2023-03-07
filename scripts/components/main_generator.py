@@ -20,6 +20,7 @@
 import json
 import os
 import re
+import sys
 
 from components import *
 from components.component import Component
@@ -74,18 +75,22 @@ class MainGenerator(Component):
     This component is used for generating file with main function, which calls specified entry points.
     """
 
-    def __init__(self, config: dict, input_file: str):
+    def __init__(self, config: dict, input_file: str, properties_desc: dict):
         super(MainGenerator, self).__init__(COMPONENT_MAIN_GENERATOR, config)
 
         # Config.
         self.ignore_types = self.component_config.get(TAG_IGNORE_TYPES, False)
         self.ignore_pthread_attr_t = self.component_config.get(TAG_IGNORE_PTHREAD_ATTR, False)
         self.print_prototypes = self.component_config.get(TAG_PRINT_PROTOTYPES, True)
-        self.specified_strategies = self.component_config.get(TAG_STRATEGIES, {})
-        for rule, strategy in self.specified_strategies.items():
-            if strategy not in MAIN_GENERATOR_STRATEGIES:
-                self.logger.warning("Specified strategy '{}' does not exist. Using default strategy".format(strategy))
-                self.specified_strategies[rule] = None
+        self.main_generation_strategies = {}
+        for prop, desc in properties_desc.items():
+            strategy = desc.get(PROPERTY_MAIN_GENERATION_STRATEGY, None)
+            if strategy:
+                self.__use_strategy(strategy, prop)
+                self.logger.debug("Use strategy {} for property {}".format(strategy, prop))
+
+        for prop, strategy in self.component_config.get(TAG_STRATEGIES, {}).items():
+            self.__use_strategy(strategy, prop)
 
         # Entry-points file parsing.
         with open(input_file, errors='ignore') as data_file:
@@ -106,26 +111,15 @@ class MainGenerator(Component):
         for static in statics:
             del self.entrypoints[static]
 
-    def get_strategy(self, rule: str) -> str:
-        specified_strategy = self.specified_strategies.get(rule, None)
-        if specified_strategy:
-            return specified_strategy
-        if rule == RULE_COVERAGE:
-            strategy = COMBINED_STRATEGY
-        elif rule == RULE_COV_AUX_OTHER:
-            strategy = PARTIAL_STRATEGY
-        elif rule == RULE_MEMSAFETY:
-            strategy = PARTIAL_STRATEGY
-        elif rule == RULE_RACES or rule == RULE_SIGNALS:
-            strategy = THREADED_STRATEGY
-        elif rule == RULE_DEADLOCK:
-            strategy = THREADED_STRATEGY
-        elif rule == RULE_TERMINATION:
-            strategy = PARTIAL_STRATEGY
-        elif rule == RULE_COV_AUX_RACES:
-            strategy = THREADED_COMBINED_STRATEGY
-        else:
-            strategy = PARTIAL_STRATEGY
+    def __use_strategy(self, strategy: str, prop: str):
+        if strategy not in MAIN_GENERATOR_STRATEGIES:
+            sys.exit("Specified main generation strategy '{}' for property '{}' does not exist".format(strategy, prop))
+        self.main_generation_strategies[prop] = strategy
+
+    def get_strategy(self, prop: str) -> str:
+        strategy = self.main_generation_strategies.get(prop, None)
+        if not strategy:
+            sys.exit("Main generation strategy for property {} was not specified".format(prop))
         return strategy
 
     def __get_source_directories(self) -> set:

@@ -51,26 +51,17 @@ class EntryPointDesc:
 
 
 class VerificationTask:
-    def __init__(self, entry_desc: EntryPointDesc, rule, entrypoint, path_to_verifier, cil_file):
+    def __init__(self, entry_desc: EntryPointDesc, rule: str, mode: str, entrypoint, path_to_verifier, cil_file):
         self.entry_desc = entry_desc
         self.rule = rule
         self.entrypoint = entrypoint
-        if self.rule == RULE_COVERAGE:
-            self.mode = COVERAGE
-        elif self.rule == RULE_MEMSAFETY:
-            self.mode = MEMSAFETY
-        elif self.rule == RULE_RACES:
-            self.mode = RACES
-        elif self.rule in DEADLOCK_SUB_PROPERTIES:
-            self.mode = DEADLOCK
-        else:
-            self.mode = UNREACHABILITY
+        self.mode = mode
         self.path_to_verifier = path_to_verifier
         self.cil_file = cil_file
         self.name = "_".join([self.entry_desc.id, self.rule, self.entrypoint])
 
     def copy(self):
-        return type(self)(self.entry_desc, self.rule, self.entrypoint, self.path_to_verifier, self.cil_file)
+        return type(self)(self.entry_desc, self.rule, self.mode, self.entrypoint, self.path_to_verifier, self.cil_file)
 
 
 class GlobalStatistics:
