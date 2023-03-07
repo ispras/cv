@@ -82,6 +82,7 @@ build-klever: download-klever
 	@echo "*** Building ${klever} ***"
 	@echo "from bridge.development import *" > ${klever_dir}/bridge/bridge/settings.py
 	@echo "{}" > ${klever_dir}/bridge/bridge/db.json
+	@cp -r ${mea_lib} ${root_dir}/scripts/aux/mea.py
 
 build-benchexec: download-benchexec
 	@echo "*** Building ${benchexec} ***"
