@@ -14,7 +14,6 @@
       ]
     },
     "main generation strategy": "partial",
-    "coverage strategy": "partial",
     "model files": ""
   },
   "common": {
@@ -35,7 +34,8 @@
         "counterexample.export.graphml=witness.%d.graphml",
         "coverage.enabled=true",
         "coverage.file=coverage.info",
-        "cpa.arg.witness.exportSourcecode=true"
+        "cpa.arg.witness.exportSourcecode=true",
+        "cpa.predicate.allowedUnsupportedFunctions=memset,memcpy,__builtin_add_overflow,__builtin_mul_overflow,__builtin_va_arg"
       ]
     }
   },
@@ -44,15 +44,13 @@
     "options": {
       "-ldv-bam": []
     },
-    "main generation strategy": "partial",
-    "coverage strategy": "partial"
+    "main generation strategy": "partial"
   },
   "termination": {
     "mode": "unreach",
     "options": {
       "-ldv-bam-optimized": []
     },
-    "main generation strategy": "partial",
-    "coverage strategy": "partial"
+    "main generation strategy": "partial"
   }
 }
