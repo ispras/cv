@@ -1,6 +1,0 @@
-{
-  "-ldv-bam": [],
-  "-setprop": [
-    "cpa.arg.witness.removeInsufficientEdges=false"
-  ]
-}

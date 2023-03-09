@@ -23,51 +23,18 @@ ET_LIB = "klever"
 ET_HTML_LIB = "et html"
 BENCHEXEC = "benchexec"
 CPACHECKER = "cpachecker"
-UNREACHABILITY = "unreachability"
-MEMSAFETY = "memsafety"
-COVERAGE = "coverage"
-RACES = "races"
-SIGNALS = "sync:signals"
-DEADLOCK_AUX_DISPATCH_SPIN = "sync:deadlocks:dispatch:spin"
-DEADLOCK_AUX_DISPATCH_MUTEX = "sync:deadlocks:dispatch:mutex"
-DEADLOCK_AUX_CIRCULAR_MS = "sync:deadlocks:circular:mutex&spin"
-DEADLOCK_SUB_PROPERTIES = [
-    DEADLOCK_AUX_DISPATCH_MUTEX,
-    DEADLOCK_AUX_DISPATCH_SPIN,
-    DEADLOCK_AUX_CIRCULAR_MS
-]
-DEADLOCK = "deadlocks"
-TERMINATION = "termination"
 CIF = "cif"
 CLADE = "clade"
 UPLOADER = "uploader"
+DEFAULT_CPACHECKER_SCRIPTS_PATH = "scripts"
 DEFAULT_TOOL_PATH = {
     CIL: ["astraver-cil/bin/toplevel.opt", "cil/obj/x86_LINUX/cilly.asm.exe", "cil/bin/cilly.native"],
     ET_LIB: "klever/core",
     ET_HTML_LIB: "klever/bridge",
     UPLOADER: "klever/utils/bin/upload-reports.py",
     BENCHEXEC: "benchexec/bin",
-    CPACHECKER: {
-        UNREACHABILITY: "unreach/scripts",
-        MEMSAFETY: "smg/scripts",
-        COVERAGE: "unreach/scripts",
-        RACES: "sync/scripts",
-        DEADLOCK: "sync/scripts",
-        SIGNALS: "sync/scripts"
-    },
     CIF: "cif/bin",
 }
-DEFAULT_CPACHECKER_CLOUD = {
-    UNREACHABILITY: "unreach",
-    MEMSAFETY: "smg",
-    COVERAGE: "unreach",
-    RACES: "sync",
-    SIGNALS: "sync",
-    DEADLOCK_AUX_DISPATCH_MUTEX: "sync",
-    DEADLOCK_AUX_DISPATCH_SPIN: "sync",
-    DEADLOCK_AUX_CIRCULAR_MS: "sync",
-}
-VERIFIER_MODES = [UNREACHABILITY, MEMSAFETY, COVERAGE, RACES, TERMINATION, SIGNALS] + DEADLOCK_SUB_PROPERTIES
 
 # Components.
 COMPONENT_MAIN_GENERATOR = "Generator"
@@ -80,16 +47,22 @@ COMPONENT_QUALIFIER = "Qualifier"
 COMPONENT_BUILDER = "Builder"
 COMPONENT_COVERAGE = "Coverage"
 
-# Preset rules
-RULE_COVERAGE = "cov"
-RULE_RACES = "sync:races"
-RULE_SIGNALS = "sync:signals"
-RULE_DEADLOCK = "sync:deadlocks"
-RULE_MEMSAFETY = "smg"
-RULE_TERMINATION = "termination"  # aux rule so far.
-RULE_COV_AUX_RACES = "cov_races"
-RULE_COV_AUX_OTHER = "cov_other"
-
+# Properties description
+DEFAULT_PROPERTIES_DIR = "properties"
+DEFAULT_AUTOMATA_DIR = "automata"
+DEFAULT_MODELS_DIR = "models"
+DEFAULT_PROPERTIES_DESC_FILE = "properties.json"
+DEFAULT_PLUGIN_DIR = "plugin"
+PROPERTY_IS_MOVE_OUTPUT = "is move output"
+PROPERTY_SPECIFICATION_AUTOMATON = "specification automaton"
+PROPERTY_MODE = "mode"
+PROPERTY_OPTIONS = "options"
+PROPERTY_MAIN_GENERATION_STRATEGY = "main generation strategy"
+PROPERTY_COVERAGE = "coverage"
+PROPERTY_COMMON = "common"
+PROPERTY_TERMINATION_REASON = "termination reason"
+PROPERTY_IS_RELEVANCE = "is relevance"
+PROPERTY_IS_ALL_TRACES_FOUND = "is all traces found"
 
 # Main generator.
 DEFAULT_MAIN = "ldv_main_generated"

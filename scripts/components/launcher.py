@@ -33,8 +33,6 @@ DEFAULT_LAUNCHES_DIR = "launches"
 DEFAULT_SOURCE_PATCHES_DIR = "patches/sources"
 DEFAULT_PREPARATION_PATCHES_DIR = "patches/preparation"
 DEFAULT_ENTRYPOINTS_DIR = "entrypoints"
-DEFAULT_RULES_DIR = "rules"
-DEFAULT_PLUGIN_DIR = "plugin"
 DEFAULT_WORK_DIR = "work_dir"
 DEFAULT_RESULTS_DIR = "results"
 DEFAULT_BACKUP_PREFIX = "backup_"
@@ -96,10 +94,6 @@ DEFAULT_TIME_FOR_STATISTICS = 0  # By default we do not allocate time for printi
 VERIFIER_OPTIONS_NOT_OPTIMIZED = [
     "cpa.functionpointer.ignoreUnknownFunctionPointerCalls=false",
 ]
-
-VERIFIER_FILES_DIR = "verifier_files"
-VERIFIER_OPTIONS_DIR = "options"
-VERIFIER_PROPERTIES_DIR = "properties"
 
 VERIFIER_OPTIONS_COMMON = "common"
 
@@ -291,7 +285,7 @@ class Launcher(Component):
             counter = 1
             for result in results:
                 # Add coverage information.
-                if result.verdict == VERDICT_SAFE and not result.rule == RULE_COVERAGE:
+                if result.verdict == VERDICT_SAFE and not result.rule == PROPERTY_COVERAGE:
                     key = self._get_none_rule_key(result)
                     if not result.cov_lines and cov_lines:
                         result.cov_lines = cov_lines.get(key, 0.0)
