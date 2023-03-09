@@ -17,21 +17,15 @@
 # limitations under the License.
 #
 
-import glob
-import json
 import multiprocessing
-import os
-import re
 import resource
-import shutil
 import subprocess
 import tempfile
-import time
 import zipfile
 
-from components import *
 from components.component import Component
 from components.coverage_processor import extract_internal_coverage, write_coverage, merge_coverages
+from models.verification_result import *
 
 ERROR_TRACE_FILE = "error trace.json"
 FINAL_REPORT = "final.json"
@@ -49,7 +43,8 @@ GLOBAL_COVERAGE_REAL = "real"
 
 
 class Exporter(Component):
-    def __init__(self, config, work_dir: str, install_dir: str, properties_desc={}, tool=DEFAULT_VERIFIER_TOOL):
+    def __init__(self, config, work_dir: str, install_dir: str, properties_desc=PropertiesDescription(),
+                 tool=DEFAULT_VERIFIER_TOOL):
         super(Exporter, self).__init__(COMPONENT_EXPORTER, config)
         self.work_dir = work_dir
         self.install_dir = install_dir
@@ -361,7 +356,9 @@ class Exporter(Component):
                             unsafe_element['parent id'] = "/{}_{}".format(self.tool, verifier_counter)
                             unsafe_element['type'] = "unsafe"
                             found_all_traces = not incomplete_result
-                            if self.properties_desc.get(rule, {}).get(PROPERTY_IS_ALL_TRACES_FOUND, False):
+                            if self.properties_desc.get_property_arg(rule, PROPERTY_IS_ALL_TRACES_FOUND,
+                                                                     ignore_missing=True):
+                                # Ignore verdict and termination reason for determining if all traces were found.
                                 found_all_traces = True
                             attrs = [
                                 self.__format_attr("Traces", [
@@ -427,16 +424,11 @@ class Exporter(Component):
                                         self.__format_attr("Functions", "{0}".format(cov_funcs))
                                     ])
                                 ]
-                                # TODO: how to determine relevancy there?
-                                if self.properties_desc.get(rule, {}).get(PROPERTY_IS_RELEVANCE, True):
+                                if self.properties_desc.get_property_arg(rule, PROPERTY_IS_RELEVANCE,
+                                                                         ignore_missing=True):
+                                    # If we do not have information about relevancy in output.
                                     attrs.append(self.__format_attr("Relevancy", relevancy))
                             else:
-                                specific_termination_reason = self.properties_desc.get(rule, {}).\
-                                    get(PROPERTY_TERMINATION_REASON, None)
-                                if specific_termination_reason and verdict == VERDICT_UNSAFE:
-                                    text = "Program never terminates"
-                                else:
-                                    text = termination_reason
                                 attrs = [
                                     self.__format_attr("Coverage", [
                                         self.__format_attr("Lines", "{0}".format(cov_lines)),
@@ -449,12 +441,12 @@ class Exporter(Component):
                                     is_cached = False
                                     identifier = str(verifier_counter)
                                 else:
-                                    if text in unknowns or not self.add_logs:
-                                        identifier = unknowns[text]
+                                    if termination_reason in unknowns or not self.add_logs:
+                                        identifier = unknowns[termination_reason]
                                         is_cached = True
                                     else:
                                         identifier = str(verifier_counter)
-                                        unknowns[text] = identifier
+                                        unknowns[termination_reason] = identifier
                                         is_cached = False
 
                                 unknown_archive = "unknown_{}.zip".format(identifier)
@@ -464,7 +456,7 @@ class Exporter(Component):
                                     with zipfile.ZipFile(unknown_archive, mode='w', compression=zipfile.ZIP_DEFLATED) \
                                             as zfp:
                                         with open(UNKNOWN_DESC_FILE, 'w') as fp:
-                                            fp.write("Termination reason: {}\n".format(text))
+                                            fp.write("Termination reason: {}\n".format(termination_reason))
                                             if incomplete_result:
                                                 fp.write("Unsafe-incomplete\n")
                                             if self.add_logs:

@@ -48,6 +48,11 @@ COMPONENT_BUILDER = "Builder"
 COMPONENT_COVERAGE = "Coverage"
 
 # Properties description
+DEFAULT_PROPERTIES_DIR = "properties"
+DEFAULT_AUTOMATA_DIR = "automata"
+DEFAULT_MODELS_DIR = "models"
+DEFAULT_PROPERTIES_DESC_FILE = "properties.json"
+DEFAULT_PLUGIN_DIR = "plugin"
 PROPERTY_IS_MOVE_OUTPUT = "is move output"
 PROPERTY_SPECIFICATION_AUTOMATON = "specification automaton"
 PROPERTY_MODE = "mode"

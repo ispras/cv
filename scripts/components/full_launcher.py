@@ -53,22 +53,9 @@ class FullLauncher(Launcher):
         # Map of verifier modes to files with specific options.
         self.verifier_options = {}
 
-        self.__parse_property_desc_file()
-
-    def __parse_property_desc_file(self):
-        self.property_desc = {}
-        desc_files = [os.path.join(DEFAULT_PROPERTIES_DIR, DEFAULT_PROPERTIES_DESC_FILE)] + \
-                     glob.glob(os.path.join(DEFAULT_PLUGIN_DIR, "*", DEFAULT_PROPERTIES_DIR,
-                                            DEFAULT_PROPERTIES_DESC_FILE))
-        for file in desc_files:
-            self.logger.debug("Parsing property file {}".format(file))
-            with open(file, "r", errors='ignore') as fd:
-                content = json.load(fd)
-                for prop, desc in content.items():
-                    self.property_desc[prop] = desc
-                    if PROPERTY_MODE not in desc:
-                        sys.exit("Property file is incorrect: property {} is missing {} attribute".
-                                 format(prop, PROPERTY_MODE))
+        # Properties description.
+        plugin_properties_desc_file = self.__get_file_for_system(DEFAULT_PROPERTIES_DIR, DEFAULT_PROPERTIES_DESC_FILE)
+        self.properties_desc = PropertiesDescription(plugin_properties_desc_file)
 
     def __perform_filtering(self, result: VerificationResults, queue: multiprocessing.Queue,
                             resource_queue_filter: multiprocessing.Queue):
@@ -192,7 +179,7 @@ class FullLauncher(Launcher):
         result.work_dir = launch_directory
 
         # If output directory is hardcoded in a verifier, then we need to move it.
-        is_move_output_dir = self.property_desc.get(result.rule, {}).get(PROPERTY_IS_MOVE_OUTPUT, False)
+        is_move_output_dir = self.properties_desc.get_property_arg(result.rule, PROPERTY_IS_MOVE_OUTPUT)
         cur_cwd = os.getcwd()
         if is_move_output_dir:
             shutil.move(benchmark_name, launch_directory)
@@ -353,7 +340,7 @@ class FullLauncher(Launcher):
         """
         # TODO: support several properties here
         # Use specified automaton file.
-        automaton_file = self.property_desc[launch.rule].get(PROPERTY_SPECIFICATION_AUTOMATON, "")
+        automaton_file = self.properties_desc.get_property_arg(launch.rule, PROPERTY_SPECIFICATION_AUTOMATON)
         if automaton_file:
             automaton_file = self.__get_file_for_system(
                 os.path.join(self.root_dir, DEFAULT_PROPERTIES_DIR, DEFAULT_AUTOMATA_DIR), automaton_file)
@@ -365,17 +352,6 @@ class FullLauncher(Launcher):
             automaton_file = os.path.join(DEFAULT_AUTOMATA_DIR, os.path.basename(automaton_file))
             ElementTree.SubElement(rundefinition, "option", {"name": "-spec"}).text = automaton_file
 
-    def __get_property_arg(self, prop: str, arg: str):
-        property_desc = self.property_desc.get(prop, {})
-        if not property_desc:
-            self.logger.debug("Property {} was not in a description".format(prop))
-        default_arg = ""
-        if arg == PROPERTY_IS_MOVE_OUTPUT:
-            default_arg = False
-        if arg == PROPERTY_OPTIONS:
-            default_arg = {}
-        return property_desc.get(arg, default_arg)
-
     def __parse_verifier_options(self, prop: str, rundefinition: ElementTree.Element) -> None:
         parsed_options = {}
 
@@ -384,8 +360,7 @@ class FullLauncher(Launcher):
                 if values:
                     for value in values:
                         if name == "-config":
-                            potential_abs_path = os.path.join(self.install_dir, self.__get_property_arg(
-                                prop, PROPERTY_MODE), value)
+                            potential_abs_path = os.path.join(self.install_dir, self.__get_mode(prop), value)
                             if os.path.exists(potential_abs_path):
                                 value = potential_abs_path
                         if name == "-setprop":
@@ -395,8 +370,8 @@ class FullLauncher(Launcher):
                             ElementTree.SubElement(rundefinition, "option", {"name": name}).text = value
                 else:
                     ElementTree.SubElement(rundefinition, "option", {"name": name})
-        common_options = self.__get_property_arg(PROPERTY_COMMON, PROPERTY_OPTIONS)
-        specific_options = self.__get_property_arg(prop, PROPERTY_OPTIONS)
+        common_options = self.properties_desc.get_property_arg(PROPERTY_COMMON, PROPERTY_OPTIONS)
+        specific_options = self.properties_desc.get_property_arg(prop, PROPERTY_OPTIONS)
 
         parse_options(common_options)
         parse_options(specific_options)
@@ -560,10 +535,7 @@ class FullLauncher(Launcher):
         return []
 
     def __get_mode(self, prop: str) -> str:
-        mode = self.property_desc[prop].get(PROPERTY_MODE, None)
-        if not mode:
-            sys.exit("Mode was not specified for property {}".format(prop))
-        return mode
+        return self.properties_desc.get_property_arg(prop, PROPERTY_MODE)
 
     def launch(self):
         # Process common directories.
@@ -704,23 +676,11 @@ class FullLauncher(Launcher):
         self.logger.debug("Starting scheduler for verification tasks preparation with {} processes".
                           format(preparator_processes))
 
-        #TODO: coverage
-        '''
         find_coverage = self.config.get(COMPONENT_COVERAGE, {}).get(TAG_MAX_COVERAGE, False)
         if find_coverage:
-            if RULE_COVERAGE in rules and len(rules) > 1:
-                rules.remove(RULE_COVERAGE)
-            if RULE_COVERAGE not in rules:
-                self.logger.debug("Adding auxiliary rule 'cov' to find coverage")
-                is_other = False
-                for rule in rules:
-                    if rule not in [RULE_RACES, RULE_DEADLOCK, RULE_SIGNALS]:
-                        is_other = True
-                if is_other:
-                    rules.append(RULE_COV_AUX_OTHER)
-                if RULE_RACES in rules or RULE_SIGNALS in rules or RULE_DEADLOCK in rules:
-                    rules.append(RULE_COV_AUX_RACES)
-        '''
+            if PROPERTY_COVERAGE in rules and len(rules) > 1:
+                # Do not create specific launch to find coverage.
+                rules.remove(PROPERTY_COVERAGE)
 
         rules = sorted(set(rules))
         preparator_start_wall = time.time()
@@ -750,14 +710,10 @@ class FullLauncher(Launcher):
                     self.logger.debug("Skipping subsystem '{}' because it does not relate with the checking commits".
                                       format(entry_desc.subsystem))
                     continue
-            main_generator = MainGenerator(self.config, entry_desc.file, self.property_desc)
+            main_generator = MainGenerator(self.config, entry_desc.file, self.properties_desc)
             main_generator.process_sources()
             for rule in rules:
                 strategy = main_generator.get_strategy(rule)
-                '''
-                if rule in [RULE_COV_AUX_OTHER, RULE_COV_AUX_RACES]:
-                    rule = RULE_COVERAGE
-                '''
                 mode = self.__get_mode(rule)
                 main_file_name = os.path.join(DEFAULT_MAIN_DIR, "{0}_{1}.c".format(entry_desc.short_name, strategy))
                 entrypoints = main_generator.generate_main(strategy, main_file_name)
@@ -916,14 +872,6 @@ class FullLauncher(Launcher):
             if counter > preparator_processes:
                 break
 
-        '''
-        if find_coverage:
-            for rule in [RULE_COV_AUX_OTHER, RULE_COV_AUX_RACES]:
-                if rule in rules:
-                    rules.remove(rule)
-            if RULE_COVERAGE not in rules:
-                rules.append(RULE_COVERAGE)
-        '''
         if backup_read:
             self.logger.info("Restoring from backup copy")
             backup_files = glob.glob(os.path.join(self.work_dir, "{}*".format(DEFAULT_BACKUP_PREFIX)))
@@ -961,7 +909,7 @@ class FullLauncher(Launcher):
         self.logger.debug("Using BenchExec, found in: '{0}'".format(path_to_benchexec))
         os.environ["PATH"] += os.pathsep + path_to_benchexec
         benchmark = {}
-        for prop in self.property_desc.keys():
+        for prop in self.properties_desc.get_properties():
             # Specify resource limitations.
             benchmark[prop] = ElementTree.Element("benchmark", {
                 "tool": CPACHECKER,
@@ -1174,7 +1122,7 @@ class FullLauncher(Launcher):
             TAG_CONFIG_CPU_TIME_LIMIT: time_limit,
             TAG_CONFIG_CPU_CORES_LIMIT: core_limit
         }
-        exporter = Exporter(self.config, DEFAULT_EXPORT_DIR, self.install_dir, properties_desc=self.property_desc)
+        exporter = Exporter(self.config, DEFAULT_EXPORT_DIR, self.install_dir, properties_desc=self.properties_desc)
         exporter.export(report_launches, report_resources, report_components, result_archive,
                         unknown_desc={COMPONENT_PREPARATOR: preparator_unknowns}, component_attrs=component_attrs,
                         verifier_config=config)

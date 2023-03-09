@@ -17,13 +17,8 @@
 # limitations under the License.
 #
 
-import json
-import os
-import re
-import sys
-
-from components import *
 from components.component import Component
+from models.verification_result import *
 
 DEFAULT_TYPE = "int"
 DEFAULT_VOID = "void"
@@ -75,7 +70,7 @@ class MainGenerator(Component):
     This component is used for generating file with main function, which calls specified entry points.
     """
 
-    def __init__(self, config: dict, input_file: str, properties_desc: dict):
+    def __init__(self, config: dict, input_file: str, properties_desc: PropertiesDescription):
         super(MainGenerator, self).__init__(COMPONENT_MAIN_GENERATOR, config)
 
         # Config.
@@ -83,8 +78,7 @@ class MainGenerator(Component):
         self.ignore_pthread_attr_t = self.component_config.get(TAG_IGNORE_PTHREAD_ATTR, False)
         self.print_prototypes = self.component_config.get(TAG_PRINT_PROTOTYPES, True)
         self.main_generation_strategies = {}
-        for prop, desc in properties_desc.items():
-            strategy = desc.get(PROPERTY_MAIN_GENERATION_STRATEGY, None)
+        for prop, strategy in properties_desc.get_property_arg_for_all(PROPERTY_MAIN_GENERATION_STRATEGY).items():
             if strategy:
                 self.__use_strategy(strategy, prop)
                 self.logger.debug("Use strategy {} for property {}".format(strategy, prop))

@@ -23,6 +23,7 @@ import os
 import re
 import shutil
 import time
+import sys
 from xml.etree import ElementTree
 
 from components import *
@@ -315,3 +316,55 @@ class VerificationResults:
                 value = self.resources.get(resource, 0)
             res.append(str(value))
         return ";".join(res)
+
+
+class PropertiesDescription:
+    def __init__(self, plugin_path=""):
+        self.property_desc = {}
+        # Here we take basic properties description file and the one for plugin.
+        basic_properties_desc_file = os.path.join(DEFAULT_PROPERTIES_DIR, DEFAULT_PROPERTIES_DESC_FILE)
+        if not os.path.exists(basic_properties_desc_file):
+            # Basic file is not required for benchmarks processing.
+            return
+
+        for file in [basic_properties_desc_file, plugin_path]:
+            if not file or not os.path.exists(file):
+                # File may not be specified for plugin
+                continue
+            with open(file, "r", errors='ignore') as fd:
+                content = json.load(fd)
+                for prop, desc in content.items():
+                    self.property_desc[prop] = desc
+                    if PROPERTY_MODE not in desc:
+                        sys.exit("Property file is incorrect: property {} is missing {} attribute".
+                                 format(prop, PROPERTY_MODE))
+
+    def get_property_arg(self, prop: str, arg: str, ignore_missing=False):
+        property_desc = self.property_desc.get(prop, {})
+        if not property_desc and not ignore_missing:
+            sys.exit("Property {} was not in a description".format(prop))
+        default_arg = ""
+        if arg == PROPERTY_IS_MOVE_OUTPUT:
+            default_arg = False
+        elif arg == PROPERTY_OPTIONS:
+            default_arg = {}
+        elif arg == PROPERTY_SPECIFICATION_AUTOMATON:
+            default_arg = ""
+        elif arg == PROPERTY_MAIN_GENERATION_STRATEGY:
+            default_arg = ""
+        elif arg == PROPERTY_IS_RELEVANCE:
+            default_arg = True
+        elif arg == PROPERTY_IS_ALL_TRACES_FOUND:
+            default_arg = False
+        if arg == PROPERTY_MODE and arg not in property_desc:
+            sys.exit("Mode was not specified for property {}".format(prop))
+        return property_desc.get(arg, default_arg)
+
+    def get_properties(self):
+        return self.property_desc.keys()
+
+    def get_property_arg_for_all(self, arg: str) -> dict:
+        result = {}
+        for prop in self.get_properties():
+            result[prop] = self.get_property_arg(prop, arg)
+        return result
