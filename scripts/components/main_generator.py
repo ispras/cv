@@ -48,11 +48,7 @@ PARTIAL_STRATEGY = "partial"
 PARTIAL_EXT_ALLOCATION_STRATEGY = "partial_ext_allocation"
 COMBINED_STRATEGY = "combined"
 THREADED_STRATEGY = "threaded"
-SIMPLIFIED_THREADED_STRATEGY = "simplified_threaded"
-THREADED_STRATEGY_NONDET = "threaded_nondet"
-THREADED_COMBINED_STRATEGY = "threaded_combined"
-MAIN_GENERATOR_STRATEGIES = [PARTIAL_STRATEGY, COMBINED_STRATEGY, THREADED_STRATEGY, THREADED_STRATEGY_NONDET,
-                             THREADED_COMBINED_STRATEGY, SIMPLIFIED_THREADED_STRATEGY, PARTIAL_EXT_ALLOCATION_STRATEGY]
+MAIN_GENERATOR_STRATEGIES = [PARTIAL_STRATEGY, COMBINED_STRATEGY, THREADED_STRATEGY, PARTIAL_EXT_ALLOCATION_STRATEGY]
 
 
 def get_formatted_type(origin):
@@ -211,7 +207,7 @@ class MainGenerator(Component):
             if not self.ignore_types:
                 for header in self.metadata.get(TAG_INCLUDE, []):
                     fp.write("#include \"{}\"\n".format(header))
-            if strategy in [THREADED_STRATEGY, THREADED_STRATEGY_NONDET, SIMPLIFIED_THREADED_STRATEGY]:
+            if strategy in [THREADED_STRATEGY]:
                 fp.write("typedef unsigned long int pthread_t;\n")
                 if not self.ignore_pthread_attr_t:
                     fp.write("union pthread_attr_t {\n"
@@ -288,7 +284,7 @@ class MainGenerator(Component):
                         arg_def_str = DEFAULT_VOID
                     fp.write("extern {0} {1}({2});\n".format(ret_type, caller, arg_def_str))
 
-                if strategy in [THREADED_STRATEGY, THREADED_STRATEGY_NONDET]:
+                if strategy in [THREADED_STRATEGY]:
                     caller_args = DEFAULT_VOID + "* arg"
                     ret_caller_type = DEFAULT_VOID + "*"
                 else:
@@ -307,20 +303,15 @@ class MainGenerator(Component):
 
             fp.write("extern int __VERIFIER_nondet_int();\n")
 
-            if strategy in [SIMPLIFIED_THREADED_STRATEGY]:
-                fp.write("/* ENVIRONMENT_MODEL {} generated main function */\n".format(
-                    DEFAULT_MAIN + ENTRY_POINT_SUFFIX))
-                fp.write("void* {0}(void *) {{\n"
-                         "  int nondet;\n".format(DEFAULT_MAIN + ENTRY_POINT_SUFFIX))
-            elif strategy not in [PARTIAL_STRATEGY, PARTIAL_EXT_ALLOCATION_STRATEGY]:
+            if strategy not in [PARTIAL_STRATEGY, PARTIAL_EXT_ALLOCATION_STRATEGY]:
                 fp.write("/* ENVIRONMENT_MODEL {} generated main function */\n".format(DEFAULT_MAIN))
                 fp.write("void {0}(int argc, char *argv[]) {{\n"
                          "  int nondet;\n".format(DEFAULT_MAIN))
 
-            if strategy in [COMBINED_STRATEGY, THREADED_COMBINED_STRATEGY]:
+            if strategy in [COMBINED_STRATEGY]:
                 fp.write("  while (1) {{\n".format(DEFAULT_MAIN))
                 for caller, params in sorted(self.entrypoints.items()):
-                    if strategy == THREADED_COMBINED_STRATEGY and not params.get("races", False):
+                    if not params.get("races", False):
                         continue
                     fp.write("    nondet = __VERIFIER_nondet_int();\n"
                              "    if (nondet) {{\n"
@@ -333,28 +324,6 @@ class MainGenerator(Component):
                          "    }}\n"
                          "  }}\n"
                          "}}\n".format(DEFAULT_CHECK_FINAL_STATE_FUNCTION))
-                callers = [DEFAULT_MAIN]
-
-            if strategy == SIMPLIFIED_THREADED_STRATEGY:
-                fp.write("  nondet = __VERIFIER_nondet_int();\n"
-                         "  switch (nondet) {\n")
-                counter = 1
-                for caller, params in sorted(self.entrypoints.items()):
-                    if strategy == THREADED_COMBINED_STRATEGY and not params.get("races", False):
-                        continue
-                    fp.write("  case {0}:\n"
-                             "    {1}();\n"
-                             "    break;\n".format(counter, caller + ENTRY_POINT_SUFFIX))
-                    counter += 1
-                fp.write("  }\n"
-                         "}\n\n")
-                fp.write("/* ENVIRONMENT_MODEL {} generated main function */\n".format(DEFAULT_MAIN))
-                fp.write("void {0}(int argc, char *argv[]) {{\n"
-                         "  int nondet;\n".format(DEFAULT_MAIN))
-                fp.write("  pthread_t thread0;\n"
-                         "  {0}_N(&thread0, 0, {1}, 0);\n".format(DEFAULT_THREAD_CREATE_FUNCTION,
-                                                                  DEFAULT_MAIN + ENTRY_POINT_SUFFIX))
-                fp.write("}\n")
                 callers = [DEFAULT_MAIN]
 
             if strategy in [THREADED_STRATEGY]:
