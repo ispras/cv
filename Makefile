@@ -178,9 +178,8 @@ install-cif-compiled: build-cif-compiled check-deploy-dir
 install-scripts: check-deploy-dir
 	@mkdir -p ${DEPLOY_DIR}
 	@cd ${DEPLOY_DIR} ; \
-	cp -r ${root_dir}/verifier_files/ . ; \
 	cp -r ${root_dir}/patches/ . ; \
-	cp -r ${root_dir}/rules/ . ; \
+	cp -r ${root_dir}/properties/ . ; \
 	cp -r ${root_dir}/entrypoints/ . ; \
 	cp -r ${root_dir}/configs/ . ; \
 	cp -r ${root_dir}/scripts/ . ; \
