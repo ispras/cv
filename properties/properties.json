@@ -13,7 +13,7 @@
         "counterexample.export.exportExtendedWitness=true"
       ]
     },
-    "main generation strategy": "partial",
+    "main generation strategy": "partial_ext_allocation",
     "model files": ""
   },
   "common": {
