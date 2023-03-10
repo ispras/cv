@@ -45,13 +45,14 @@ TAG_IGNORE_TYPES = "ignore types"
 
 # Strategies.
 PARTIAL_STRATEGY = "partial"
+PARTIAL_EXT_ALLOCATION_STRATEGY = "partial_ext_allocation"
 COMBINED_STRATEGY = "combined"
 THREADED_STRATEGY = "threaded"
 SIMPLIFIED_THREADED_STRATEGY = "simplified_threaded"
 THREADED_STRATEGY_NONDET = "threaded_nondet"
 THREADED_COMBINED_STRATEGY = "threaded_combined"
 MAIN_GENERATOR_STRATEGIES = [PARTIAL_STRATEGY, COMBINED_STRATEGY, THREADED_STRATEGY, THREADED_STRATEGY_NONDET,
-                             THREADED_COMBINED_STRATEGY, SIMPLIFIED_THREADED_STRATEGY]
+                             THREADED_COMBINED_STRATEGY, SIMPLIFIED_THREADED_STRATEGY, PARTIAL_EXT_ALLOCATION_STRATEGY]
 
 
 def get_formatted_type(origin):
@@ -63,6 +64,26 @@ def get_formatted_type(origin):
 def simplify_type(var_type: str):
     res = re.sub(r'\s', '_', var_type)
     return re.sub(r'\*', '_pointer_', res)
+
+
+def is_pointer(var_type: str):
+    return "*" in var_type
+
+
+def get_memory_allocation_function(var_type: str):
+    variable_name = "__VERIFIER_nondet_{}".format(simplify_type(var_type))
+    res = var_type + " " + variable_name + "() {\n"
+    res = res + "  {} {};\n".format(var_type, variable_name)
+    res = res + "  " + variable_name + " = ext_allocation();\n"
+    array_pointer = variable_name
+    var_type = var_type.replace("*", "", 1)
+    while is_pointer(var_type):
+        array_pointer = array_pointer + "[0]"
+        res = res + "  " + array_pointer + " = ext_allocation();\n"
+        var_type = var_type.replace("*", "", 1)
+    res = res + "  return " + variable_name + ";\n"
+    res = res + "}\n"
+    return res
 
 
 class MainGenerator(Component):
@@ -242,7 +263,11 @@ class MainGenerator(Component):
                         fp.write(var_def + ";\n")
                         if var_type not in nondet_funcs:
                             nondet_funcs.add(var_type)
-                            fp.write("extern {} __VERIFIER_nondet_{}();\n".format(var_type, simplify_type(var_type)))
+                            if strategy == PARTIAL_EXT_ALLOCATION_STRATEGY and is_pointer(var_type):
+                                fp.write(get_memory_allocation_function(var_type))
+                            else:
+                                fp.write(
+                                    "extern {} __VERIFIER_nondet_{}();\n".format(var_type, simplify_type(var_type)))
                         if is_cast:
                             var_def = var_name + " = ({})__VERIFIER_nondet_{}();\n".format(var_type,
                                                                                            simplify_type(var_type))
@@ -276,7 +301,7 @@ class MainGenerator(Component):
                     fp.write("  {0}".format(local_var))
 
                 fp.write("  {0}({1});\n".format(caller, ", ".join(arg_names)))
-                if strategy == PARTIAL_STRATEGY:
+                if strategy in [PARTIAL_STRATEGY, PARTIAL_EXT_ALLOCATION_STRATEGY]:
                     fp.write("  {}();\n".format(DEFAULT_CHECK_FINAL_STATE_FUNCTION))
                 fp.write("}\n\n")
 
@@ -287,7 +312,7 @@ class MainGenerator(Component):
                     DEFAULT_MAIN + ENTRY_POINT_SUFFIX))
                 fp.write("void* {0}(void *) {{\n"
                          "  int nondet;\n".format(DEFAULT_MAIN + ENTRY_POINT_SUFFIX))
-            elif strategy not in [PARTIAL_STRATEGY]:
+            elif strategy not in [PARTIAL_STRATEGY, PARTIAL_EXT_ALLOCATION_STRATEGY]:
                 fp.write("/* ENVIRONMENT_MODEL {} generated main function */\n".format(DEFAULT_MAIN))
                 fp.write("void {0}(int argc, char *argv[]) {{\n"
                          "  int nondet;\n".format(DEFAULT_MAIN))
