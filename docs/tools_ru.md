@@ -1,37 +1,18 @@
 Описание вспомогательных инструментов
 -------------------------------------
 
-Для корректной работы вспомогательных инструментов необходимо наличие следующих зависимостей:
- - git;
- - svn, версия не ниже 1.9;
- - java, версия не ниже 1.8;
- - python, версия не ниже 3.4;
- - python-dev (Ubuntu), python-devel (Fedora);
- - модули python:
-   - requests;
-   - ujson;
-   - graphviz;
-   - ply;
-   - pytest;
-   - atomicwrites;
-   - pathlib2;
-   - more-itertools;
-   - pluggy;
-   - py;
-   - attrs;
-   - setuptools;
-   - six;
-   - django;
-   - psycopg2;
-   - clade.
- - ant;
- - lcov;
- - cmake;
- - libmpc-dev (Ubuntu), libmpc-devel (Fedora);
- - lib32z1;
- - libxslt-devel;
- - libxml2-devel.x86_64;
- - clade (cм. п. 2).
+Инструментарий корректно работает с Ubuntu 18.
+Необходимые зависимости устанавливаются командой:
+
+```shell
+sudo apt install git openjdk-11-jdk python3 python3-dev ant lcov cmake libmpc-dev lib32z1 libxslt-dev libpq-dev
+```
+
+Модули python:
+
+```shell
+sudo pip3 install requests ujson graphviz ply pytest atomicwrites pathlib2 more-itertools pluggy py attrs setuptools six django==2.1 clade psycopg2
+```
 
 1. Инструмент klever — web-интерфейс, отвечающий за визуализацию результатов.
 Репозиторий: https://github.com/mutilin/klever.git
@@ -47,16 +28,21 @@
 ```
 make install-astraver-cil DEPLOY_DIR=<директория, в которую будет развернут инструментарий CV>
 ```
+
 3. Инструмент BenchExec отвечает за ограничение и измерение вычислительных ресурсов.
 Репозиторий: https://github.com/sosy-lab/benchexec.git.
-НЕ работает с Ubunut 22.
+НЕ работает с Ubuntu 22.
 
 4. Инструмент CPAchecker отвечает непосредственно за верификацию.
 Требуемые версии инструмента хранятся в файле cpa.config в корневой директории в формате
 `<mode>;<репозиторий>;<ветка>;<ревизия>`.
 Для скачивания всех указанных версий CPAchecker необходимо выполнить:
-```
+```shell
 make download-cpa
+```
+Для удаления уже установленных версий CPAchecker необходимо выполнить:
+```shell
+make clean-cpa
 ```
 
 5. Инструмент CIF требуется для проверки коммитов.
