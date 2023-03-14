@@ -517,8 +517,6 @@ class FullLauncher(Launcher):
         new_path = os.path.join(prefix, file)
         if os.path.exists(new_path):
             return new_path
-        self.logger.debug("Cannot find file {} neither in basic directory {} nor in plugin directory {}".
-                          format(file, prefix, plugin_dir))
         return ""
 
     def __get_files_for_system(self, prefix: str, pattern: str) -> list:
@@ -715,12 +713,12 @@ class FullLauncher(Launcher):
             for rule in rules:
                 strategy = main_generator.get_strategy(rule)
                 mode = self.__get_mode(rule)
-                main_file_name = os.path.join(DEFAULT_MAIN_DIR, "{0}_{1}.c".format(entry_desc.short_name, strategy))
-                entrypoints = main_generator.generate_main(strategy, main_file_name)
+                object_name = "{0}_{1}_{2}".format(entry_desc.short_name, re.sub('\W+','_', rule), strategy)
+                main_file_name = os.path.join(DEFAULT_MAIN_DIR, "{}.c".format(object_name))
+                entrypoints = main_generator.generate_main(strategy, main_file_name, rule)
                 model = self.__get_file_for_system(self.models_dir, "{0}.c".format(rule))
                 common_file = self.__get_file_for_system(self.models_dir, COMMON_HEADER_FOR_RULES)
-                cil_file = os.path.abspath(os.path.join(DEFAULT_CIL_DIR, "{0}_{1}_{2}.i".format(entry_desc.short_name,
-                                                                                                rule, strategy)))
+                cil_file = os.path.abspath(os.path.join(DEFAULT_CIL_DIR, "{}.i".format(object_name)))
                 try:
                     while True:
                         for i in range(preparator_processes):

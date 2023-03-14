@@ -37,6 +37,8 @@ TAG_RENAME = "rename"
 TAG_SED_COMMANDS = "sed commands"
 TAG_CAST = "cast"
 TAG_IGNORE_PTHREAD_ATTR = "ignore pthread_attr_t"
+TAG_IGNORE_ENTRYPOINT = "ignore"
+TAG_NOT_IGNORE_ENTRYPOINT = "not ignore"
 
 # Config tags.
 TAG_STRATEGIES = "strategies"
@@ -192,11 +194,18 @@ class MainGenerator(Component):
                                 file = os.path.join(root, name)
                                 self.exec_sed_cmd(regexp, file)
 
-    def generate_main(self, strategy: str, output_file: str) -> list:
+    def __is_entrypoint_ignored(self, params: dict, prop: str) -> bool:
+        global_ignore = self.metadata.get(TAG_IGNORE_ENTRYPOINT, [])
+        if global_ignore:
+            return prop in global_ignore and prop not in params.get(TAG_NOT_IGNORE_ENTRYPOINT, [])
+        return prop in params.get(TAG_IGNORE_ENTRYPOINT, [])
+
+    def generate_main(self, strategy: str, output_file: str, prop: str) -> list:
         """
         This function generates environment model.
         :param strategy: defines strategy for environment model generation.
         :param output_file: model will be generated in this file.
+        :param prop: property to be checked.
         :return: list of all generated entrypoints, for which verifier should be launched.
         """
         callers = self.callers
@@ -311,7 +320,7 @@ class MainGenerator(Component):
             if strategy in [COMBINED_STRATEGY]:
                 fp.write("  while (1) {{\n".format(DEFAULT_MAIN))
                 for caller, params in sorted(self.entrypoints.items()):
-                    if not params.get("races", False):
+                    if self.__is_entrypoint_ignored(params, prop):
                         continue
                     fp.write("    nondet = __VERIFIER_nondet_int();\n"
                              "    if (nondet) {{\n"
@@ -329,7 +338,7 @@ class MainGenerator(Component):
             if strategy in [THREADED_STRATEGY]:
                 counter = 1
                 for caller, params in sorted(self.entrypoints.items()):
-                    if params.get("races", False):
+                    if not self.__is_entrypoint_ignored(params, prop):
                         fp.write("  pthread_t thread{1};\n"
                                  "  {0}(&thread{1}, 0, {2}, 0);\n\n".format(DEFAULT_THREAD_CREATE_FUNCTION, counter,
                                                                             caller + ENTRY_POINT_SUFFIX))
