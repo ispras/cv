@@ -143,6 +143,8 @@ TAG_LOG_FILE = "log"
 
 TAG_METADATA = "metadata"
 TAG_SUBSYSTEM = "subsystem"
+TAG_ENTRYPOINTS = "entrypoints"
+DEFAULT_SUBSYSTEM = "."
 
 CLADE_WORK_DIR = "clade-work-dir"
 CLADE_BASE_FILE = "cmds.txt"

@@ -479,8 +479,8 @@ class FullLauncher(Launcher):
                             process_pool[i] = None
                         if not process_pool[i]:
                             process_pool[i] = multiprocessing.Process(target=self.__process_single_launch_results,
-                                                              name=result.entrypoint,
-                                                              args=(result, launch_dir, queue))
+                                                                      name=result.entrypoint,
+                                                                      args=(result, launch_dir, queue))
                             process_pool[i].start()
                             raise NestedLoop
                     sleep(BUSY_WAITING_INTERVAL)
@@ -629,17 +629,22 @@ class FullLauncher(Launcher):
         else:
             for group in ep_desc_files:
                 self.logger.debug("Processing given group of files: {}".format(group))
-                # Wildcards are supported here.
-                files = self.__get_files_for_system(self.entrypoints_dir, group + JSON_EXTENSION)
+                files = []
+                if type(group) == list:
+                    for elem in group:
+                        files.extend(self.__get_files_for_system(self.entrypoints_dir, elem + JSON_EXTENSION))
+                    identifier = "_".join(group)
+                    self.logger.debug("Processing joint files with entry point description '{}'".format(identifier))
+                    entrypoints_desc.add(EntryPointDesc(files, identifier))
+                else:
+                    # Wildcards are supported here.
+                    files = self.__get_files_for_system(self.entrypoints_dir, group + JSON_EXTENSION)
+                    for file in files:
+                        self.logger.debug("Processing file with entry point description '{}'".format(file))
+                        identifier = os.path.basename(file)[:-len(JSON_EXTENSION)]
+                        entrypoints_desc.add(EntryPointDesc([file], identifier))
                 if not files:
-                    self.logger.warning("No file with description of entry points were found for group '{}'. "
-                                        "This group will be ignored.".format(group))
-                for file in files:
-                    self.logger.debug("Processing file with entry point description '{}'".format(file))
-                    identifier = os.path.basename(file)[:-len(JSON_EXTENSION)]
-                    entrypoints_desc.add(EntryPointDesc(file, identifier))
-            if not entrypoints_desc:
-                sys.exit("No file with description of entry points to be checked were found")
+                    sys.exit("No file with description of entry points for '{}' were found".format(group))
 
         # Process sources in separate process.
         sources_queue = multiprocessing.Queue()
@@ -701,14 +706,15 @@ class FullLauncher(Launcher):
             if specific_sources:
                 is_skip = True
                 for file in specific_sources:
-                    if entry_desc.subsystem in file:
-                        is_skip = False
-                        break
+                    for subsystem in entry_desc.subsystems:
+                        if subsystem in file:
+                            is_skip = False
+                            break
                 if is_skip:
                     self.logger.debug("Skipping subsystem '{}' because it does not relate with the checking commits".
-                                      format(entry_desc.subsystem))
+                                      format(entry_desc.id))
                     continue
-            main_generator = MainGenerator(self.config, entry_desc.file, self.properties_desc)
+            main_generator = MainGenerator(self.config, entry_desc.data, self.properties_desc)
             main_generator.process_sources()
             for rule in rules:
                 strategy = main_generator.get_strategy(rule)
@@ -732,7 +738,7 @@ class FullLauncher(Launcher):
                                     self.logger.debug("Generating verification task {0} for entrypoints {1}, rule {2}".
                                                       format(cil_file, entry_desc.id, rule))
                                     preparator = Preparator(self.install_dir, self.config,
-                                                            subdirectory_pattern=entry_desc.subsystem, model=model,
+                                                            subdirectory_patterns=entry_desc.subsystems, model=model,
                                                             main_file=main_file_name, output_file=cil_file,
                                                             preparation_config=preparation_config,
                                                             common_file=common_file, build_results=self.build_results)
@@ -1000,7 +1006,7 @@ class FullLauncher(Launcher):
                             launch = launches.popleft()
                             percent = 100 - 100 * counter / number_of_launches
                             self.logger.info("Scheduling new launch: subsystem '{0}', rule '{1}', entrypoint '{2}' "
-                                             "({3}% remains)".format(launch.entry_desc.subsystem, launch.rule,
+                                             "({3}% remains)".format(launch.entry_desc.id, launch.rule,
                                                                      launch.entrypoint, round(percent, 2)))
                             counter += 1
                             process_pool[i] = multiprocessing.Process(target=self.local_launch, name=launch.name,

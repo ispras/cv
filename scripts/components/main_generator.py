@@ -27,7 +27,6 @@ DEFAULT_CHECK_FINAL_STATE_FUNCTION = "ldv_check_final_state"
 ARGUMENT_PREFIX = "ldv_"
 
 # Entry-points file tags.
-TAG_ENTRYPOINTS = "entrypoints"
 TAG_INCLUDE = "include"
 TAG_RETURN = "return"
 TAG_ARGS = "args"
@@ -39,6 +38,7 @@ TAG_CAST = "cast"
 TAG_IGNORE_PTHREAD_ATTR = "ignore pthread_attr_t"
 TAG_IGNORE_ENTRYPOINT = "ignore"
 TAG_NOT_IGNORE_ENTRYPOINT = "not ignore"
+TAG_GLOBAL_SCOPE = "global scope"
 
 # Config tags.
 TAG_STRATEGIES = "strategies"
@@ -89,7 +89,7 @@ class MainGenerator(Component):
     This component is used for generating file with main function, which calls specified entry points.
     """
 
-    def __init__(self, config: dict, input_file: str, properties_desc: PropertiesDescription):
+    def __init__(self, config: dict, entrypoints: dict, properties_desc: PropertiesDescription):
         super(MainGenerator, self).__init__(COMPONENT_MAIN_GENERATOR, config)
 
         # Config.
@@ -105,20 +105,24 @@ class MainGenerator(Component):
         for prop, strategy in self.component_config.get(TAG_STRATEGIES, {}).items():
             self.__use_strategy(strategy, prop)
 
-        # Entry-points file parsing.
-        with open(input_file, errors='ignore') as data_file:
-            data = json.load(data_file)
-
-        self.entrypoints = data.get(TAG_ENTRYPOINTS)
-        self.metadata = data.get(TAG_METADATA, {})
-
+        self.entrypoints = entrypoints
         self.callers = list()
         statics = set()
+        self.sed_commands = dict()
+        self.includes = set()
         for caller, params in sorted(self.entrypoints.items()):
             if TAG_STATIC_PROTOTYPE in params:
                 statics.add(caller)
                 caller += STATIC_SUFFIX
                 self.entrypoints[caller] = params
+            metadata = self.__get_metadata(params)
+            sed_cmds = metadata.get(TAG_SED_COMMANDS, [])
+            if sed_cmds:
+                subsystem = metadata.get(TAG_SUBSYSTEM, DEFAULT_SUBSYSTEM)
+                if subsystem not in self.sed_commands:
+                    self.sed_commands[subsystem] = set()
+                self.sed_commands[subsystem] = self.sed_commands[subsystem].union(set(sed_cmds))
+            self.includes = self.includes.union(metadata.get(TAG_INCLUDE, set()))
             self.callers.append(caller + ENTRY_POINT_SUFFIX)
 
         for static in statics:
@@ -128,6 +132,10 @@ class MainGenerator(Component):
         if strategy not in MAIN_GENERATOR_STRATEGIES:
             sys.exit("Specified main generation strategy '{}' for property '{}' does not exist".format(strategy, prop))
         self.main_generation_strategies[prop] = strategy
+
+    @staticmethod
+    def __get_metadata(params: dict) -> dict:
+        return params.get(TAG_METADATA, {})
 
     def get_strategy(self, prop: str) -> str:
         strategy = self.main_generation_strategies.get(prop, None)
@@ -181,21 +189,19 @@ class MainGenerator(Component):
                                 self.exec_sed_cmd('s/\\b{}\\b\\s*(/{}(/g'.format(initial_name, caller), file_abs_path)
 
         # Apply sed commands for the whole subsystem.
-        for regexp in self.metadata.get(TAG_SED_COMMANDS, []):
+        for subsystem, regexps in self.sed_commands.items():
             for source_dir in source_dirs:
-                subsystems = self.metadata.get(TAG_SUBSYSTEM, ".")
-                if type(subsystems) == str:
-                    subsystems = [subsystems]
-                for subsystem in subsystems:
-                    subsystem_dir = os.path.join(source_dir, subsystem)
-                    if os.path.isdir(subsystem_dir):
-                        for root, dirs, files_in in os.walk(subsystem_dir):
-                            for name in files_in:
-                                file = os.path.join(root, name)
+                subsystem_dir = os.path.join(source_dir, subsystem)
+                if os.path.isdir(subsystem_dir):
+                    for root, dirs, files_in in os.walk(subsystem_dir):
+                        for name in files_in:
+                            file = os.path.join(root, name)
+                            for regexp in sorted(regexps):
                                 self.exec_sed_cmd(regexp, file)
 
     def __is_entrypoint_ignored(self, params: dict, prop: str) -> bool:
-        global_ignore = self.metadata.get(TAG_IGNORE_ENTRYPOINT, [])
+        metadata = self.__get_metadata(params)
+        global_ignore = metadata.get(TAG_IGNORE_ENTRYPOINT, [])
         if global_ignore:
             return prop in global_ignore and prop not in params.get(TAG_NOT_IGNORE_ENTRYPOINT, [])
         return prop in params.get(TAG_IGNORE_ENTRYPOINT, [])
@@ -214,7 +220,7 @@ class MainGenerator(Component):
         with open(output_file, 'w', encoding='utf8') as fp:
             # Add header files.
             if not self.ignore_types:
-                for header in self.metadata.get(TAG_INCLUDE, []):
+                for header in sorted(self.includes):
                     fp.write("#include \"{}\"\n".format(header))
             if strategy in [THREADED_STRATEGY]:
                 fp.write("typedef unsigned long int pthread_t;\n")
@@ -262,7 +268,7 @@ class MainGenerator(Component):
                         else:
                             var_def = var_type + " " + var_name
 
-                    global_scope = arg.get('global scope', True)
+                    global_scope = arg.get(TAG_GLOBAL_SCOPE, True)
                     is_cast = arg.get(TAG_CAST, True)
                     if global_scope:
                         fp.write(var_def + ";\n")

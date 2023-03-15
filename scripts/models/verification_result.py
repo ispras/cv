@@ -37,15 +37,22 @@ def to_str(val) -> str:
 
 
 class EntryPointDesc:
-    def __init__(self, file: str, identifier: str):
-        self.file = file
-        with open(file, errors='ignore') as fd:
-            data = json.load(fd)
-            metadata = data.get(TAG_METADATA, {})
-            self.optimize = metadata.get(TAG_OPTIMIZE, False)
-            self.subsystem = metadata.get(TAG_SUBSYSTEM, ".")
-        self.id = identifier  # Path in the entrypoints directory (may contain subdirectories).
+    def __init__(self, files: list, identifier: str):
+        self.id = identifier
         self.short_name = re.sub(r"\W", "_", identifier)  # Should be used in path concatenations.
+        self.optimize = False
+        self.subsystems = []
+        self.data = {}
+        for file in files:
+            with open(file, errors='ignore') as fd:
+                data = json.load(fd)
+            metadata = data.get(TAG_METADATA, {})
+            entrypoints = data[TAG_ENTRYPOINTS]
+            self.optimize = self.optimize or metadata.get(TAG_OPTIMIZE, False)
+            self.subsystems.append(metadata.get(TAG_SUBSYSTEM, DEFAULT_SUBSYSTEM))
+            for caller, params in entrypoints.items():
+                self.data[caller] = params
+                self.data[caller][TAG_METADATA] = metadata
 
     def __str__(self):
         return self.id
@@ -127,7 +134,7 @@ class GlobalStatistics:
 class VerificationResults:
     def __init__(self, verification_task, config: dict):
         if verification_task:
-            self.id = verification_task.entry_desc.subsystem
+            self.id = verification_task.entry_desc.id
             self.rule = verification_task.rule
             self.entrypoint = verification_task.entrypoint
         else:
@@ -152,7 +159,7 @@ class VerificationResults:
         self.resources = dict()
 
     def is_equal(self, verification_task: VerificationTask):
-        return self.id == verification_task.entry_desc.subsystem and \
+        return self.id == verification_task.entry_desc.id and \
                self.rule == verification_task.rule and \
                self.entrypoint == verification_task.entrypoint
 

@@ -62,7 +62,7 @@ class Preparator(Component):
     This component is used for preparation of a verification task.
     """
 
-    def __init__(self, install_dir, config, subdirectory_pattern=None, model=None, main_file=None,
+    def __init__(self, install_dir, config, subdirectory_patterns=None, model=None, main_file=None,
                  common_file=None, output_file=DEFAULT_CIL_FILE, preparation_config={}, build_results=None):
         # Here we suggest 2 scenarios:
         # 1. call from launcher.py (main) - script is inside working directory already;
@@ -85,7 +85,7 @@ class Preparator(Component):
 
         self.white_list = self.component_config.get(TAG_FILTER_WHITE_LIST, [])
         self.black_list = self.component_config.get(TAG_FILTER_BLACK_LIST, [])
-        self.subdirectory_pattern = subdirectory_pattern
+        self.subdirectory_patterns = subdirectory_patterns
 
         # Auxiliary (optional) arguments.
         self.files_suffix = self.component_config.get(TAG_FILES_SUFFIX, None)
@@ -199,17 +199,12 @@ class Preparator(Component):
                     return True
         if file in self.build_commands:
             self.build_commands[file][0] = True
-        if self.subdirectory_pattern:
-            if type(self.subdirectory_pattern) is list:
-                is_ignore_file = True
-                for subsystem in self.subdirectory_pattern:
-                    if re.search(subsystem, file):
-                        is_ignore_file = False
-                if is_ignore_file:
-                        self.subsystem_filter_build_commands += 1
-                        return True
-            elif not re.search(self.subdirectory_pattern, file):
-                # Exclude files for none-specified subdir
+        if self.subdirectory_patterns:
+            is_ignore_file = True
+            for subsystem in self.subdirectory_patterns:
+                if re.search(subsystem, file):
+                    is_ignore_file = False
+            if is_ignore_file:
                 self.subsystem_filter_build_commands += 1
                 return True
         if file in self.build_commands:
