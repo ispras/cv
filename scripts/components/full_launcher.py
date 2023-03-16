@@ -56,6 +56,8 @@ class FullLauncher(Launcher):
         # Properties description.
         plugin_properties_desc_file = self.__get_file_for_system(DEFAULT_PROPERTIES_DIR, DEFAULT_PROPERTIES_DESC_FILE)
         self.properties_desc = PropertiesDescription(plugin_properties_desc_file)
+        self.is_cgroup_v2 = "cgroup2" in \
+                            self.command_caller_with_output("mount | grep '^cgroup' | awk '{print $1}' | uniq")
 
     def __perform_filtering(self, result: VerificationResults, queue: multiprocessing.Queue,
                             resource_queue_filter: multiprocessing.Queue):
@@ -382,13 +384,7 @@ class FullLauncher(Launcher):
                                internal_time_limit, queue):
         # TODO: This is for vcloud only - not supported!
         # Prepare benchmark file for the whole group.
-        benchmark_cur = ElementTree.Element("benchmark", {
-            "tool": CPACHECKER,
-            "timelimit": str(time_limit),
-            # TODO: memlimit does not work with Ubuntu 22
-            # "memlimit": str(memory_limit) + "GB",
-            "cpuCores": str(core_limit)
-        })
+        benchmark_cur = self.__create_benchmark_config(time_limit, core_limit, memory_limit)
         ElementTree.SubElement(benchmark_cur, "resultfiles").text = "**/*"
         ElementTree.SubElement(benchmark_cur, "requiredfiles").text = "properties/*"
         for launch in launches:
@@ -534,6 +530,16 @@ class FullLauncher(Launcher):
 
     def __get_mode(self, prop: str) -> str:
         return self.properties_desc.get_property_arg(prop, PROPERTY_MODE)
+
+    def __create_benchmark_config(self, time_limit, core_limit, memory_limit):
+        base_config = {
+            "tool": CPACHECKER,
+            "timelimit": str(time_limit),
+            "cpuCores": str(core_limit)
+        }
+        if not self.is_cgroup_v2:
+            base_config["memlimit"] = str(memory_limit) + "GB"
+        return ElementTree.Element("benchmark", base_config)
 
     def launch(self):
         # Process common directories.
@@ -915,13 +921,7 @@ class FullLauncher(Launcher):
         benchmark = {}
         for prop in self.properties_desc.get_properties():
             # Specify resource limitations.
-            benchmark[prop] = ElementTree.Element("benchmark", {
-                "tool": CPACHECKER,
-                "timelimit": str(time_limit)
-                # TODO: memlimit does not work with Ubunut 22
-                # "memlimit": str(memory_limit) + "GB",
-                # TODO: option 'cpuCores' does not work in BenchExec
-            })
+            benchmark[prop] = self.__create_benchmark_config(time_limit, core_limit, memory_limit)
             rundefinition = ElementTree.SubElement(benchmark[prop], "rundefinition")
             ElementTree.SubElement(rundefinition, "option", {"name": "-heap"}).text = "{}m".format(heap_limit)
             ElementTree.SubElement(rundefinition, "option", {"name": "-timelimit"}).text = str(internal_time_limit)
@@ -958,7 +958,6 @@ class FullLauncher(Launcher):
         if self.scheduler == SCHEDULER_CLOUD:
             launch_groups = dict()
             for launch in launches:
-                # TODO: here we need to unify by pairs (mode, options)
                 mode = self.__get_mode(launch.rule)
                 if mode in launch_groups:
                     launch_groups[mode].append(launch)
