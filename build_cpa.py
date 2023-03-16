@@ -83,10 +83,13 @@ def parse_args():
 
 def command_caller(cmd: str, error_msg: str, cwd=CV_DIR, is_check=True):
     try:
-        subprocess.run(cmd, shell=True, cwd=cwd, capture_output=(not is_debug), check=True)
+        if is_debug:
+            stdout = None
+        else:
+            stdout = subprocess.PIPE
+        subprocess.run(cmd, shell=True, cwd=cwd, check=True, stdout=stdout)
     except subprocess.CalledProcessError as e:
         cmd = str(e.cmd)
-        output = ""
         error_str = "{}: failed command '{}'".format(error_msg, cmd)
         if e.output:
             output = e.output.decode("utf-8", errors='ignore').rstrip()
