@@ -227,7 +227,7 @@ class Builder(Component):
             # noinspection PyUnresolvedReferences
             from clade import Clade
             c = Clade(CLADE_WORK_DIR, CLADE_BASE_FILE, conf=self.clade_conf)
-            c.intercept(str(self.make_command).split())
+            c.intercept(str(self.make_command).split(), cwd=self.source_dir)
             c.parse("SrcGraph")
             cmds = c.compilation_cmds
             for cmd in cmds:
