@@ -18,6 +18,7 @@
 #
 
 import json
+import os.path
 import shutil
 import sys
 import tempfile
@@ -257,7 +258,10 @@ class Preparator(Component):
     def __process_single_cc_command(self, command, cif_out, cif_in, source_dir):
         processed_files = []
 
+        source_dir_basename = os.path.relpath(source_dir, os.path.abspath(os.path.join(source_dir, os.pardir)))
+
         cif_out = os.path.normpath(os.path.relpath(cif_out, start=source_dir))
+        cif_out = os.path.join(source_dir_basename, cif_out)
         if self.__is_skip_file(cif_out):
             self.logger.debug("Skip file due to filter settings: %s", cif_out)
             return -1, None
