@@ -657,19 +657,22 @@ class FullLauncher(Launcher):
         sources_process = multiprocessing.Process(target=self.__prepare_sources, name="sources",
                                                   args=(sources_queue, ))
         sources_process.start()
-        while True:
-            sleep(BUSY_WAITING_INTERVAL * 10)
-            if sources_queue.qsize():
-                data = sources_queue.get()
-                if not specific_functions:
-                    specific_functions = data.get(SOURCE_QUEUE_FUNCTIONS)
-                specific_sources = data.get(SOURCE_QUEUE_FILES)
-                qualifier_resources = data.get(SOURCE_QUEUE_QUALIFIER_RESOURCES)
-                builder_resources = data.get(SOURCE_QUEUE_BUILDER_RESOURCES)
-                self.build_results = data.get(SOURCE_QUEUE_RESULTS)
-                break
-
         sources_process.join()  # Wait here since this information may reduce future preparation work.
+
+        if not sources_queue.empty():
+            data = sources_queue.get()
+            print(data)
+            if not specific_functions:
+                specific_functions = data.get(SOURCE_QUEUE_FUNCTIONS)
+            specific_sources = data.get(SOURCE_QUEUE_FILES)
+            qualifier_resources = data.get(SOURCE_QUEUE_QUALIFIER_RESOURCES)
+            builder_resources = data.get(SOURCE_QUEUE_BUILDER_RESOURCES)
+            self.build_results = data.get(SOURCE_QUEUE_RESULTS)
+        else:
+            if not sources_process.exitcode:
+                self.logger.error("Sanity check failed: builder data is missed with none-error exit code")
+                exit(sources_process.exitcode)
+
         if sources_process.exitcode:
             self.logger.error("Source directories were not prepared")
             exit(sources_process.exitcode)
