@@ -17,12 +17,18 @@
 # limitations under the License.
 #
 
+# pylint: disable=wildcard-import, unused-wildcard-import, too-many-instance-attributes
+# pylint: disable=too-many-locals, too-many-arguments, broad-exception-caught
+
+"""
+Launcher implements basic functionality for launching verification tasks.
+"""
+
 import datetime
 import multiprocessing
 import subprocess
 import tempfile
 
-from aux.common import *
 from components.component import Component
 from components.coverage_processor import Coverage
 from models.verification_result import *
@@ -117,12 +123,13 @@ TAG_CONFIG_OPTIONS = "Options"
 
 class Launcher(Component):
     """
-    Main component, which creates verification tasks for the given system, launches them and processes results.
+    Main component, which creates verification tasks for the given system,
+    launches them and processes results.
     """
     def __init__(self, name: str, config_file: str):
         self.config_file = os.path.basename(config_file).replace(JSON_EXTENSION, "")
         if os.path.exists(config_file):
-            with open(config_file, errors='ignore') as data_file:
+            with open(config_file, errors='ignore', encoding='ascii') as data_file:
                 config = json.load(data_file)
         else:
             config = {
@@ -132,9 +139,10 @@ class Launcher(Component):
                 }
             }
 
-        super(Launcher, self).__init__(name, config)
+        super().__init__(name, config)
 
-        # Since Launcher does not produce a lot of output and any of its failure is fatal, we can put in on stdout.
+        # Since Launcher does not produce a lot of output and any of its failure is fatal,
+        # we can put in on stdout.
         self.debug = self.config.get(TAG_DEBUG, False)
         if self.debug:
             self.output_desc = sys.stdout
@@ -142,15 +150,17 @@ class Launcher(Component):
             self.output_desc = subprocess.DEVNULL
 
         # Remember some useful directories.
-        self.root_dir = os.getcwd()  # By default tool-set is run from this directory.
-        self.work_dir = os.path.abspath(self.config.get(TAG_DIRS, {}).get(TAG_DIRS_WORK, DEFAULT_WORK_DIR))
-        self.results_dir = os.path.abspath(self.config.get(TAG_DIRS, {}).get(TAG_DIRS_RESULTS, DEFAULT_RESULTS_DIR))
+        self.root_dir = os.getcwd()  # By default, tool-set is run from this directory.
+        self.work_dir = os.path.abspath(self.config.get(TAG_DIRS, {}).get(TAG_DIRS_WORK,
+                                                                          DEFAULT_WORK_DIR))
+        self.results_dir = os.path.abspath(self.config.get(TAG_DIRS, {}).get(TAG_DIRS_RESULTS,
+                                                                             DEFAULT_RESULTS_DIR))
         if not os.path.exists(self.results_dir):
             os.makedirs(self.results_dir, exist_ok=True)
 
         if self.config.get(TAG_EXPORT_HTML_ERROR_TRACES, False):
-            self.result_dir_et = os.path.abspath(os.path.join(self.config[TAG_DIRS][TAG_DIRS_RESULTS],
-                                                              self._get_result_file_prefix()))
+            self.result_dir_et = os.path.abspath(os.path.join(
+                self.config[TAG_DIRS][TAG_DIRS_RESULTS], self._get_result_file_prefix()))
         else:
             self.result_dir_et = None
         self.install_dir = os.path.join(self.root_dir, DEFAULT_INSTALL_DIR)
@@ -164,11 +174,13 @@ class Launcher(Component):
         self.benchmark_args = self.component_config.get(TAG_BENCHMARK_ARGS, "")
         if self.scheduler == SCHEDULER_CLOUD:
             cloud_master = self.config.get(TAG_CLOUD, {}).get(TAG_CLOUD_MASTER)
-            cloud_priority = self.config.get(TAG_CLOUD, {}).get(TAG_CLOUD_PRIORITY, DEFAULT_CLOUD_PRIORITY)
-            self.benchmark_args = "{} --cloud --cloudMaster {} --cloudPriority {}".\
-                format(self.benchmark_args, cloud_master, cloud_priority)
+            cloud_priority = self.config.get(TAG_CLOUD, {}).get(TAG_CLOUD_PRIORITY,
+                                                                DEFAULT_CLOUD_PRIORITY)
+            self.benchmark_args = f"{self.benchmark_args} --cloud --cloudMaster {cloud_master} " \
+                                  f"--cloudPriority {cloud_priority}"
         self.job_name_suffix = ""
-        self.export_safes = self.config.get(COMPONENT_EXPORTER, {}).get(TAG_ADD_VERIFIER_PROOFS, True)
+        self.export_safes = self.config.get(COMPONENT_EXPORTER, {}).get(TAG_ADD_VERIFIER_PROOFS,
+                                                                        True)
 
     def __check_result_files(self, file: str, launch_dir: str):
         if file.endswith(".log"):
@@ -184,16 +196,18 @@ class Launcher(Component):
         for file in files:
             if os.path.isfile(file):
                 self.__check_result_files(file, launch_dir)
-            for root, dirs, files_in in os.walk(file):
+            for root, _, files_in in os.walk(file):
                 for name in files_in:
                     file = os.path.join(root, name)
                     self.__check_result_files(file, launch_dir)
         return launch_dir
 
-    def _process_coverage(self, result, launch_directory, source_dirs: list, default_source_file=None):
+    def _process_coverage(self, result, launch_directory, source_dirs: list,
+                          default_source_file=None):
         cov = Coverage(self, default_source_file=default_source_file)
         cov_queue = multiprocessing.Queue()
-        cov_process = multiprocessing.Process(target=cov.compute_coverage, name="coverage_{}".format(result.get_name()),
+        cov_process = multiprocessing.Process(target=cov.compute_coverage,
+                                              name=f"coverage_{result.get_name()}",
                                               args=(source_dirs, launch_directory, cov_queue))
         cov_process.start()
         cov_process.join()  # Wait since we are already in parallel threads for each launch.
@@ -206,20 +220,22 @@ class Launcher(Component):
                 result.coverage_resources[TAG_WALL_TIME] = data.get(TAG_WALL_TIME, 0.0)
                 result.coverage_resources[TAG_MEMORY_USAGE] = data.get(TAG_MEMORY_USAGE, 0)
         else:
-            self.logger.warning("Coverage was not computed for {} and entry-point {}".
-                                format(result.id, result.entrypoint))
+            warning_msg = f"Coverage was not computed for {result.id} and entry-point "\
+                          f"{result.entrypoint}"
+            self.logger.warning(warning_msg)
 
     def _get_from_queue_into_list(self, queue, result_list):
         while not queue.empty():
             launch = queue.get()
             result_list.append(launch)
             if self.backup:
-                with open(self.backup, "a") as f_report:
+                with open(self.backup, "a", encoding='ascii') as f_report:
                     f_report.write(str(launch) + "\n")
         return result_list
 
     def _get_result_file_prefix(self):
-        return self.config_file + "_" + datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H_%M_%S')
+        return self.config_file + "_" + datetime.datetime.fromtimestamp(time.time()).\
+            strftime('%Y_%m_%d_%H_%M_%S')
 
     def _upload_results(self, uploader_config, result_file):
         server = uploader_config.get(TAG_UPLOADER_SERVER)
@@ -238,9 +254,10 @@ class Launcher(Component):
         if not user:
             self.logger.error("User name was not provided for uploading results, skipping it.")
             return
-        self.logger.info("Uploading results into server {} with identifier {}".format(server, identifier))
+        self.logger.info("Uploading results into server %s with identifier %s", server, identifier)
         uploader = self.get_tool_path(DEFAULT_TOOL_PATH[UPLOADER])
-        uploader_python_path = os.path.abspath(os.path.join(os.path.dirname(uploader), os.path.pardir))
+        uploader_python_path = os.path.abspath(os.path.join(os.path.dirname(uploader),
+                                                            os.path.pardir))
         commits = self.config.get(TAG_COMMITS)
         if commits:
             commit = commits[0]
@@ -254,33 +271,39 @@ class Launcher(Component):
             job_name = job_name.replace(RUNDEFINITION_PATTERN, self.job_name_suffix)
             job_name = job_name.replace(COMMIT_PATTERN, str(commits))
         elif commits:
-            job_name = "{}: {} ({})".format(self.config_file, commits, timestamp)
+            job_name = f"{self.config_file}: {commits} ({timestamp})"
         else:
-            job_name = "{} ({})".format(self.config_file, timestamp)
-        self.logger.debug("Using name '{}' for uploaded report".format(job_name))
-        command = "PYTHONPATH={} {} '{}' --host='{}' --username='{}' --password='{}' --archive='{}' --name='{}'". \
-            format(uploader_python_path, uploader, identifier, server, user, password, result_file, job_name)
+            job_name = f"{self.config_file} ({timestamp})"
+        self.logger.debug("Using name '%s' for uploaded report", job_name)
+        command = f"PYTHONPATH={uploader_python_path} {uploader} '{identifier}' " \
+                  f"--host='{server}' --username='{user}' --password='{password}' " \
+                  f"--archive='{result_file}' --name='{job_name}'"
+        self.logger.error(command)
         if request_sleep:
-            command = "{} --request-sleep {}".format(command, request_sleep)
+            command = f"{command} --request-sleep {request_sleep}"
         if is_parent:
-            command = "{} --copy".format(command)
+            command = f"{command} --copy"
         try:
             subprocess.check_call(command, shell=True)
-            self.logger.info("Results were successfully uploaded into the server: {}/jobs".format(server))
-        except:
-            self.logger.warning("Error on uploading of report archive '{}' via command '{}':\n".
-                                format(result_file, command), exc_info=True)
+            self.logger.info("Results were successfully uploaded into the server: %s/jobs", server)
+        except Exception as any_exception:
+            exception_msg = f"Error on uploading of report archive '{result_file}' "\
+                            f"via command '{command}': {any_exception}\n"
+            self.logger.warning(exception_msg, exc_info=True)
 
-    def _get_none_rule_key(self, verification_result: VerificationResults):
-        return "{0}_{1}".format(verification_result.id, verification_result.entrypoint)
+    @staticmethod
+    def _get_none_rule_key(verification_result: VerificationResults):
+        return f"{verification_result.id}_{verification_result.entrypoint}"
 
-    def _print_launches_report(self, file_name: str, report_resources: str, results: list, cov_lines: dict = None,
-                               cov_funcs: dict = None):
-        self.logger.info("Preparing report on launches into file: '{}'".format(file_name))
-        with open(file_name, "w") as f_report, open(report_resources, "w") as f_resources:
-            # Write headers.
-            f_report.write("Subsystem;Rule;Entrypoint;Verdict;Termination;CPU;Wall;Memory;Relevancy;"
-                           "Traces;Filtered traces;Work dir;Cov lines;Cov funcs;MEA time\n")
+    def _print_launches_report(self, file_name: str, report_resources: str, results: list,
+                               cov_lines: dict = None, cov_funcs: dict = None):
+        self.logger.info("Preparing report on launches into file: '%s'", file_name)
+        with open(file_name, "w", encoding='ascii') as f_report, \
+                open(report_resources, "w", encoding='ascii') as f_resources:
+            # Write header.
+            f_report.write("Subsystem;Rule;Entrypoint;Verdict;Termination;CPU;Wall;Memory;"
+                           "Relevancy;Traces;Filtered traces;Work dir;Cov lines;Cov funcs;"
+                           "MEA time\n")
             f_resources.write("Counter;" + ";".join(ADDITIONAL_RESOURCES) + "\n")
             counter = 1
             for result in results:
@@ -292,14 +315,15 @@ class Launcher(Component):
                     if not result.cov_funcs and cov_funcs:
                         result.cov_funcs = cov_funcs.get(key, 0.0)
                 f_report.write(str(result) + "\n")
-                f_resources.write("{};".format(counter) + result.print_resources() + "\n")
+                f_resources.write(f"{counter};" + result.print_resources() + "\n")
                 counter += 1
 
     def _get_results_names(self) -> tuple:
         reports_prefix = self._get_result_file_prefix()
-        report_launches = os.path.join(self.results_dir, "report_launches_{0}.csv".format(reports_prefix))
-        result_archive = os.path.join(self.results_dir, "results_{0}.zip".format(reports_prefix))
-        report_components = os.path.join(self.results_dir, "report_components_{0}.csv".format(reports_prefix))
-        short_report = os.path.join(self.results_dir, "short_report_{0}.csv".format(reports_prefix))
-        report_resources = os.path.join(self.results_dir, "report_resources_{0}.csv".format(reports_prefix))
+        report_launches = os.path.join(self.results_dir, f"report_launches_{reports_prefix}.csv")
+        result_archive = os.path.join(self.results_dir, f"results_{reports_prefix}.zip")
+        report_components = os.path.join(self.results_dir,
+                                         f"report_components_{reports_prefix}.csv")
+        short_report = os.path.join(self.results_dir, f"short_report_{reports_prefix}.csv")
+        report_resources = os.path.join(self.results_dir, f"report_resources_{reports_prefix}.csv")
         return report_launches, result_archive, report_components, short_report, report_resources

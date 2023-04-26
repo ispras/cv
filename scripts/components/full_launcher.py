@@ -22,6 +22,7 @@ from collections import deque
 from time import sleep
 from xml.dom import minidom
 
+from aux.common import *
 from components.builder import Builder
 from components.exporter import Exporter
 from components.launcher import *
@@ -661,7 +662,6 @@ class FullLauncher(Launcher):
 
         if not sources_queue.empty():
             data = sources_queue.get()
-            print(data)
             if not specific_functions:
                 specific_functions = data.get(SOURCE_QUEUE_FUNCTIONS)
             specific_sources = data.get(SOURCE_QUEUE_FILES)
