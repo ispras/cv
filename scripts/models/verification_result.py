@@ -16,6 +16,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=too-few-public-methods, invalid-name
+"""
+This module describes internal data structures.
+"""
 
 import glob
 import json
@@ -32,11 +36,15 @@ from components.mea import MEA
 TAG_OPTIMIZE = "optimize"
 
 
-def to_str(val) -> str:
-    return "{}".format(val)
+def _to_str(val) -> str:
+    return str(val)
 
 
 class EntryPointDesc:
+    """
+    Representation of entry points description.
+    """
+
     def __init__(self, files: list, identifier: str):
         self.id = identifier
         self.short_name = re.sub(r"\W", "_", identifier)  # Should be used in path concatenations.
@@ -44,8 +52,8 @@ class EntryPointDesc:
         self.subsystems = []
         self.data = {}
         for file in files:
-            with open(file, errors='ignore') as fd:
-                data = json.load(fd)
+            with open(file, errors='ignore', encoding="utf8") as file_obj:
+                data = json.load(file_obj)
             metadata = data.get(TAG_METADATA, {})
             entrypoints = data[TAG_ENTRYPOINTS]
             self.optimize = self.optimize or metadata.get(TAG_OPTIMIZE, False)
@@ -59,7 +67,12 @@ class EntryPointDesc:
 
 
 class VerificationTask:
-    def __init__(self, entry_desc: EntryPointDesc, rule: str, mode: str, entrypoint, path_to_verifier, cil_file):
+    """
+    Representation of a verification task.
+    """
+
+    def __init__(self, entry_desc: EntryPointDesc, rule: str, mode: str, entrypoint,
+                 path_to_verifier, cil_file):
         self.entry_desc = entry_desc
         self.rule = rule
         self.entrypoint = entrypoint
@@ -69,7 +82,11 @@ class VerificationTask:
         self.name = "_".join([self.entry_desc.id, self.rule, self.entrypoint])
 
     def copy(self):
-        return type(self)(self.entry_desc, self.rule, self.mode, self.entrypoint, self.path_to_verifier, self.cil_file)
+        """
+        Make a copy of verification task.
+        """
+        return type(self)(self.entry_desc, self.rule, self.mode, self.entrypoint,
+                          self.path_to_verifier, self.cil_file)
 
 
 class GlobalStatistics:
@@ -83,14 +100,17 @@ class GlobalStatistics:
         self.safes = 0
         self.unsafes = 0
         self.unknowns = 0
-        self.et = 0
+        self.et_num = 0
         self.filtered = 0
         self.relevant = 0
 
     def add_result(self, verification_result):
+        """
+        Add intermediate resources usages to global statistics.
+        """
         self.cpu += verification_result.cpu
         self.wall += verification_result.wall
-        self.et += verification_result.initial_traces
+        self.et_num += verification_result.initial_traces
         self.filtered += verification_result.filtered_traces
         if verification_result.relevant:
             self.relevant += 1
@@ -102,23 +122,29 @@ class GlobalStatistics:
             self.unknowns += 1
         self.mem_average += verification_result.mem
 
-    def __add_overall(self, cpu, wall, et, filtered, relevant):
+    def __add_overall(self, cpu, wall, et_num, filtered, relevant):
         self.cpu += cpu
         self.wall += wall
-        self.et += et
+        self.et_num += et_num
         self.filtered += filtered
         self.relevant += relevant
 
     def sum(self, info):
+        """
+        Complete resource measurements.
+        """
         self.relevant = max(self.relevant, info.relevant)
         info.relevant = 0
-        self.__add_overall(info.cpu, info.wall, info.et, info.filtered, info.relevant)
+        self.__add_overall(info.cpu, info.wall, info.et_num, info.filtered, info.relevant)
         self.mem_average = max(self.mem_average, info.mem_average)
         self.safes += info.safes
         self.unsafes += info.unsafes
         self.unknowns += info.unknowns
 
     def sum_memory(self):
+        """
+        Summary of memory usage.
+        """
         overall = self.safes + self.unknowns + self.unsafes
         if overall:
             self.mem_average = int(self.mem_average / overall)
@@ -126,12 +152,16 @@ class GlobalStatistics:
             self.mem_average = 0
 
     def __str__(self):
-        return ";".join([str(self.safes), str(self.unsafes), str(self.unknowns), str(self.relevant), str(self.et),
-                         str(self.filtered), str(round(self.cpu, -3)), str(round(self.wall, -3)),
-                         str(round(self.mem_average / 1000))])
+        return ";".join([str(self.safes), str(self.unsafes), str(self.unknowns), str(self.relevant),
+                         str(self.et_num), str(self.filtered), str(round(self.cpu, -3)),
+                         str(round(self.wall, -3)), str(round(self.mem_average / 1000))])
 
 
 class VerificationResults:
+    """
+    Representation of a result for a given verification task.
+    """
+
     def __init__(self, verification_task, config: dict):
         if verification_task:
             self.id = verification_task.entry_desc.id
@@ -154,16 +184,22 @@ class VerificationResults:
         self.filtered_traces = 0
         self.debug = config.get(TAG_DEBUG, False)
         self.config = config
-        self.coverage_resources = dict()
-        self.mea_resources = dict()
-        self.resources = dict()
+        self.coverage_resources = {}
+        self.mea_resources = {}
+        self.resources = {}
 
     def is_equal(self, verification_task: VerificationTask):
+        """
+        Compare two verification results.
+        """
         return self.id == verification_task.entry_desc.id and \
-               self.rule == verification_task.rule and \
-               self.entrypoint == verification_task.entrypoint
+            self.rule == verification_task.rule and \
+            self.entrypoint == verification_task.entrypoint
 
     def get_name(self) -> str:
+        """
+        Returns unique name of a verification result.
+        """
         return "_".join([str(self.entrypoint), str(self.rule), str(self.entrypoint)])
 
     def __parse_xml_node(self, columns):
@@ -190,7 +226,7 @@ class VerificationResults:
                 if str(value).endswith("s"):
                     value = value[:-1]
                 self.wall = float(value)
-            elif title == 'memUsage' or title == 'memory':
+            elif title in ['memUsage', 'memory']:
                 value = column.attrib['value']
                 if str(value).endswith("B"):
                     value = value[:-1]
@@ -201,7 +237,11 @@ class VerificationResults:
                     value = value[:-1]
                 self.resources[title] = int(value)
 
-    def parse_output_dir(self, launch_dir: str, install_dir: str, result_dir: str, parsed_columns=None):
+    def parse_output_dir(self, launch_dir: str, install_dir: str, result_dir: str,
+                         parsed_columns=None):
+        """
+        Get verification results from launch directory.
+        """
         # Process BenchExec xml output file.
         if parsed_columns:
             self.__parse_xml_node(parsed_columns)
@@ -221,19 +261,18 @@ class VerificationResults:
             else:
                 log_file = glob.glob(os.path.join(launch_dir, 'benchmark*logfiles/*.log'))[0]
 
-            with open(log_file, errors='ignore') as f_res:
+            with open(log_file, errors='ignore', encoding="utf8") as f_res:
                 for line in f_res.readlines():
                     res = re.search(r'Number of refinements:(\s+)(\d+)', line)
                     if res:
                         if int(res.group(2)) > 1:
                             self.relevant = True
             if not parsed_columns:
-                shutil.move(log_file, "{}/{}".format(launch_dir, LOG_FILE))
+                shutil.move(log_file, f"{launch_dir}/{LOG_FILE}")
         except IndexError:
-            print("WARNING: log file was not found for entry point '{}'".format(self.entrypoint))
-            pass
+            print(f"WARNING: log file was not found for entry point '{self.entrypoint}'")
 
-        error_traces = glob.glob("{}/*{}".format(launch_dir, GRAPHML_EXTENSION))
+        error_traces = glob.glob(f"{launch_dir}/*{GRAPHML_EXTENSION}")
         self.initial_traces = len(error_traces)
         if self.verdict == VERDICT_SAFE and not \
                 self.config.get(COMPONENT_EXPORTER, {}).get(TAG_ADD_VERIFIER_PROOFS, True):
@@ -243,7 +282,7 @@ class VerificationResults:
         if not self.verdict == VERDICT_SAFE:
             self.relevant = True
 
-        # If there is only one trace, filtering will not be performed and it will not be examined.
+        # If there is only one trace, filtering will not be performed, and it will not be examined.
         if self.initial_traces == 1:
             # Trace should be checked if it is correct or not.
             start_time_cpu = time.process_time()
@@ -253,12 +292,14 @@ class VerificationResults:
             if is_exported:
                 # Trace is fine, just recheck final verdict.
                 if witness_type == WITNESS_VIOLATION:
-                    # Change global verdict to Unsafe, if there is at least one correct violation witness.
+                    # Change global verdict to Unsafe,
+                    # if there is at least one correct violation witness.
                     self.verdict = VERDICT_UNSAFE
                 if witness_type == WITNESS_CORRECTNESS:
                     self.verdict = VERDICT_SAFE
             else:
-                # Trace is bad, most likely verifier was killed during its printing, so just delete it.
+                # Trace is bad, most likely verifier was killed during its printing,
+                # so just delete it.
                 if self.verdict == VERDICT_UNSAFE and witness_type == WITNESS_VIOLATION:
                     # TODO: Add exception text to log.
                     self.verdict = VERDICT_UNKNOWN
@@ -277,10 +318,12 @@ class VerificationResults:
                     os.remove(file)
 
     def filter_traces(self, launch_dir: str, install_dir: str, result_dir: str):
-        # Perform Multiple Error Analysis to filter found error traces (only for several traces).
+        """
+        Perform Multiple Error Analysis to filter found error traces (only for several traces).
+        """
         start_time_cpu = time.process_time()
         start_wall_time = time.time()
-        traces = glob.glob("{}/witness*".format(launch_dir))
+        traces = glob.glob(f"{launch_dir}/witness*")
         mea = MEA(self.config, traces, install_dir, self.rule, result_dir)
         self.filtered_traces = len(mea.filter())
         if self.filtered_traces:
@@ -290,6 +333,9 @@ class VerificationResults:
         self.mea_resources[TAG_MEMORY_USAGE] = mea.memory
 
     def parse_line(self, line: str):
+        """
+        Parse a given line with verification results.
+        """
         values = line.split(";")
         self.id = values[0]
         self.rule = values[1]
@@ -308,14 +354,18 @@ class VerificationResults:
         self.mea_resources[TAG_CPU_TIME] = float(values[14])
 
     def __str__(self):
-        return ";".join([to_str(self.id), to_str(self.rule), to_str(self.entrypoint), to_str(self.verdict),
-                         to_str(self.termination_reason), to_str(self.cpu), to_str(self.wall), to_str(self.mem),
-                         to_str(self.relevant), to_str(self.initial_traces), to_str(self.filtered_traces),
-                         to_str(self.work_dir), to_str(self.cov_lines), to_str(self.cov_funcs),
-                         to_str(self.mea_resources.get(TAG_CPU_TIME, 0.0))])
+        return ";".join([_to_str(self.id), _to_str(self.rule), _to_str(self.entrypoint),
+                         _to_str(self.verdict), _to_str(self.termination_reason), _to_str(self.cpu),
+                         _to_str(self.wall), _to_str(self.mem), _to_str(self.relevant),
+                         _to_str(self.initial_traces), _to_str(self.filtered_traces),
+                         _to_str(self.work_dir), _to_str(self.cov_lines), _to_str(self.cov_funcs),
+                         _to_str(self.mea_resources.get(TAG_CPU_TIME, 0.0))])
 
     def print_resources(self):
-        res = list()
+        """
+        Encode verification results into line.
+        """
+        res = []
         for resource in ADDITIONAL_RESOURCES:
             if resource == "error traces":
                 value = self.filtered_traces
@@ -326,10 +376,15 @@ class VerificationResults:
 
 
 class PropertiesDescription:
+    """
+    Representation of a property description.
+    """
+
     def __init__(self, plugin_path=""):
         self.property_desc = {}
         # Here we take basic properties description file and the one for plugin.
-        basic_properties_desc_file = os.path.join(DEFAULT_PROPERTIES_DIR, DEFAULT_PROPERTIES_DESC_FILE)
+        basic_properties_desc_file = os.path.join(DEFAULT_PROPERTIES_DIR,
+                                                  DEFAULT_PROPERTIES_DESC_FILE)
         if not os.path.exists(basic_properties_desc_file):
             # Basic file is not required for benchmarks processing.
             return
@@ -338,18 +393,21 @@ class PropertiesDescription:
             if not file or not os.path.exists(file):
                 # File may not be specified for plugin
                 continue
-            with open(file, "r", errors='ignore') as fd:
-                content = json.load(fd)
+            with open(file, "r", errors='ignore', encoding="utf8") as file_obj:
+                content = json.load(file_obj)
                 for prop, desc in content.items():
                     self.property_desc[prop] = desc
                     if PROPERTY_MODE not in desc:
-                        sys.exit("Property file is incorrect: property {} is missing {} attribute".
-                                 format(prop, PROPERTY_MODE))
+                        sys.exit(f"Property file is incorrect: property {prop} is missing "
+                                 f"{PROPERTY_MODE} attribute")
 
     def get_property_arg(self, prop: str, arg: str, ignore_missing=False):
+        """
+        Get a value of an argument for the property.
+        """
         property_desc = self.property_desc.get(prop, {})
         if not property_desc and not ignore_missing:
-            sys.exit("Property {} was not in a description".format(prop))
+            sys.exit(f"Property {prop} was not in a description")
         default_arg = ""
         if arg == PROPERTY_IS_MOVE_OUTPUT:
             default_arg = False
@@ -364,13 +422,19 @@ class PropertiesDescription:
         elif arg == PROPERTY_IS_ALL_TRACES_FOUND:
             default_arg = False
         if arg == PROPERTY_MODE and arg not in property_desc:
-            sys.exit("Mode was not specified for property {}".format(prop))
+            sys.exit(f"Mode was not specified for property {prop}")
         return property_desc.get(arg, default_arg)
 
     def get_properties(self):
+        """
+        Get names of all properties.
+        """
         return self.property_desc.keys()
 
     def get_property_arg_for_all(self, arg: str) -> dict:
+        """
+        Get values of a given argument for all properties.
+        """
         result = {}
         for prop in self.get_properties():
             result[prop] = self.get_property_arg(prop, arg)

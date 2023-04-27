@@ -17,6 +17,10 @@
 # limitations under the License.
 #
 
+"""
+This component is used for preparation of a verification task.
+"""
+
 import json
 import os.path
 import shutil
@@ -35,7 +39,8 @@ TAG_CIL_OPTIONS = "cil options"
 TAG_FAIL_ON_ANY_CIL_FAIL = "fail on any cil fail"
 COMMAND_COMPILER = "command"
 
-PREPARATION_STRATEGY_SUBSYSTEM = "subsystem"  # Take all single build commands for specific directory.
+# Take all single build commands for specific directory.
+PREPARATION_STRATEGY_SUBSYSTEM = "subsystem"
 PREPARATION_STRATEGY_LIBRARY = "library"  # Create a single task for each library.
 CONF_SED_AFTER_CIL = "sed after cil"
 CONF_FILTERS = "filters"
@@ -46,8 +51,8 @@ STAGE_PREPROCESS = 1
 
 DEFAULT_CIL_OPTIONS = [
     "--printCilAsIs", "--domakeCFG", "--decil", "--noInsertImplicitCasts", "--useLogicalOperators",
-    "--ignore-merge-conflicts", "--no-convert-direct-calls", "--no-convert-field-offsets", "--no-split-structs",
-    "--rmUnusedInlines", "--out"
+    "--ignore-merge-conflicts", "--no-convert-direct-calls", "--no-convert-field-offsets",
+    "--no-split-structs", "--rmUnusedInlines", "--out"
 ]
 
 NOT_SUPPORTED_FUNCTIONS = ["__builtin_va_arg"]
@@ -64,13 +69,14 @@ class Preparator(Component):
     """
 
     def __init__(self, install_dir, config, subdirectory_patterns=None, model=None, main_file=None,
-                 common_file=None, output_file=DEFAULT_CIL_FILE, preparation_config={}, build_results=None):
+                 common_file=None, output_file=DEFAULT_CIL_FILE, preparation_config=None,
+                 build_results=None):
         # Here we suggest 2 scenarios:
         # 1. call from launcher.py (main) - script is inside working directory already;
-        # 2. manual call (aux) - script changes directory to working before creating instance of Preparator.
-        # In any case script is already in working directory (root).
+        # 2. manual call (aux) - script changes directory to working before creating instance of
+        # Preparator. In any case script is already in working directory (root).
 
-        super(Preparator, self).__init__(COMPONENT_PREPARATOR, config)
+        super().__init__(COMPONENT_PREPARATOR, config)
 
         if not build_results:
             sys.exit("Build results were not passed")
@@ -79,8 +85,10 @@ class Preparator(Component):
         self.install_dir = install_dir  # Must be absolute path here.
 
         # Configure CIL.
-        self.cil_out = self.component_config.get('cil_out', os.path.join(self.work_dir, output_file))
-        cil_bin = self.get_tool_path(DEFAULT_TOOL_PATH[CIL], self.component_config.get(TAG_TOOLS, {}).get(CIL))
+        self.cil_out = self.component_config.get('cil_out',
+                                                 os.path.join(self.work_dir, output_file))
+        cil_bin = self.get_tool_path(DEFAULT_TOOL_PATH[CIL],
+                                     self.component_config.get(TAG_TOOLS, {}).get(CIL))
         cil_options = self.component_config.get(TAG_CIL_OPTIONS, DEFAULT_CIL_OPTIONS)
         self.cil_command = [cil_bin] + cil_options
 
@@ -96,7 +104,8 @@ class Preparator(Component):
         self.use_cif = bool(re.search(CIF, self.compiler))
         self.aspect = self.component_config.get(TAG_ASPECT, None)
         self.extra_opts = set(self.component_config.get(TAG_EXTRA_OPTIONS, []))
-        self.unsupported_opts_regex = re.compile(r"unrecognized command line option [‘«\"](.*?)[’»\"]")
+        self.unsupported_opts_regex = re.compile(
+            r"unrecognized command line option [‘«\"](.*?)[’»\"]")
         self.resolve_missed_proto = self.component_config.get(TAG_RESOLVE_MISSED_PROTO, False)
         self.strategy = self.component_config.get(TAG_STRATEGY, PREPARATION_STRATEGY_SUBSYSTEM)
         self.fail_on_cil = self.component_config.get(TAG_FAIL_ON_ANY_CIL_FAIL, False)
@@ -105,7 +114,7 @@ class Preparator(Component):
         preprocess_dir = os.path.join(self.work_dir, DEFAULT_PREPROCESS_DIR)
         if not os.path.exists(preprocess_dir):
             os.makedirs(preprocess_dir, exist_ok=True)
-        self.preprocessing_dir = tempfile.mkdtemp(dir=preprocess_dir)
+        self.preprocessing_dir = str(tempfile.mkdtemp(dir=preprocess_dir))
 
         self.main_file = self.__get_file_for_preprocess(main_file, self.preprocessing_dir)
         spec_file = self.__get_file_for_preprocess(model, self.preprocessing_dir)
@@ -121,7 +130,7 @@ class Preparator(Component):
         self.complied_commands = 0
         self.processed_commands = 0
         self.temp_logs = set()
-        self.libs = dict()
+        self.libs = {}
 
         self.preparation_config = preparation_config
         path_to_compilers = self.component_config.get(TAG_PATH, "")
@@ -136,7 +145,8 @@ class Preparator(Component):
         self.black_list_filter_build_commands = 0
         self.build_commands = {}
 
-    def __get_file_for_preprocess(self, file, work_dir):
+    @staticmethod
+    def __get_file_for_preprocess(file, work_dir):
         if not file:
             return None
         abs_path = os.path.join(work_dir, os.path.basename(file))
@@ -144,7 +154,7 @@ class Preparator(Component):
             shutil.copy(file, work_dir)
         return abs_path
 
-    def preprocess_model_file(self, file, cif_in, cif_out, cif_args):
+    def __preprocess_model_file(self, file, cif_in, cif_out, cif_args):
         file_out = file + ".i"
         cif_args = [file_out if x == cif_out else x for x in cif_args]
         cif_args = [file if x == cif_in else x for x in cif_args]
@@ -152,11 +162,10 @@ class Preparator(Component):
         self.logger.debug(' '.join(cif_args))
         if not self.command_caller(cif_args, self.preprocessing_dir, keep_log=False):
             return file_out
-        else:
-            self.logger.debug("Error in preprocessing model file %s", file_out)
-            return None
+        self.logger.debug("Error in preprocessing model file %s", file_out)
+        return None
 
-    def get_first_target(self, command, tag):
+    def __get_first_target(self, command, tag):
         if command[tag] == [] or command[tag] is None:
             self.incorrect_build_commands += 1
             return None
@@ -164,16 +173,16 @@ class Preparator(Component):
         command_file = command[tag][0]
 
         if command_file == "0":
-            self.logger.warning("Argument {0} is zero, this usually means, "
-                                "that some build option is not correctly parsed,"
-                                " please, check clade configuration".format(tag))
+            self.logger.warning(f"Argument {tag} is zero, this usually means, "
+                                f"that some build option is not correctly parsed,"
+                                f" please, check clade configuration")
             command_file = command["in"][1]
 
         if command_file == "-" or command_file == "/dev/null" or command_file is None:
             self.incorrect_build_commands += 1
             return None
-        elif tag == "in" and (re.search(r'\.[sS]$', command_file) or
-                              re.search(r'\.o$', command_file)):
+        if tag == "in" and \
+                (re.search(r'\.[sS]$', command_file) or re.search(r'\.o$', command_file)):
             self.incorrect_build_commands += 1
             return None
         for regexp in self.preparation_config.get(CONF_FILTERS, []):
@@ -184,7 +193,7 @@ class Preparator(Component):
         return command_file
 
     def __is_skip_file(self, file):
-        if self.is_auxiliary(file):
+        if self.__is_auxiliary(file):
             # Do not touch aux files.
             return False
         if self.white_list:
@@ -213,14 +222,14 @@ class Preparator(Component):
         # If no regexp was applied then do not skip the file.
         return False
 
-    def process_cc_command(self, command, source_dir):
+    def __process_cc_command(self, command, source_dir):
         # Workarounds for bad cc commands
 
-        cif_in = self.get_first_target(command, "in")
+        cif_in = self.__get_first_target(command, "in")
         if cif_in is None:
             self.logger.debug("Skip command due to absent in: %s", str(command))
             return -1, None
-        cif_out = self.get_first_target(command, "out")
+        cif_out = self.__get_first_target(command, "out")
         if cif_out is None:
             if self.strategy in [PREPARATION_STRATEGY_SUBSYSTEM]:
                 self.logger.debug("Skip command due to subsystem filter: %s", str(command))
@@ -242,23 +251,22 @@ class Preparator(Component):
 
             if self.libs[counter]:
                 return 0, processed_files
-            else:
-                del self.libs[counter]
-                return -1, None
+            del self.libs[counter]
+            return -1, None
 
         if self.strategy in [PREPARATION_STRATEGY_LIBRARY]:
             return -1, None
-        else:
-            if not os.path.isabs(cif_out):
-                cif_out = os.path.normpath(os.path.join(command["cwd"], cif_out))
-            if not os.path.isabs(cif_in):
-                cif_in = os.path.normpath(os.path.join(command["cwd"], cif_in))
-            return self.__process_single_cc_command(command, cif_out, cif_in, source_dir)
+        if not os.path.isabs(cif_out):
+            cif_out = os.path.normpath(os.path.join(command["cwd"], cif_out))
+        if not os.path.isabs(cif_in):
+            cif_in = os.path.normpath(os.path.join(command["cwd"], cif_in))
+        return self.__process_single_cc_command(command, cif_out, cif_in, source_dir)
 
     def __process_single_cc_command(self, command, cif_out, cif_in, source_dir):
         processed_files = []
 
-        source_dir_basename = os.path.relpath(source_dir, os.path.abspath(os.path.join(source_dir, os.pardir)))
+        source_dir_basename = os.path.relpath(source_dir, os.path.abspath(os.path.join(source_dir,
+                                                                                       os.pardir)))
 
         cif_out = os.path.normpath(os.path.relpath(cif_out, start=source_dir))
         cif_out = os.path.join(source_dir_basename, cif_out)
@@ -280,10 +288,10 @@ class Preparator(Component):
             # Use CIF as a compiler.
             if not self.aspect:
                 self.aspect = os.path.abspath(DEFAULT_CIF_FILE)
-                self.logger.warning("Aspect file was not specified for CIF, using empty aspect '{}'".
-                                    format(self.aspect))
-                with open(self.aspect, "w", encoding='utf8') as fa:
-                    fa.write(EMPTY_ASPECT_TEXT)
+                self.logger.warning(
+                    f"Aspect file was not specified for CIF, using empty aspect '{self.aspect}'")
+                with open(self.aspect, "w", encoding='utf8') as aspect_obj:
+                    aspect_obj.write(EMPTY_ASPECT_TEXT)
             cif_args = [self.compiler,
                         "--in", cif_in,
                         "--aspect", self.aspect,
@@ -304,8 +312,9 @@ class Preparator(Component):
         opts = command["opts"][:]
         opts.extend(self.extra_opts)
         opts = [re.sub(r'\"', r'\\"', opt) for opt in opts]
-        cif_unsupported_opts = preprocessor_deps_opts + self.preparation_config.get(CONF_UNSUPPORTED_OPTIONS, []) +\
-                               self.component_config.get(CONF_UNSUPPORTED_OPTIONS, [])
+        cif_unsupported_opts = preprocessor_deps_opts + \
+            self.preparation_config.get(CONF_UNSUPPORTED_OPTIONS, []) + \
+            self.component_config.get(CONF_UNSUPPORTED_OPTIONS, [])
         opts = filter_opts(opts, cif_unsupported_opts)
         if self.use_cif:
             # noinspection PyUnresolvedReferences
@@ -326,18 +335,18 @@ class Preparator(Component):
         if not ret:
             for file, stage in self.aux_files.items():
                 if stage == STAGE_NONE:
-                    aux_file_out = self.preprocess_model_file(file, cif_in, cif_out, cif_args)
+                    aux_file_out = self.__preprocess_model_file(file, cif_in, cif_out, cif_args)
                     if aux_file_out:
                         if not self.__execute_cil(self.cil_out, [aux_file_out]):
                             processed_files.append(aux_file_out)
                             self.aux_files[file] = STAGE_PREPROCESS
         return ret, processed_files
 
-    def fix_cil_file(self, cil_file):
+    def __fix_cil_file(self, cil_file):
         # Remove functions, which are not supported by CPAchecker,
         # by adding ldv_ prefix.
         for func in NOT_SUPPORTED_FUNCTIONS:
-            self.exec_sed_cmd('s/{0}/{1}{0}/g'.format(func, ADDED_PREFIX), cil_file)
+            self.exec_sed_cmd(f's/{func}/{ADDED_PREFIX}{func}/g', cil_file)
 
         for regexp in self.preparation_config.get(CONF_SED_AFTER_CIL, []):
             self.exec_sed_cmd(regexp, cil_file)
@@ -345,59 +354,56 @@ class Preparator(Component):
         if self.resolve_missed_proto:
             self.__resolve_missed_proto(cil_file)
 
+    def __get_number_of_args(self, missing_func, file) -> int:
+        out = self.command_caller_with_output(f"grep -oE \" {missing_func}\\((.*)\\)\" {file}")
+        if not out:
+            return 0
+        line = out.splitlines()[0]
+        line = re.sub(f' {missing_func}\\(', '', line)
+        line = re.sub('\\)$', '', line)
+        return line.count(", ") + 1
+
     def __resolve_missed_proto(self, cil_file):
-        missed_proto = dict()
-        out = self.command_caller_with_output("grep -oE \"missing proto \*/(.+)\)\(\)\" {}".format(cil_file))
+        missed_proto = {}
+        out = self.command_caller_with_output(
+            f"grep -oE \"missing proto \\*/(.+)\\)\\(\\)\" {cil_file}")
         for line in out.splitlines():
-            line = re.sub('missing proto \*/\s+', '', line)
-            line = re.sub('\)\(\)', '', line)
+            line = re.sub('missing proto \\*/\\s+', '', line)
+            line = re.sub('\\)\\(\\)', '', line)
             missed_proto[line] = 0
-        none_main_funcs = dict()
-        for func in missed_proto.keys():
-            out = self.command_caller_with_output("grep -oE \" {}\((.*)\)\" {}".format(func, self.main_file))
-            if not out:
-                self.logger.debug("Function prototype {} was not found in main file".format(func))
-                none_main_funcs[func] = 0
-                continue
-            line = out.splitlines()[0]
-            line = re.sub(' {}\('.format(func), '', line)
-            line = re.sub('\)$'.format(func), '', line)
-            if line:
-                missed_proto[func] = line.count(", ") + 1
-        for func in none_main_funcs.keys():
-            out = self.command_caller_with_output("grep -oE \" {}\((.*)\)\" {}".format(func, cil_file))
-            if not out:
-                self.logger.warning("Function prototype {} was not found in CIL file".format(func))
-                continue
-            line = out.splitlines()[0]
-            line = re.sub(' {}\('.format(func), '', line)
-            line = re.sub('\)$'.format(func), '', line)
-            if line:
-                missed_proto[func] = line.count(", ") + 1
+        for func, _ in missed_proto.items():
+            args_in_main = self.__get_number_of_args(func, self.main_file)
+            if args_in_main:
+                missed_proto[func] = args_in_main
+            else:
+                missed_proto[func] = self.__get_number_of_args(func, cil_file)
+                if not missed_proto[func]:
+                    self.logger.warning(f"Function prototype {func} was not found in CIL file")
+
         if missed_proto:
-            with open(cil_file, "a", encoding='utf8') as fp:
-                fp.write("\n\n/* Adding missed function prototypes*/\n\n")
+            with open(cil_file, "a", encoding='utf8') as file_obj:
+                file_obj.write("\n\n/* Adding missed function prototypes*/\n\n")
                 for func, params in missed_proto.items():
                     if params == 0:
                         proto_params = "void"
                     else:
                         proto_params = "int"
-                        for i in range(1, params):
-                            proto_params = "{}, int".format(proto_params)
-                    fp.write("extern int {}({});\n".format(func, proto_params))
+                        for _ in range(1, params):
+                            proto_params = f"{proto_params}, int"
+                    file_obj.write(f"extern int {func}({proto_params});\n")
 
-            self.exec_sed_cmd('s/^(.+)missing proto \*\//\/\//g', cil_file, args='-E')
+            self.exec_sed_cmd('s/^(.+)missing proto \\*\\//\\/\\//g', cil_file, args='-E')
 
     def __print_temp_logs(self):
         contexts = set()
         for log in self.temp_logs:
-            with open(log, errors='ignore') as fd:
-                context = "".join(fd.readlines())
+            with open(log, errors='ignore', encoding='utf8') as fd_obj:
+                context = "".join(fd_obj.readlines())
                 if context not in contexts:
                     contexts.add(context)
                     print(context)
 
-    def run_preparator(self):
+    def __run_preparator(self):
         processed_files = []
         failed_files = []
 
@@ -405,31 +411,31 @@ class Preparator(Component):
         prev_cwd = os.getcwd()
         for source_dir, build_commands in self.build_results.items():
             if build_commands and os.path.exists(build_commands):
-                with open(build_commands, "r", errors='ignore') as bc_fh:
+                with open(build_commands, "r", errors='ignore', encoding='utf8') as bc_fh:
                     bc_json = json.load(bc_fh)
             else:
                 # noinspection PyUnresolvedReferences
                 from clade import Clade
                 cur_dir = os.getcwd()
                 os.chdir(source_dir)
-                c = Clade(CLADE_WORK_DIR, CLADE_BASE_FILE)
-                bc_json = c.get_compilation_cmds(with_opts=True, with_raw=True)
+                clade = Clade(CLADE_WORK_DIR, CLADE_BASE_FILE)
+                bc_json = clade.get_compilation_cmds(with_opts=True, with_raw=True)
                 os.chdir(cur_dir)
 
             number_of_commands = len(bc_json)
             self.overall_build_commands = number_of_commands
             if number_of_commands == 0:
                 sys.exit("Specified json file doesn't contain valid cc or ld commands")
-            self.logger.debug("Found {} build commands".format(number_of_commands))
+            self.logger.debug(f"Found {number_of_commands} build commands")
 
             # TODO: Need to prevent none-deterministic issues.
             for command in bc_json:
                 if "command" not in command:
-                    sys.exit("Can't find 'command' field in the next build command: {}".format(command))
+                    sys.exit(f"Can't find 'command' field in the next build command: {command}")
                 elif "in" not in command:
-                    sys.exit("Can't find 'in' field in build command: {}".format(command))
+                    sys.exit(f"Can't find 'in' field in build command: {command}")
                 elif "out" not in command:
-                    sys.exit("Can't find 'out' field in build command: {}".format(command))
+                    sys.exit(f"Can't find 'out' field in build command: {command}")
 
                 if command['out']:
                     cmd_name = command['out'][0]
@@ -438,7 +444,7 @@ class Preparator(Component):
                     cmd_name = os.path.normpath(os.path.relpath(cmd_name, source_dir))
                     self.build_commands[cmd_name] = [False, False, False, False]
 
-                ret, files = self.process_cc_command(command, source_dir)
+                ret, files = self.__process_cc_command(command, source_dir)
                 if not ret:
                     processed_files.extend(files)
                     for file in files:
@@ -450,9 +456,10 @@ class Preparator(Component):
 
         for aux_file, stage in self.aux_files.items():
             if stage != STAGE_PREPROCESS:
-                self.logger.critical("Auxiliary file '{}' was not prepared due to following reasons:".format(aux_file))
+                self.logger.critical(f"Auxiliary file '{aux_file}' was not prepared due "
+                                     f"to following reasons:")
                 self.__print_temp_logs()
-                sys.exit(-1)
+                sys.exit(1)
 
         self.complied_commands = len(processed_files)
 
@@ -460,34 +467,34 @@ class Preparator(Component):
 
         if len(failed_files) > 0:
             for failed in failed_files:
-                self.logger.warning("File '{}' could not be compiled".format(failed))
+                self.logger.warning(f"File '{failed}' could not be compiled")
         if self.debug:
             preprocessed_files_dump = os.path.join(self.work_dir, "preprocessed_files.txt")
             self.logger.debug("Dump preprocessed files into %s", preprocessed_files_dump)
-            with open(preprocessed_files_dump, "w") as out_fh:
+            with open(preprocessed_files_dump, "w", encoding='utf8') as out_fh:
                 for file in processed_files:
                     out_fh.write(file + "\n")
 
         processed_files.sort()
         processed_files_sorted = []
         for file in processed_files:
-            if self.is_auxiliary(file):
+            if self.__is_auxiliary(file):
                 # Put aux files to the start (they may rewrite other functions).
                 processed_files_sorted.insert(0, file)
             else:
                 processed_files_sorted.append(file)
 
         self.logger.debug("Parsing build commands is finished")
-        self.logger.debug("{} files were found for further processing".format(len(processed_files_sorted)))
+        self.logger.debug(f"{len(processed_files_sorted)} files were found for further processing")
         return processed_files_sorted
 
-    def is_auxiliary(self, file):
-        for aux_file in self.aux_files.keys():
+    def __is_auxiliary(self, file):
+        for aux_file, _ in self.aux_files.items():
             if re.search(aux_file, file):
                 return True
         return False
 
-    def filter_files(self, files):
+    def __filter_files(self, files):
         checked_files = []
         filtered_files = []
 
@@ -512,9 +519,9 @@ class Preparator(Component):
                 file_copy = file + self.files_suffix
                 try:
                     shutil.copy(file, file_copy)
-                except:
+                except Exception as exception:
                     self.__on_exit()
-                    sys.exit("Can not copy file '{}' to '{}'".format(file, file_copy))
+                    sys.exit(f"Can not copy file '{file}' to '{file_copy}' due to {exception}")
                 file = file_copy
             if not self.__execute_cil(self.cil_out, [file]):
                 checked_files.append(file)
@@ -526,7 +533,7 @@ class Preparator(Component):
                     self.__on_exit()
                     sys.exit("Stop verification task preparation due to CIL failure")
                 self.logger.warning("Skip file '%s' due to failed check", file)
-                if self.is_auxiliary(file):
+                if self.__is_auxiliary(file):
                     self.__on_exit()
                     sys.exit("Stop preparation due to failed check on auxiliary file")
 
@@ -541,15 +548,18 @@ class Preparator(Component):
 
     def __merge_cil(self, output_file: str, input_files: list) -> None:
         if self.__execute_cil(output_file, input_files):
-            self.logger.critical("CIL has failed during merge on {}".format(output_file))
+            self.logger.critical(f"CIL has failed during merge on {output_file}")
         else:
-            self.logger.debug("CIL has merged {} files successfully {}".format(len(input_files), output_file))
-            self.fix_cil_file(output_file)
+            self.logger.debug(f"CIL has merged {len(input_files)} files successfully {output_file}")
+            self.__fix_cil_file(output_file)
 
     def prepare_task(self, queue=None):
+        """
+        Main method for verification task preparation.
+        """
         self.logger.debug("Start processing build commands")
-        prepared_files = self.run_preparator()
-        checked_files = self.filter_files(prepared_files)
+        prepared_files = self.__run_preparator()
+        checked_files = self.__filter_files(prepared_files)
 
         if self.use_cil:
             os.remove(self.cil_out)  # Remove temp files.
@@ -560,9 +570,9 @@ class Preparator(Component):
                         if file in checked_files:
                             selected_files.append(file)
                     for file in checked_files:
-                        if self.is_auxiliary(file):
+                        if self.__is_auxiliary(file):
                             selected_files.append(file)
-                    cil_out = self.cil_out + "_{}.i".format(num)
+                    cil_out = self.cil_out + f"_{num}.i"
                     self.__merge_cil(cil_out, selected_files)
             else:
                 self.__merge_cil(self.cil_out, checked_files)
@@ -572,20 +582,24 @@ class Preparator(Component):
 
         os.chdir(self.work_dir)
 
-        self.logger.debug("Overall build commands: {}, incorrect: {}, filtered by special regexp: {}, "
-                          "filtered by black filter: {}, filtered by subsystem: {}, processed: {}".format(
-            self.overall_build_commands, self.incorrect_build_commands, self.special_regexp_filter_build_commands,
-            self.black_list_filter_build_commands, self.subsystem_filter_build_commands, self.extracted_commands
-        ))
-        self.logger.info("Successfully finished task preparation {} "
-                         "(extracted commands: {}, compiled commands: {}, processed commands: {})".
-                         format(self.cil_out, self.extracted_commands, self.complied_commands, self.processed_commands))
+        self.logger.debug(f"Overall build commands: {self.overall_build_commands}, "
+                          f"incorrect: {self.incorrect_build_commands}, "
+                          f"filtered by special regexp: "
+                          f"{self.special_regexp_filter_build_commands}, "
+                          f"filtered by black filter: {self.black_list_filter_build_commands}, "
+                          f"filtered by subsystem: {self.subsystem_filter_build_commands}, "
+                          f"processed: {self.extracted_commands}")
+        self.logger.info(f"Successfully finished task preparation {self.cil_out} "
+                         f"(extracted commands: {self.extracted_commands}, "
+                         f"compiled commands: {self.complied_commands}, "
+                         f"processed commands: {self.processed_commands})")
         if queue:
             results_data = self.get_component_full_stats()
             results_data[TAG_CIL_FILE] = self.cil_out
             results_file = os.path.join(self.preprocessing_dir, DEFAULT_PREP_RESULT)
-            with open(results_file, 'w', encoding='utf8') as fd:
-                json.dump(self.build_commands, fd, ensure_ascii=False, sort_keys=True, indent="\t")
+            with open(results_file, 'w', encoding='utf8') as fd_obj:
+                json.dump(self.build_commands, fd_obj, ensure_ascii=False, sort_keys=True,
+                          indent="\t")
             results_data[TAG_PREP_RESULTS] = results_file
             queue.put(results_data)
 
@@ -593,4 +607,3 @@ class Preparator(Component):
         # Clean aux files.
         if os.path.exists(self.cil_out):
             os.remove(self.cil_out)
-

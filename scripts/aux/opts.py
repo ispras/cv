@@ -20,6 +20,10 @@
 # These are options like "-include header.h" with space between option and value
 # Options with values that are not separated by space should not be included here
 
+"""
+Specific GCC options.
+"""
+
 import re
 import os
 
@@ -455,6 +459,9 @@ requires_value = {
 
 
 def filter_opts(opts: list, opts_to_filter: list) -> list:
+    """
+    Filter GCC options.
+    """
     if not opts_to_filter:
         return opts
 
@@ -469,9 +476,9 @@ def filter_opts(opts: list, opts_to_filter: list) -> list:
             if opt in requires_value["CC"]:
                 next(opts)
             continue
-        m = re.search(r'-I(.*)', opt)
-        if m:
-            path = m.group(1)
+        res = re.search(r'-I(.*)', opt)
+        if res:
+            path = res.group(1)
             if not path:
                 path = next(opts)
                 opt = "-I" + os.path.abspath(path)

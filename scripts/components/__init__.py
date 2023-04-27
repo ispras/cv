@@ -17,6 +17,10 @@
 # limitations under the License.
 #
 
+"""
+Here global names are defined.
+"""
+
 # Default location of additional tools.
 CIL = "cil"
 ET_LIB = "klever"
@@ -28,7 +32,11 @@ CLADE = "clade"
 UPLOADER = "uploader"
 DEFAULT_CPACHECKER_SCRIPTS_PATH = "scripts"
 DEFAULT_TOOL_PATH = {
-    CIL: ["astraver-cil/bin/toplevel.opt", "cil/obj/x86_LINUX/cilly.asm.exe", "cil/bin/cilly.native"],
+    CIL: [
+        "astraver-cil/bin/toplevel.opt",
+        "cil/obj/x86_LINUX/cilly.asm.exe",
+        "cil/bin/cilly.native"
+    ],
     ET_LIB: "klever/core",
     ET_HTML_LIB: "klever/bridge",
     UPLOADER: "klever/utils/bin/upload-reports.py",

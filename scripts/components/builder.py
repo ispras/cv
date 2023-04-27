@@ -1,7 +1,7 @@
 #
 # CV is a framework for continuous verification.
 #
-# Copyright (c) 2018-2019 ISP RAS (http://www.ispras.ru)
+# Copyright (clade) 2018-2019 ISP RAS (http://www.ispras.ru)
 # Ivannikov Institute for System Programming of the Russian Academy of Sciences
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+"""
+This component is used for processing source directories (repositories).
+"""
 
 import json
 import os
@@ -25,8 +28,8 @@ import subprocess
 import sys
 import traceback
 
-from components import COMPONENT_BUILDER, TAG_CLADE_CONF, TAG_MAKE_COMMAND, TAG_FAIL_IF_FAILURE, CLADE_BASE_FILE, \
-    CLADE_WORK_DIR, TAG_MAKE_CLEAN_COMMAND, TAG_PATH
+from components import COMPONENT_BUILDER, TAG_CLADE_CONF, TAG_MAKE_COMMAND, TAG_FAIL_IF_FAILURE, \
+    CLADE_BASE_FILE, CLADE_WORK_DIR, TAG_MAKE_CLEAN_COMMAND, TAG_PATH
 from components.component import Component
 
 REPOSITORY_GIT = "git"
@@ -53,14 +56,15 @@ class Builder(Component):
     This component is used for processing source directories (repositories).
     """
 
-    def __init__(self, install_dir, config, source_dir, builder_config={}, repository=REPOSITORY_NONE):
-        super(Builder, self).__init__(COMPONENT_BUILDER, config)
+    def __init__(self, install_dir, config, source_dir, builder_config=None,
+                 repository=REPOSITORY_NONE):
+        super().__init__(COMPONENT_BUILDER, config)
         self.install_dir = install_dir
         self.source_dir = source_dir
 
         if repository not in REPOSITORY_TYPES:
-            sys.exit("Repository type '{}' is not known. Supported types of repositories are: {}".
-                     format(repository, REPOSITORY_TYPES))
+            sys.exit(f"Repository type '{repository}' is not known. "
+                     f"Supported types of repositories are: {REPOSITORY_TYPES}")
         self.repository = repository
 
         if not builder_config:
@@ -85,8 +89,11 @@ class Builder(Component):
         self.last_commit = None
 
     def clean(self):
+        """
+        Clean any changes in a given repository.
+        """
         if self.repository:
-            self.logger.debug("Cleaning the source directory {}".format(self.source_dir))
+            self.logger.debug(f"Cleaning the source directory {self.source_dir}")
             os.chdir(self.source_dir)
             if self.clean_sources:
                 self.command_caller("rm -rf *")
@@ -95,27 +102,34 @@ class Builder(Component):
             elif self.repository == REPOSITORY_SVN:
                 self.command_caller("svn revert --recursive .")
             else:
-                sys.exit("Operation 'clean' is not implemented for repository type '{}'".format(self.repository))
+                sys.exit(
+                    f"Operation 'clean' is not implemented for repository type '{self.repository}'")
             os.chdir(self.work_dir)
 
     def change_branch(self, branch: str):
+        """
+        Use specified branch in a given repository.
+        """
         if self.repository:
-            self.logger.debug("Using branch '{}' in the source directory {}".format(branch, self.source_dir))
+            self.logger.debug(f"Using branch '{branch}' in the source directory {self.source_dir}")
             os.chdir(self.source_dir)
             if self.repository == REPOSITORY_GIT:
-                if self.command_caller("git checkout {}".format(branch)):
-                    sys.exit("Cannot checkout to GIT branch '{}' in the source directory".format(branch))
+                if self.command_caller(f"git checkout {branch}"):
+                    sys.exit(f"Cannot checkout to GIT branch '{branch}' in the source directory")
                 self.command_caller("git reset --hard")
             elif self.repository == REPOSITORY_SVN:
-                if self.command_caller("svn switch ^/{}".format(branch)):
-                    sys.exit("Cannot switch to SVN branch '{}' in the source directory".format(branch))
+                if self.command_caller(f"svn switch ^/{branch}"):
+                    sys.exit(f"Cannot switch to SVN branch '{branch}' in the source directory")
                 self.command_caller("svn revert --recursive .")
             else:
-                sys.exit("Operation 'change branch' is not implemented for repository type '{}'".
-                         format(self.repository))
+                sys.exit(f"Operation 'change branch' is not implemented for repository type "
+                         f"'{self.repository}'")
             os.chdir(self.work_dir)
 
     def check_commit(self, commit: str) -> None:
+        """
+        Use specified commit in a given repository.
+        """
         os.chdir(self.source_dir)
         if self.repository == REPOSITORY_GIT:
             res = re.search(r'(\w+)\.\.(\w+)', commit)
@@ -129,34 +143,41 @@ class Builder(Component):
             self.change_branch(self.last_commit)
         else:
             # TODO: support SVN.
-            sys.exit("Operation 'check commit' is not implemented for repository type '{}'".format(self.repository))
+            sys.exit(f"Operation 'check commit' is not implemented for repository type "
+                     f"'{self.repository}'")
         os.chdir(self.work_dir)
 
     def get_changed_files(self) -> set:
+        """
+        Find all changed files by a specified range of commits.
+        """
         assert self.start_commit
         assert self.last_commit
         result = set()
         os.chdir(self.source_dir)
         if self.repository == REPOSITORY_GIT:
-            files = subprocess.check_output("git diff --name-only {0}~1..{1}".format(self.start_commit,
-                                                                                     self.last_commit), shell=True)
+            files = subprocess.check_output(
+                f"git diff --name-only {self.start_commit}~1..{self.last_commit}", shell=True)
             for file in files.decode("utf-8", errors="ignore").split():
                 result.add(os.path.abspath(file))
         else:
             # TODO: support SVN.
-            sys.exit("Operation 'get changed files' is not implemented for repository type '{}'".
-                     format(self.repository))
+            sys.exit(f"Operation 'get changed files' is not implemented for repository type "
+                     f"'{self.repository}'")
         os.chdir(self.work_dir)
         return result
 
     def get_changed_functions(self) -> set:
+        """
+        Find all changed functions by a specified range of commits.
+        """
         assert self.start_commit
         assert self.last_commit
         result = set()
         os.chdir(self.source_dir)
         if self.repository == REPOSITORY_GIT:
-            out = subprocess.check_output("git diff --function-context {0}~1..{1}".format(self.start_commit,
-                                                                                          self.last_commit), shell=True)
+            out = subprocess.check_output(f"git diff --function-context "
+                                          f"{self.start_commit}~1..{self.last_commit}", shell=True)
             prev_line = None
             for line in out.splitlines():
                 line = line.decode("utf-8", errors="ignore")
@@ -164,9 +185,8 @@ class Builder(Component):
                 if not prev_line:
                     prev_line = line
                     continue
-                else:
-                    line = prev_line + line
-                    prev_line = line.replace(prev_line, "")
+                line = prev_line + line
+                prev_line = line.replace(prev_line, "")
 
                 res = re.search(r'@@ (.+) @@(.*)(\W+)(\w+)(\s*)\((\w+)\)', line)  # Macro
                 if res:
@@ -177,32 +197,39 @@ class Builder(Component):
                     result.add(res.group(4))
         else:
             # TODO: support SVN.
-            sys.exit("Operation 'get changed functions' is not implemented for repository type '{}'".
-                     format(self.repository))
+            sys.exit(f"Operation 'get changed functions' is not implemented for repository type "
+                     f"'{self.repository}'")
         os.chdir(self.work_dir)
         return result
 
     def patch(self, patch: str):
+        """
+        Apply specified patch to the repository.
+        """
         os.chdir(self.source_dir)
         if not os.path.exists(patch):
-            sys.exit("Specified patch '{}' does not exists".format(patch))
-        self.logger.debug("Applying patch '{}' to the source directory {}".format(patch, self.source_dir))
+            sys.exit(f"Specified patch '{patch}' does not exists")
+        self.logger.debug(f"Applying patch '{patch}' to the source directory {self.source_dir}")
         if self.repository == REPOSITORY_GIT:
-            command = "git apply --ignore-space-change --ignore-whitespace {}".format(patch)
+            command = f"git apply --ignore-space-change --ignore-whitespace {patch}"
             if self.command_caller(command):
-                self.logger.error("Command '{}' failed".format(command))
-                sys.exit("Cannot apply patch '{}' to the source directory {}".format(patch, self.source_dir))
+                self.logger.error(f"Command '{command}' failed")
+                sys.exit(f"Cannot apply patch '{patch}' to the source directory {self.source_dir}")
         elif self.repository == REPOSITORY_SVN:
-            if self.command_caller("svn patch {}".format(patch)):
-                sys.exit("Cannot apply patch '{}' to the source directory {}".format(patch, self.source_dir))
+            if self.command_caller(f"svn patch {patch}"):
+                sys.exit(f"Cannot apply patch '{patch}' to the source directory {self.source_dir}")
         elif not self.repository:
-            if self.command_caller("patch -lf -p1 < {}".format(patch)):
-                sys.exit("Cannot apply patch '{}' to the source directory {}".format(patch, self.source_dir))
+            if self.command_caller(f"patch -lf -p1 < {patch}"):
+                sys.exit(f"Cannot apply patch '{patch}' to the source directory {self.source_dir}")
         else:
-            sys.exit("Operation 'patch' is not implemented for repository type '{}'".format(self.repository))
+            sys.exit(f"Operation 'patch' is not implemented for repository type "
+                     f"'{self.repository}'")
         os.chdir(self.work_dir)
 
     def build(self, build_commands_file: str):
+        """
+        Build repository with a specified command.
+        """
         if not self.is_build:
             return
         os.chdir(self.source_dir)
@@ -222,24 +249,24 @@ class Builder(Component):
         if os.path.exists(self.env_path):
             os.environ["PATH"] += os.pathsep + self.env_path
 
-        self.logger.debug("Using Clade tool to build sources with '{}'".format(self.make_command))
+        self.logger.debug(f"Using Clade tool to build sources with '{self.make_command}'")
         try:
             # noinspection PyUnresolvedReferences
             from clade import Clade
-            c = Clade(CLADE_WORK_DIR, CLADE_BASE_FILE, conf=self.clade_conf)
-            c.intercept(str(self.make_command).split(), cwd=self.source_dir)
-            c.parse("SrcGraph")
-            cmds = c.compilation_cmds
+            clade = Clade(CLADE_WORK_DIR, CLADE_BASE_FILE, conf=self.clade_conf)
+            clade.intercept(str(self.make_command).split(), cwd=self.source_dir)
+            clade.parse("SrcGraph")
+            cmds = clade.compilation_cmds
             for cmd in cmds:
                 identifier = cmd['id']
-                cmd['command'] = c.get_cmd_raw(identifier)[0]
-                cmd['opts'] = c.get_cmd_opts(identifier)
+                cmd['command'] = clade.get_cmd_raw(identifier)[0]
+                cmd['opts'] = clade.get_cmd_opts(identifier)
             if self.make_target_dir:
                 os.chdir(self.source_dir)
-            with open(build_commands_file, "w") as fd:
-                json.dump(cmds, fd, sort_keys=True, indent="\t")
-        except Exception:
-            error_msg = "Building has failed due to: {}".format(traceback.format_exc())
+            with open(build_commands_file, "w", encoding="utf8") as file_obj:
+                json.dump(cmds, file_obj, sort_keys=True, indent="\t")
+        except Exception as exception:
+            error_msg = f"Building has failed due to {exception}:\n{traceback.format_exc()}"
             if self.fail_if_failure:
                 sys.exit(error_msg)
             else:

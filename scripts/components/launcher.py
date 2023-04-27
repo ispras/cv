@@ -17,9 +17,6 @@
 # limitations under the License.
 #
 
-# pylint: disable=wildcard-import, unused-wildcard-import, too-many-instance-attributes
-# pylint: disable=too-many-locals, too-many-arguments, broad-exception-caught
-
 """
 Launcher implements basic functionality for launching verification tasks.
 """
@@ -278,7 +275,7 @@ class Launcher(Component):
         command = f"PYTHONPATH={uploader_python_path} {uploader} '{identifier}' " \
                   f"--host='{server}' --username='{user}' --password='{password}' " \
                   f"--archive='{result_file}' --name='{job_name}'"
-        self.logger.error(command)
+        self.logger.debug(command)
         if request_sleep:
             command = f"{command} --request-sleep {request_sleep}"
         if is_parent:

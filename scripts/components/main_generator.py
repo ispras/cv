@@ -17,6 +17,10 @@
 # limitations under the License.
 #
 
+"""
+Component is used for generating a file with main entry point.
+"""
+
 from components.component import Component
 from models.verification_result import *
 
@@ -50,32 +54,33 @@ PARTIAL_STRATEGY = "partial"
 PARTIAL_EXT_ALLOCATION_STRATEGY = "partial_ext_allocation"
 COMBINED_STRATEGY = "combined"
 THREADED_STRATEGY = "threaded"
-MAIN_GENERATOR_STRATEGIES = [PARTIAL_STRATEGY, COMBINED_STRATEGY, THREADED_STRATEGY, PARTIAL_EXT_ALLOCATION_STRATEGY]
+MAIN_GENERATOR_STRATEGIES = [PARTIAL_STRATEGY, COMBINED_STRATEGY, THREADED_STRATEGY,
+                             PARTIAL_EXT_ALLOCATION_STRATEGY]
 
 
-def get_formatted_type(origin):
+def _get_formatted_type(origin):
     formatted_type = re.sub(r' ', "_", origin)
     formatted_type = re.sub(r'\*', "", formatted_type)
     return ARGUMENT_PREFIX + formatted_type
 
 
-def simplify_type(var_type: str):
+def _simplify_type(var_type: str):
     res = re.sub(r'\s', '_', var_type)
     return re.sub(r'\*', '_pointer_', res)
 
 
-def is_pointer(var_type: str):
+def _is_pointer(var_type: str):
     return "*" in var_type
 
 
-def get_memory_allocation_function(var_type: str):
-    variable_name = "__VERIFIER_nondet_{}".format(simplify_type(var_type))
+def _get_memory_allocation_function(var_type: str):
+    variable_name = f"__VERIFIER_nondet_{_simplify_type(var_type)}"
     res = var_type + " " + variable_name + "() {\n"
-    res = res + "  {} {};\n".format(var_type, variable_name)
+    res = res + f"  {var_type} {variable_name};\n"
     res = res + "  " + variable_name + " = ext_allocation();\n"
     array_pointer = variable_name
     var_type = var_type.replace("*", "", 1)
-    while is_pointer(var_type):
+    while _is_pointer(var_type):
         array_pointer = array_pointer + "[0]"
         res = res + "  " + array_pointer + " = ext_allocation();\n"
         var_type = var_type.replace("*", "", 1)
@@ -86,29 +91,31 @@ def get_memory_allocation_function(var_type: str):
 
 class MainGenerator(Component):
     """
-    This component is used for generating file with main function, which calls specified entry points.
+    This component is used for generating file with main function, which calls specified
+    entry points.
     """
 
     def __init__(self, config: dict, entrypoints: dict, properties_desc: PropertiesDescription):
-        super(MainGenerator, self).__init__(COMPONENT_MAIN_GENERATOR, config)
+        super().__init__(COMPONENT_MAIN_GENERATOR, config)
 
         # Config.
         self.ignore_types = self.component_config.get(TAG_IGNORE_TYPES, False)
         self.ignore_pthread_attr_t = self.component_config.get(TAG_IGNORE_PTHREAD_ATTR, False)
         self.print_prototypes = self.component_config.get(TAG_PRINT_PROTOTYPES, True)
         self.main_generation_strategies = {}
-        for prop, strategy in properties_desc.get_property_arg_for_all(PROPERTY_MAIN_GENERATION_STRATEGY).items():
+        for prop, strategy in properties_desc.get_property_arg_for_all(
+                PROPERTY_MAIN_GENERATION_STRATEGY).items():
             if strategy:
                 self.__use_strategy(strategy, prop)
-                self.logger.debug("Use strategy {} for property {}".format(strategy, prop))
+                self.logger.debug(f"Use strategy {strategy} for property {prop}")
 
         for prop, strategy in self.component_config.get(TAG_STRATEGIES, {}).items():
             self.__use_strategy(strategy, prop)
 
         self.entrypoints = entrypoints
-        self.callers = list()
+        self.callers = []
         statics = set()
-        self.sed_commands = dict()
+        self.sed_commands = {}
         self.includes = set()
         for caller, params in sorted(self.entrypoints.items()):
             if TAG_STATIC_PROTOTYPE in params:
@@ -130,7 +137,8 @@ class MainGenerator(Component):
 
     def __use_strategy(self, strategy: str, prop: str):
         if strategy not in MAIN_GENERATOR_STRATEGIES:
-            sys.exit("Specified main generation strategy '{}' for property '{}' does not exist".format(strategy, prop))
+            sys.exit(f"Specified main generation strategy '{strategy}' for property '{prop}' "
+                     f"does not exist")
         self.main_generation_strategies[prop] = strategy
 
     @staticmethod
@@ -138,9 +146,12 @@ class MainGenerator(Component):
         return params.get(TAG_METADATA, {})
 
     def get_strategy(self, prop: str) -> str:
+        """
+        Returns main generation strategy for a given property.
+        """
         strategy = self.main_generation_strategies.get(prop, None)
         if not strategy:
-            sys.exit("Main generation strategy for property {} was not specified".format(prop))
+            sys.exit(f"Main generation strategy for property {prop} was not specified")
         return strategy
 
     def __get_source_directories(self) -> set:
@@ -152,7 +163,8 @@ class MainGenerator(Component):
 
     def process_sources(self) -> None:
         """
-        Apply specific changes to source files before preparing verification tasks for this subsystem.
+        Apply specific changes to source files before preparing verification tasks for
+        this subsystem.
         """
         source_dirs = self.__get_source_directories()
 
@@ -162,23 +174,22 @@ class MainGenerator(Component):
                 args_with_types = []
                 counter = 0
                 for arg in params.get(TAG_ARGS, []):
-                    args.append("arg_{}".format(counter))
-                    args_with_types.append("{} arg_{}".format(arg.get(TAG_TYPE, DEFAULT_TYPE), counter))
+                    args.append(f"arg_{counter}")
+                    args_with_types.append(f"{arg.get(TAG_TYPE, DEFAULT_TYPE)} arg_{counter}")
                     counter += 1
                 if not args_with_types:
                     args_with_types.append(DEFAULT_VOID)
 
                 # Add prototype for static function.
                 if TAG_STATIC_PROTOTYPE in params:
-                    prototype = "\nvoid {}({})\n{{\n  {}({});\n}}\n".format(caller, ", ".join(args_with_types),
-                                                                            caller[:-len(STATIC_SUFFIX)],
-                                                                            ", ".join(args))
+                    prototype = f"\nvoid {caller}({', '.join(args_with_types)})\n{{\n" \
+                                f"  {caller[:-len(STATIC_SUFFIX)]}({', '.join(args)});\n}}\n"
                     for source_dir in source_dirs:
                         file_abs_path = os.path.join(source_dir, params[TAG_STATIC_PROTOTYPE])
                         if os.path.exists(file_abs_path):
-                            if self.command_caller("echo '{}' >> {}".format(prototype, file_abs_path)):
-                                self.logger.warning("Can not append lines '{}' to file: {}".
-                                                    format(prototype, file_abs_path))
+                            if self.command_caller(f"echo '{prototype}' >> {file_abs_path}"):
+                                self.logger.warning(
+                                    f"Can not append lines '{prototype}' to file: {file_abs_path}")
 
                 # Set unique name for function during merge.
                 elif TAG_RENAME in params:
@@ -186,18 +197,19 @@ class MainGenerator(Component):
                         for source_dir in source_dirs:
                             file_abs_path = os.path.join(source_dir, file_rel_path)
                             if os.path.exists(file_abs_path):
-                                self.exec_sed_cmd('s/\\b{}\\b\\s*(/{}(/g'.format(initial_name, caller), file_abs_path)
+                                self.exec_sed_cmd(f's/\\b{initial_name}\\b\\s*(/{caller}(/g',
+                                                  file_abs_path)
 
         # Apply sed commands for the whole subsystem.
         for subsystem, regexps in self.sed_commands.items():
             for source_dir in source_dirs:
                 subsystem_dir = os.path.join(source_dir, subsystem)
                 if os.path.isdir(subsystem_dir):
-                    for root, dirs, files_in in os.walk(subsystem_dir):
+                    for root, _, files_in in os.walk(subsystem_dir):
                         for name in files_in:
-                            file = os.path.join(root, name)
+                            abs_path = os.path.join(root, name)
                             for regexp in sorted(regexps):
-                                self.exec_sed_cmd(regexp, file)
+                                self.exec_sed_cmd(regexp, abs_path)
 
     def __is_entrypoint_ignored(self, params: dict, prop: str) -> bool:
         metadata = self.__get_metadata(params)
@@ -215,28 +227,29 @@ class MainGenerator(Component):
         :return: list of all generated entrypoints, for which verifier should be launched.
         """
         callers = self.callers
-        self.logger.info("Generating main file {} using strategy {}".format(output_file, strategy))
+        self.logger.info(f"Generating main file {output_file} using strategy {strategy}")
 
-        with open(output_file, 'w', encoding='utf8') as fp:
+        with open(output_file, 'w', encoding='utf8') as file:
             # Add header files.
             if not self.ignore_types:
                 for header in sorted(self.includes):
-                    fp.write("#include \"{}\"\n".format(header))
+                    file.write(f"#include \"{header}\"\n")
             if strategy in [THREADED_STRATEGY]:
-                fp.write("typedef unsigned long int pthread_t;\n")
+                file.write("typedef unsigned long int pthread_t;\n")
                 if not self.ignore_pthread_attr_t:
-                    fp.write("union pthread_attr_t {\n"
-                             "  char __size[56];\n"
-                             "  long int __align;\n"
-                             "};\ntypedef union pthread_attr_t pthread_attr_t;\n\n")
-                fp.write("int ldv_thread_create(pthread_t *thread, pthread_attr_t const *attr,"
-                         "                      void *(*start_routine)(void *), void *arg);\n\n"
-                         "int ldv_thread_join(pthread_t thread, void **retval);\n\n"
-                         "int ldv_thread_create_N(pthread_t **thread, pthread_attr_t const *attr,"
-                         "                        void *(*start_routine)(void *), void *arg);\n\n"
-                         "int ldv_thread_join_N(pthread_t **thread, void (*start_routine)(void *));\n\n")
-            fp.write("\n/*This is generated main function*/\n\n"
-                     "void {}(void);\n\n".format(DEFAULT_CHECK_FINAL_STATE_FUNCTION))
+                    file.write("union pthread_attr_t {\n"
+                               "  char __size[56];\n"
+                               "  long int __align;\n"
+                               "};\ntypedef union pthread_attr_t pthread_attr_t;\n\n")
+                file.write("int ldv_thread_create(pthread_t *thread, pthread_attr_t const *attr,"
+                           "                      void *(*start_routine)(void *), void *arg);\n\n"
+                           "int ldv_thread_join(pthread_t thread, void **retval);\n\n"
+                           "int ldv_thread_create_N(pthread_t **thread, pthread_attr_t const *attr,"
+                           "                        void *(*start_routine)(void *), void *arg);\n\n"
+                           "int ldv_thread_join_N"
+                           "(pthread_t **thread, void (*start_routine)(void *));\n\n")
+            file.write(f"\n/*This is generated main function*/\n\n"
+                       f"void {DEFAULT_CHECK_FINAL_STATE_FUNCTION}(void);\n\n")
 
             # Parsing function definition.
             # Do not print in file, we do not know: are the arguments local or not
@@ -261,7 +274,7 @@ class MainGenerator(Component):
                         # Do not format type and use it as it is
                         var_def = re.sub(r'\$', var_name, var_type)
                     else:
-                        var_name = get_formatted_type(var_type) + "_" + caller + "_" + str(i)
+                        var_name = _get_formatted_type(var_type) + "_" + caller + "_" + str(i)
                         if re.search(r' \*', var_type):
                             # Already has valuable space
                             var_def = var_type + var_name
@@ -271,19 +284,22 @@ class MainGenerator(Component):
                     global_scope = arg.get(TAG_GLOBAL_SCOPE, True)
                     is_cast = arg.get(TAG_CAST, True)
                     if global_scope:
-                        fp.write(var_def + ";\n")
+                        file.write(var_def + ";\n")
                         if var_type not in nondet_funcs:
                             nondet_funcs.add(var_type)
-                            if strategy == PARTIAL_EXT_ALLOCATION_STRATEGY and is_pointer(var_type):
-                                fp.write(get_memory_allocation_function(var_type))
+                            if strategy == PARTIAL_EXT_ALLOCATION_STRATEGY and \
+                                    _is_pointer(var_type):
+                                file.write(_get_memory_allocation_function(var_type))
                             else:
-                                fp.write(
-                                    "extern {} __VERIFIER_nondet_{}();\n".format(var_type, simplify_type(var_type)))
+                                file.write(
+                                    f"extern {var_type} "
+                                    f"__VERIFIER_nondet_{_simplify_type(var_type)}();\n")
                         if is_cast:
-                            var_def = var_name + " = ({})__VERIFIER_nondet_{}();\n".format(var_type,
-                                                                                           simplify_type(var_type))
+                            var_def = var_name + f" = ({var_type})__VERIFIER_nondet_" \
+                                                 f"{_simplify_type(var_type)}();\n"
                         else:
-                            var_def = var_name + " = __VERIFIER_nondet_{}();\n".format(simplify_type(var_type))
+                            var_def = var_name + f" = __VERIFIER_nondet_" \
+                                                 f"{_simplify_type(var_type)}();\n"
                         local_var_defs.append(var_def)
                     else:
                         local_var_defs.append(var_def + ";\n")
@@ -297,7 +313,7 @@ class MainGenerator(Component):
                         arg_def_str = ", ".join(arg_types)
                     else:
                         arg_def_str = DEFAULT_VOID
-                    fp.write("extern {0} {1}({2});\n".format(ret_type, caller, arg_def_str))
+                    file.write(f"extern {ret_type} {caller}({arg_def_str});\n")
 
                 if strategy in [THREADED_STRATEGY]:
                     caller_args = DEFAULT_VOID + "* arg"
@@ -305,52 +321,52 @@ class MainGenerator(Component):
                 else:
                     caller_args = DEFAULT_VOID
                     ret_caller_type = DEFAULT_VOID
-                fp.write("/* ENVIRONMENT_MODEL {}{} generated main function */\n".format(caller, ENTRY_POINT_SUFFIX))
-                fp.write("{0} {1}{2}({3}) {{\n".format(ret_caller_type, caller, ENTRY_POINT_SUFFIX, caller_args))
+                file.write(f"/* ENVIRONMENT_MODEL {caller}{ENTRY_POINT_SUFFIX} generated main "
+                           f"function */\n")
+                file.write(f"{ret_caller_type} {caller}{ENTRY_POINT_SUFFIX}({caller_args}) {{\n")
 
                 for local_var in local_var_defs:
-                    fp.write("  {0}".format(local_var))
+                    file.write(f"  {local_var}")
 
-                fp.write("  {0}({1});\n".format(caller, ", ".join(arg_names)))
+                file.write(f"  {caller}({', '.join(arg_names)});\n")
                 if strategy in [PARTIAL_STRATEGY, PARTIAL_EXT_ALLOCATION_STRATEGY]:
-                    fp.write("  {}();\n".format(DEFAULT_CHECK_FINAL_STATE_FUNCTION))
-                fp.write("}\n\n")
+                    file.write(f"  {DEFAULT_CHECK_FINAL_STATE_FUNCTION}();\n")
+                file.write("}\n\n")
 
-            fp.write("extern int __VERIFIER_nondet_int();\n")
+            file.write("extern int __VERIFIER_nondet_int();\n")
 
             if strategy not in [PARTIAL_STRATEGY, PARTIAL_EXT_ALLOCATION_STRATEGY]:
-                fp.write("/* ENVIRONMENT_MODEL {} generated main function */\n".format(DEFAULT_MAIN))
-                fp.write("void {0}(int argc, char *argv[]) {{\n"
-                         "  int nondet;\n".format(DEFAULT_MAIN))
+                file.write(f"/* ENVIRONMENT_MODEL {DEFAULT_MAIN} generated main function */\n")
+                file.write(f"void {DEFAULT_MAIN}(int argc, char *argv[]) {{\n  int nondet;\n")
 
             if strategy in [COMBINED_STRATEGY]:
-                fp.write("  while (1) {{\n".format(DEFAULT_MAIN))
+                file.write("  while (1) {{\n")
                 for caller, params in sorted(self.entrypoints.items()):
                     if self.__is_entrypoint_ignored(params, prop):
                         continue
-                    fp.write("    nondet = __VERIFIER_nondet_int();\n"
-                             "    if (nondet) {{\n"
-                             "      {0}();\n"
-                             "    }}\n".format(caller + ENTRY_POINT_SUFFIX))
-                fp.write("    nondet = __VERIFIER_nondet_int();\n"
-                         "    if (nondet) {{\n"
-                         "      {}();\n"
-                         "      break;\n"
-                         "    }}\n"
-                         "  }}\n"
-                         "}}\n".format(DEFAULT_CHECK_FINAL_STATE_FUNCTION))
+                    file.write(f"    nondet = __VERIFIER_nondet_int();\n"
+                               f"    if (nondet) {{\n"
+                               f"      {caller + ENTRY_POINT_SUFFIX}();\n"
+                               f"    }}\n")
+                file.write(f"    nondet = __VERIFIER_nondet_int();\n"
+                           f"    if (nondet) {{\n"
+                           f"      {DEFAULT_CHECK_FINAL_STATE_FUNCTION}();\n"
+                           f"      break;\n"
+                           f"    }}\n"
+                           f"  }}\n"
+                           f"}}\n")
                 callers = [DEFAULT_MAIN]
 
             if strategy in [THREADED_STRATEGY]:
                 counter = 1
                 for caller, params in sorted(self.entrypoints.items()):
                     if not self.__is_entrypoint_ignored(params, prop):
-                        fp.write("  pthread_t thread{1};\n"
-                                 "  {0}(&thread{1}, 0, {2}, 0);\n\n".format(DEFAULT_THREAD_CREATE_FUNCTION, counter,
-                                                                            caller + ENTRY_POINT_SUFFIX))
+                        file.write(f"  pthread_t thread{counter};\n"
+                                   f"  {DEFAULT_THREAD_CREATE_FUNCTION}(&thread{counter}, 0, "
+                                   f"{caller + ENTRY_POINT_SUFFIX}, 0);\n\n")
 
                         counter += 1
-                fp.write("}\n")
+                file.write("}\n")
                 callers = [DEFAULT_MAIN]
 
         return callers

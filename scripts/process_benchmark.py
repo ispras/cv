@@ -18,10 +18,14 @@
 # limitations under the License.
 #
 
+"""
+This script provides functionality to launch a specific benchmark and visualize the results.
+"""
+
 import argparse
 
-from components.benchmark_launcher import BenchmarkLauncher as Launcher, TAG_BENCHMARK_CLIENT_DIR, TAG_BENCHMARK_FILE, \
-    TAG_TOOL_DIR, TAG_TASKS_DIR, TAG_OUTPUT_DIR, TAG_TOOL_NAME
+from components.benchmark_launcher import BenchmarkLauncher as Launcher, TAG_BENCHMARK_CLIENT_DIR,\
+    TAG_BENCHMARK_FILE, TAG_TOOL_DIR, TAG_TASKS_DIR, TAG_OUTPUT_DIR, TAG_TOOL_NAME
 
 if __name__ == '__main__':
     # Support the following modes:
@@ -32,7 +36,8 @@ if __name__ == '__main__':
     parser.add_argument("-l", "--launch", help="launch benchmark", action='store_true')
     parser.add_argument("-o", "--output", help="benchmark output directory", default=None)
     parser.add_argument("-t", "--tasks", help="tasks directory", default=None)
-    parser.add_argument("-b", "--benchmark-client", dest="client", help="benchmark client directory", default=None)
+    parser.add_argument("-b", "--benchmark-client", dest="client",
+                        help="benchmark client directory", default=None)
     parser.add_argument("-f", "--benchmark", help="benchmark xml file", default=None)
     parser.add_argument("-v", "--verifier", help="verifier directory", default=None)
     parser.add_argument("-n", "--name", help="tool name", default=None)

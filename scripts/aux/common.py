@@ -17,20 +17,31 @@
 # limitations under the License.
 #
 
+"""
+Common functions.
+"""
+
 import os
 import sys
 
 
 def wait_for_launches(processes):
+    """
+    Wait for all created processes.
+    """
     try:
         for process in processes:
             if process:
                 process.join()
-    except:
+    except Exception as exception:
+        print(f"Killing all processes due to {exception}")
         kill_launches(processes)
 
 
 def kill_launches(processes):
+    """
+    Kill all created processes.
+    """
     for process in processes:
         if process:
             os.kill(process.pid, 9)
@@ -39,6 +50,9 @@ def kill_launches(processes):
 
 
 def update_symlink(abs_path: str):
+    """
+    Update symlinks in benchmark directory.
+    """
     rel_path = os.path.basename(abs_path)
     # Remove old link.
     if os.path.islink(rel_path):
@@ -49,6 +63,9 @@ def update_symlink(abs_path: str):
 
 
 def clear_symlink(abs_path: str):
+    """
+    Clear symlinks in benchmark directory.
+    """
     if not abs_path:
         return
     rel_path = os.path.basename(abs_path)
@@ -57,4 +74,6 @@ def clear_symlink(abs_path: str):
 
 
 class NestedLoop(Exception):
-    pass
+    """
+    Exception for exiting nested loops.
+    """
