@@ -58,7 +58,7 @@ def _find_cpa_config() -> list:
         result.append(cpa_config_files[0])
     if cpa_config_files_size > 1:
         # Several plugins - error.
-        sys.exit("Several plugins detected in {PLUGINS_DIR} directory, only one is supported!")
+        sys.exit(f"Several plugins detected in {PLUGINS_DIR} directory, only one is supported!")
     return result
 
 
