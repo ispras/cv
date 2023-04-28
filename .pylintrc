@@ -1,0 +1,20 @@
+[MESSAGES CONTROL]
+
+disable=
+    wildcard-import,
+    unused-wildcard-import,
+    too-many-instance-attributes,
+    too-many-locals,
+    too-many-arguments,
+    broad-exception-caught,
+    fixme,
+    logging-fstring-interpolation,
+    too-many-branches,
+    unused-import,
+    import-error,
+    too-many-statements,
+    too-many-nested-blocks,
+    import-outside-toplevel,
+    no-member,
+    duplicate-code
+

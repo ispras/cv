@@ -17,6 +17,10 @@
 # limitations under the License.
 #
 
+"""
+Component for extracting results into archive to be uploaded in the web-interface.
+"""
+
 import multiprocessing
 import resource
 import subprocess
@@ -43,20 +47,24 @@ GLOBAL_COVERAGE_REAL = "real"
 
 
 class Exporter(Component):
-    def __init__(self, config, work_dir: str, install_dir: str, properties_desc=PropertiesDescription(),
-                 tool=DEFAULT_VERIFIER_TOOL):
-        super(Exporter, self).__init__(COMPONENT_EXPORTER, config)
+    """
+    Component for extracting results into archive to be uploaded in the web-interface.
+    """
+    def __init__(self, config, work_dir: str, install_dir: str,
+                 properties_desc=PropertiesDescription(), tool=DEFAULT_VERIFIER_TOOL):
+        super().__init__(COMPONENT_EXPORTER, config)
         self.work_dir = work_dir
         self.install_dir = install_dir
         self.version = self.component_config.get(TAG_VERSION)
         self.add_logs = self.component_config.get(TAG_ADD_VERIFIER_LOGS, True)
         self.add_proofs = self.component_config.get(TAG_ADD_VERIFIER_PROOFS, True)
         self.lock = multiprocessing.Lock()
-        self.global_coverage_element = dict()
+        self.global_coverage_element = {}
         self.tool = tool
         self.properties_desc = properties_desc
 
-    def __format_attr(self, name: str, value, compare=False):
+    @staticmethod
+    def __format_attr(name: str, value, compare=False):
         if isinstance(value, int):
             value = str(value)
         res = {
@@ -68,67 +76,68 @@ class Exporter(Component):
             res["associate"] = True
         return res
 
-    def __create_component_report(self, name, cpu, wall, mem):
-        component = dict()
-        component['id'] = "/{}".format(name)
-        component['parent id'] = "/"
-        component['type'] = "component"
-        component['name'] = name
-        component['resources'] = {
-            "CPU time": cpu,
-            "memory size": mem,
-            "wall time": wall
-        }
-        component['attrs'] = []
+    @staticmethod
+    def __create_component_report(name, cpu, wall, mem):
+        component = {'id': f"/{name}", 'parent id': "/", 'type': "component", 'name': name,
+                     'resources': {
+                         "CPU time": cpu,
+                         "memory size": mem,
+                         "wall time": wall
+                     }, 'attrs': []}
         return component
 
-    def __process_coverage(self, final_zip: zipfile.ZipFile, verifier_counter: int, work_dir: str,
+    @staticmethod
+    def __process_coverage(final_zip: zipfile.ZipFile, verifier_counter: int, work_dir: str,
                            coverage_sources: dict, ignore=False) -> str:
         cov_name = None
         coverage = os.path.join(os.path.join(work_dir, DEFAULT_COVERAGE_ARCH))
         if os.path.exists(coverage):
             if not ignore:
-                cov_name = "coverage_{}.zip".format(verifier_counter)
+                cov_name = f"coverage_{verifier_counter}.zip"
                 final_zip.write(coverage, arcname=cov_name)
 
             coverage_src = os.path.join(os.path.join(work_dir, DEFAULT_COVERAGE_SOURCE_FILES))
             if os.path.exists(coverage_src):
-                with open(coverage_src) as f_s:
+                with open(coverage_src, encoding='utf8') as f_s:
                     for line_src in f_s.readlines():
+                        # pylint: disable=consider-using-f-string
                         res = re.search(r'^(.+){0}(.+)$'.format(CSV_SEPARATOR), line_src)
                         if res:
                             coverage_sources[res.group(1)] = res.group(2)
         return cov_name
 
-    def __print_coverage(self, final_zip: zipfile.ZipFile, counter: int, function_coverage: dict, line_coverage: dict,
-                         stats: dict, cov_type: str):
-        cov_name = "gc_{}.zip".format(counter)
+    def __print_coverage(self, final_zip: zipfile.ZipFile, counter: int, function_coverage: dict,
+                         line_coverage: dict, stats: dict, cov_type: str):
+        cov_name = f"gc_{counter}.zip"
         if not function_coverage or not line_coverage:
             return
-        final_zip.write(write_coverage(counter, function_coverage, line_coverage, stats), arcname=cov_name)
+        final_zip.write(write_coverage(counter, function_coverage, line_coverage, stats),
+                        arcname=cov_name)
         if not self.global_coverage_element:
             self.global_coverage_element = {
                 "id": "/",
                 "parent id": None,
                 "type": "job coverage",
                 "name": "Global coverage",
-                "coverage": dict()
+                "coverage": {}
             }
         self.global_coverage_element["coverage"][cov_type] = cov_name
 
-    def __process_specific_coverage(self, work_dirs: list, cov_type: str, final_zip: zipfile.ZipFile, counter: int,
-                                    is_rule=False):
-        function_coverage = dict()
-        line_coverage = dict()
-        stats = dict()
+    def __process_specific_coverage(self, work_dirs: list, cov_type: str,
+                                    final_zip: zipfile.ZipFile, counter: int,
+                                    coverage_by_rule: dict, is_rule=False):
+        function_coverage = {}
+        line_coverage = {}
+        stats = {}
         for work_dir in work_dirs:
             coverage = os.path.join(os.path.join(work_dir, DEFAULT_COVERAGE_ARCH))
             if os.path.exists(coverage):
                 with zipfile.ZipFile(coverage) as tmp_arch:
-                    data = json.loads(tmp_arch.read(DEFAULT_COVERAGE_FILE).decode('utf8', errors='ignore'))
+                    data = json.loads(tmp_arch.read(DEFAULT_COVERAGE_FILE).
+                                      decode('utf8', errors='ignore'))
                     extract_internal_coverage(data, function_coverage, line_coverage, stats)
         if is_rule:
-            for merge_type, results in self.coverage_by_rule.items():
+            for merge_type, results in coverage_by_rule.items():
                 if not results[TAG_STATISTICS]:
                     results[TAG_STATISTICS] = stats
                 merge_coverages(function_coverage, results[TAG_FUNCTION_COVERAGE],
@@ -138,30 +147,35 @@ class Exporter(Component):
 
     def __process_global_coverage(self, global_cov_files: dict, final_zip: zipfile.ZipFile):
         counter = 0
-        self.coverage_by_rule = {
-            COVERAGE_MERGE_TYPE_UNION: dict(),
-            COVERAGE_MERGE_TYPE_INTERSECTION: dict()
+        coverage_by_rule = {
+            COVERAGE_MERGE_TYPE_UNION: {},
+            COVERAGE_MERGE_TYPE_INTERSECTION: {}
         }
-        for merge_type in self.coverage_by_rule:
-            self.coverage_by_rule[merge_type][TAG_FUNCTION_COVERAGE] = dict()
-            self.coverage_by_rule[merge_type][TAG_LINE_COVERAGE] = dict()
-            self.coverage_by_rule[merge_type][TAG_STATISTICS] = dict()
+        for _, description in coverage_by_rule.items():
+            description[TAG_FUNCTION_COVERAGE] = {}
+            description[TAG_LINE_COVERAGE] = {}
+            description[TAG_STATISTICS] = {}
         for cov_type, work_dirs in global_cov_files.items():
             if not work_dirs:
                 continue
             if cov_type == GLOBAL_COVERAGE_REAL:
                 for rule, work_dirs_by_rule in work_dirs.items():
-                    counter = self.__process_specific_coverage(work_dirs_by_rule, rule, final_zip, counter, True)
+                    counter = self.__process_specific_coverage(work_dirs_by_rule, rule, final_zip,
+                                                               counter, coverage_by_rule, True)
 
             else:
-                counter = self.__process_specific_coverage(work_dirs, cov_type, final_zip, counter)
-        for merge_type, results in self.coverage_by_rule.items():
-            self.__print_coverage(final_zip, counter, results[TAG_FUNCTION_COVERAGE], results[TAG_LINE_COVERAGE],
-                                  results[TAG_STATISTICS], merge_type)
+                counter = self.__process_specific_coverage(work_dirs, cov_type, final_zip, counter,
+                                                           coverage_by_rule)
+        for merge_type, results in coverage_by_rule.items():
+            self.__print_coverage(final_zip, counter, results[TAG_FUNCTION_COVERAGE],
+                                  results[TAG_LINE_COVERAGE], results[TAG_STATISTICS], merge_type)
             counter += 1
 
-    def export(self, report_launches: str, report_resources: str, report_components: str, archive_name: str,
-               unknown_desc=dict(), component_attrs=dict(), verifier_config=dict()):
+    def export(self, report_launches: str, report_resources: str, report_components: str,
+               archive_name: str, unknown_desc=None, component_attrs=None, verifier_config=None):
+        """
+        Main method for extracting results into archive to be uploaded in the web-interface.
+        """
         start_wall_time = time.time()
         overall_wall = 0  # Launcher + Exporter.
         overall_cpu = 0  # Sum of all components.
@@ -185,21 +199,18 @@ class Exporter(Component):
         os.chdir(export_dir)
 
         # Initialization of root element
-        root_element = dict()
-        root_element['id'] = "/"
-        root_element['parent id'] = None
-        root_element['type'] = "component"
-        root_element['name'] = "Core"
-        root_element['comp'] = [
-            {"memory size": str(int(int(subprocess.check_output("free -m", shell=True).splitlines()[1].split()[1]) /
-                                    1000)) + "GB"},
+        root_element = {'id': "/", 'parent id': None, 'type': "component", 'name': "Core", 'comp': [
+            {"memory size": str(int(int(subprocess.check_output("free -m", shell=True).
+                                        splitlines()[1].split()[1]) / 1000)) + "GB"},
             {"node name": subprocess.check_output("uname -n", shell=True).decode().rstrip()},
-            {"CPU model": subprocess.check_output("cat /proc/cpuinfo  | grep 'name'| uniq", shell=True).decode().
+            {"CPU model": subprocess.check_output("cat /proc/cpuinfo  | grep 'name'| uniq",
+                                                  shell=True).decode().
                 replace("model name	: ", "").rstrip()},
             {"CPU cores": str(max_cores)},
-            {"Linux kernel version": subprocess.check_output("uname -r", shell=True).decode().rstrip()},
+            {"Linux kernel version": subprocess.check_output("uname -r", shell=True).
+                decode().rstrip()},
             {"architecture": subprocess.check_output("uname -m", shell=True).decode().rstrip()}
-        ]
+        ]}
         if verifier_config:
             root_element['config'] = verifier_config
         if self.version:
@@ -209,15 +220,16 @@ class Exporter(Component):
 
         launcher_id = "/"
         if_coverage_sources_written = False
-        coverage_sources = dict()
+        coverage_sources = {}
         global_cov_files = {
             GLOBAL_COVERAGE_MAX: set(),
-            GLOBAL_COVERAGE_REAL: dict()
+            GLOBAL_COVERAGE_REAL: {}
         }
         with zipfile.ZipFile(archive_name, mode='w', compression=zipfile.ZIP_DEFLATED) as final_zip:
             # Components reports.
-            with open(report_components, encoding='utf8', errors='ignore') as fp:
-                for line in fp.readlines():
+            with open(report_components, encoding='utf8', errors='ignore') as file_obj:
+                for line in file_obj.readlines():
+                    # pylint: disable=consider-using-f-string
                     # Launcher;0.12;203.77;12365824
                     res = re.search(r'(\w+){0}(.+){0}(.+){0}(.+)'.format(CSV_SEPARATOR), line)
                     if res:
@@ -232,14 +244,14 @@ class Exporter(Component):
                             counter = 0
                             for u_desc in unknown_desc[name]:
                                 log = u_desc[TAG_LOG_FILE]
-                                unknown_report = dict()
-                                unknown_report['id'] = "{}/unknown/{}".format(new_report['id'], counter)
-                                unknown_report['parent id'] = "{}".format(new_report['id'])
-                                unknown_report['type'] = "unknown"
-                                unknown_archive = "unknown_{}_{}.zip".format(name, counter)
+                                unknown_report = {'id': f"{new_report['id']}/unknown/{counter}",
+                                                  'parent id': f"{new_report['id']}",
+                                                  'type': "unknown"}
+                                unknown_archive = f"unknown_{name}_{counter}.zip"
                                 counter += 1
-                                with zipfile.ZipFile(unknown_archive, mode='w', compression=zipfile.ZIP_DEFLATED) as zfp:
-                                    zfp.write(log, arcname=UNKNOWN_DESC_FILE)
+                                with zipfile.ZipFile(unknown_archive, mode='w',
+                                                     compression=zipfile.ZIP_DEFLATED) as arch_obj:
+                                    arch_obj.write(log, arcname=UNKNOWN_DESC_FILE)
                                 final_zip.write(unknown_archive, arcname=unknown_archive)
                                 unknown_report["problem desc"] = unknown_archive
                                 unknown_report['attrs'] = u_desc.get(TAG_ATTRS)
@@ -267,14 +279,16 @@ class Exporter(Component):
 
             # Process several error traces in parallel.
             source_files = set()
-            with open(report_launches, encoding='utf8', errors='ignore') as fp,\
-                    open(report_resources, encoding='utf8', errors='ignore') as fr:
-                resources_data = fr.readlines()[1:]
+            with open(report_launches, encoding='utf8', errors='ignore') as file_obj, \
+                    open(report_resources, encoding='utf8', errors='ignore') as res_obj:
+                resources_data = res_obj.readlines()[1:]
                 id_counter = 0
-                for line in fp.readlines():
-                    # <subsystem>;<rule id>;<entrypoint>;<verdict>;<termination reason>;<CPU (s)>;<wall (s)>;
-                    # memory (Mb);<relevancy>;<number of traces>;<number of filtered traces>;<work dir>;<cov lines>;
+                for line in file_obj.readlines():
+                    # <subsystem>;<rule id>;<entrypoint>;<verdict>;<termination reason>;<CPU (s)>;
+                    # <wall (s)>;memory (Mb);<relevancy>;<number of traces>;
+                    # <number of filtered traces>;<work dir>;<cov lines>;
                     # <cov funcs>;<CPU (s) for filtering>
+                    # pylint: disable=consider-using-f-string
                     res = re.search(r'(.+){0}(.+){0}(.+){0}(\w+){0}(.+){0}'
                                     r'(.+){0}(.+){0}(\d+){0}(\w+){0}(\d+){0}(\d+){0}'
                                     r'(.+){0}(.+){0}(.+){0}(.+)'.format(CSV_SEPARATOR), line)
@@ -290,7 +304,8 @@ class Exporter(Component):
                         if verdict == VERDICT_UNSAFE:
                             mea_all_unsafes += 1
                         termination_reason = res.group(5)
-                        if not termination_reason == TERMINATION_SUCCESS and verdict == VERDICT_UNSAFE:
+                        if not termination_reason == TERMINATION_SUCCESS and \
+                                verdict == VERDICT_UNSAFE:
                             mea_unsafe_incomplete += 1
                             incomplete_result = True
                         else:
@@ -299,8 +314,8 @@ class Exporter(Component):
                         wall = float(res.group(7)) * 1000
                         mem = int(res.group(8)) * 1000000
                         relevancy = res.group(9)
-                        et = int(res.group(10))
-                        mea_overall_initial_traces += et
+                        et_num = int(res.group(10))
+                        mea_overall_initial_traces += et_num
                         filtered = int(res.group(11))
                         mea_overall_filtered_traces += filtered
                         work_dir = res.group(12)
@@ -308,12 +323,10 @@ class Exporter(Component):
                         cov_funcs = float(res.group(14))
                         filter_cpu = round(float(res.group(15)), 2)
 
-                        verification_element = dict()
-                        verification_element['id'] = "/{}_{}".format(self.tool, verifier_counter)
-                        verification_element['parent id'] = launcher_id
-                        verification_element['type'] = "verification"
-                        verification_element['name'] = self.tool
-                        attrs = list()
+                        verification_element = {'id': f"/{self.tool}_{verifier_counter}",
+                                                'parent id': launcher_id, 'type': "verification",
+                                                'name': self.tool}
+                        attrs = []
                         if subsystem and subsystem != ".":
                             attrs.append(self.__format_attr("Subsystem", subsystem, True))
                         attrs.append(self.__format_attr("Verification object", entrypoint, True))
@@ -330,54 +343,61 @@ class Exporter(Component):
                         id_counter += 1
                         if rule == PROPERTY_COVERAGE:
                             global_cov_files[GLOBAL_COVERAGE_MAX].add(work_dir)
-                            self.__process_coverage(final_zip, verifier_counter, work_dir, coverage_sources, True)
+                            self.__process_coverage(final_zip, verifier_counter, work_dir,
+                                                    coverage_sources, True)
                             if not if_coverage_sources_written:
-                                verification_element['coverage sources'] = DEFAULT_COVERAGE_SOURCES_ARCH
+                                verification_element['coverage sources'] = \
+                                    DEFAULT_COVERAGE_SOURCES_ARCH
                                 if_coverage_sources_written = True
                             reports.append(verification_element)
                             verifier_counter += 1
                             continue
-                        cov_name = self.__process_coverage(final_zip, verifier_counter, work_dir, coverage_sources)
+                        cov_name = self.__process_coverage(final_zip, verifier_counter, work_dir,
+                                                           coverage_sources)
                         if cov_name:
                             if rule not in global_cov_files[GLOBAL_COVERAGE_REAL]:
                                 global_cov_files[GLOBAL_COVERAGE_REAL][rule] = set()
                             global_cov_files[GLOBAL_COVERAGE_REAL][rule].add(work_dir)
                             verification_element['coverage'] = cov_name
                             if not if_coverage_sources_written:
-                                verification_element['coverage sources'] = DEFAULT_COVERAGE_SOURCES_ARCH
+                                verification_element['coverage sources'] = \
+                                    DEFAULT_COVERAGE_SOURCES_ARCH
                                 if_coverage_sources_written = True
 
                         overall_cpu += cpu
                         max_memory = max(max_memory, mem)
                         reports.append(verification_element)
-                        witnesses = glob.glob("{}/{}_witness*{}".format(work_dir, WITNESS_VIOLATION, ARCHIVE_EXTENSION))
+                        witnesses = glob.glob(
+                            f"{work_dir}/{WITNESS_VIOLATION}_witness*{ARCHIVE_EXTENSION}")
                         for witness in witnesses:
-                            unsafe_element = {}
-                            unsafe_element['parent id'] = "/{}_{}".format(self.tool, verifier_counter)
-                            unsafe_element['type'] = "unsafe"
+                            unsafe_element = {
+                                'parent id': f"/{self.tool}_{verifier_counter}",
+                                'type': "unsafe"
+                            }
                             found_all_traces = not incomplete_result
-                            if self.properties_desc.get_property_arg(rule, PROPERTY_IS_ALL_TRACES_FOUND,
-                                                                     ignore_missing=True):
-                                # Ignore verdict and termination reason for determining if all traces were found.
+                            if self.properties_desc.get_property_arg(
+                                    rule, PROPERTY_IS_ALL_TRACES_FOUND, ignore_missing=True):
+                                # Ignore verdict and termination reason for determining
+                                # if all traces were found.
                                 found_all_traces = True
                             attrs = [
                                 self.__format_attr("Traces", [
                                     self.__format_attr("Filtered", str(filtered)),
-                                    self.__format_attr("Initial", str(et))
+                                    self.__format_attr("Initial", str(et_num))
                                 ]),
                                 self.__format_attr("Found all traces", str(found_all_traces)),
                                 self.__format_attr("Filtering time", str(filter_cpu)),
                                 self.__format_attr("Coverage", [
-                                    self.__format_attr("Lines", "{0}".format(cov_lines)),
-                                    self.__format_attr("Functions", "{0}".format(cov_funcs))
+                                    self.__format_attr("Lines", f"{cov_lines}"),
+                                    self.__format_attr("Functions", f"{cov_funcs}")
                                 ])
                             ]
 
-                            archive_id = "unsafe_{}".format(trace_counter)
+                            archive_id = f"unsafe_{trace_counter}"
                             trace_counter += 1
                             report_files_archive = archive_id + ".zip"
 
-                            unsafe_element['id'] = "/{}/{}".format(self.tool, archive_id)
+                            unsafe_element['id'] = f"/{self.tool}/{archive_id}"
                             unsafe_element['attrs'] = attrs
                             unsafe_element['error traces'] = [report_files_archive]
                             unsafe_element['sources'] = DEFAULT_SOURCES_ARCH
@@ -385,25 +405,29 @@ class Exporter(Component):
                             unsafes[report_files_archive] = witness
 
                             try:
-                                src = json.loads(zipfile.ZipFile(witness, 'r').read(ERROR_TRACE_SOURCES).decode())
+                                with zipfile.ZipFile(witness, 'r') as arc_arch:
+                                    src = json.loads(arc_arch.read(ERROR_TRACE_SOURCES).
+                                                     decode('utf8', errors='ignore'))
                                 source_files.update(src)
-                            except:
-                                self.logger.warning("Cannot process sources: ", exc_info=True)
+                            except Exception as exception:
+                                self.logger.warning(f"Cannot process sources: {exception}\n",
+                                                    exc_info=True)
 
                         if not witnesses or incomplete_result:
-                            other_element = dict()
-                            witnesses = glob.glob("{}/{}_witness*{}".format(work_dir, WITNESS_CORRECTNESS,
-                                                                            ARCHIVE_EXTENSION))
+                            other_element = {}
+                            witnesses = glob.glob(
+                                f"{work_dir}/{WITNESS_CORRECTNESS}_witness*{ARCHIVE_EXTENSION}")
                             if verdict == VERDICT_SAFE:
                                 verdict = "safe"
                                 if witnesses and self.add_proofs:
                                     # TODO: only one correctness witness is supported.
                                     if len(witnesses) > 1:
-                                        self.logger.warning("Only one correctness witness is supported per "
-                                                            "verification task")
+                                        self.logger.warning(
+                                            "Only one correctness witness is supported per "
+                                            "verification task")
                                     witness = witnesses[0]
 
-                                    archive_id = "safe_{}".format(trace_counter)
+                                    archive_id = f"safe_{trace_counter}"
                                     trace_counter += 1
                                     report_files_archive = archive_id + ".zip"
 
@@ -412,27 +436,30 @@ class Exporter(Component):
                                     proofs[report_files_archive] = witness
 
                                     try:
-                                        src = json.loads(
-                                            zipfile.ZipFile(witness, 'r').read(ERROR_TRACE_SOURCES).decode())
+                                        with zipfile.ZipFile(witness, 'r') as arc_arch:
+                                            src = json.loads(arc_arch.read(ERROR_TRACE_SOURCES).
+                                                             decode('utf8', errors='ignore'))
                                         source_files.update(src)
-                                    except:
-                                        self.logger.warning("Cannot process sources: ", exc_info=True)
+                                    except Exception as exception:
+                                        self.logger.warning(f"Cannot process sources: "
+                                                            f"{exception}\n", exc_info=True)
 
                                 attrs = [
                                     self.__format_attr("Coverage", [
-                                        self.__format_attr("Lines", "{0}".format(cov_lines)),
-                                        self.__format_attr("Functions", "{0}".format(cov_funcs))
+                                        self.__format_attr("Lines", f"{cov_lines}"),
+                                        self.__format_attr("Functions", f"{cov_funcs}")
                                     ])
                                 ]
-                                if self.properties_desc.get_property_arg(rule, PROPERTY_IS_RELEVANCE,
+                                if self.properties_desc.get_property_arg(rule,
+                                                                         PROPERTY_IS_RELEVANCE,
                                                                          ignore_missing=True):
                                     # If we do not have information about relevancy in output.
                                     attrs.append(self.__format_attr("Relevancy", relevancy))
                             else:
                                 attrs = [
                                     self.__format_attr("Coverage", [
-                                        self.__format_attr("Lines", "{0}".format(cov_lines)),
-                                        self.__format_attr("Functions", "{0}".format(cov_funcs))
+                                        self.__format_attr("Lines", f"{cov_lines}"),
+                                        self.__format_attr("Functions", f"{cov_funcs}")
                                     ])
                                 ]
                                 verdict = "unknown"
@@ -449,40 +476,44 @@ class Exporter(Component):
                                         unknowns[termination_reason] = identifier
                                         is_cached = False
 
-                                unknown_archive = "unknown_{}.zip".format(identifier)
+                                unknown_archive = f"unknown_{identifier}.zip"
                                 other_element["problem desc"] = unknown_archive
 
                                 if not is_cached:
-                                    with zipfile.ZipFile(unknown_archive, mode='w', compression=zipfile.ZIP_DEFLATED) \
-                                            as zfp:
-                                        with open(UNKNOWN_DESC_FILE, 'w') as fp:
-                                            fp.write("Termination reason: {}\n".format(termination_reason))
+                                    with zipfile.ZipFile(unknown_archive, mode='w',
+                                                         compression=zipfile.ZIP_DEFLATED) \
+                                            as arch_obj:
+                                        with open(UNKNOWN_DESC_FILE, 'w', encoding='utf8') \
+                                                as unk_obj:
+                                            unk_obj.write(f"Termination reason: "
+                                                          f"{termination_reason}\n")
                                             if incomplete_result:
-                                                fp.write("Unsafe-incomplete\n")
+                                                unk_obj.write("Unsafe-incomplete\n")
                                             if self.add_logs:
                                                 log_name = os.path.join(work_dir, "log.txt")
                                                 if os.path.exists(log_name):
-                                                    with open(log_name) as f_log:
-                                                        for line in f_log.readlines():
-                                                            fp.write(line)
+                                                    with open(log_name, encoding='utf8') as f_log:
+                                                        for log_line in f_log.readlines():
+                                                            unk_obj.write(log_line)
                                                 else:
-                                                    self.logger.warning("Log file '{}' does not exist".format(log_name))
-                                        zfp.write(UNKNOWN_DESC_FILE, arcname=UNKNOWN_DESC_FILE)
+                                                    self.logger.warning(
+                                                        f"Log file '{log_name}' does not exist")
+                                        arch_obj.write(UNKNOWN_DESC_FILE, arcname=UNKNOWN_DESC_FILE)
                                     if os.path.exists(UNKNOWN_DESC_FILE):
                                         os.remove(UNKNOWN_DESC_FILE)
                                     final_zip.write(unknown_archive, arcname=unknown_archive)
                                     if os.path.exists(unknown_archive):
                                         os.remove(unknown_archive)
 
-                            other_element['parent id'] = "/{}_{}".format(self.tool, verifier_counter)
+                            other_element['parent id'] = f"/{self.tool}_{verifier_counter}"
                             other_element['type'] = verdict
-                            other_element['id'] = "/{}/other_{}".format(self.tool, verifier_counter)
+                            other_element['id'] = f"/{self.tool}/other_{verifier_counter}"
                             other_element['attrs'] = attrs
                             reports.append(other_element)
 
                         verifier_counter += 1
 
-                failed_reports = 0
+                failed_reports = set()
                 for base_name, abs_path in unsafes.items():
                     if os.path.exists(abs_path):
                         final_zip.write(abs_path, arcname=base_name)
@@ -490,9 +521,9 @@ class Exporter(Component):
                     else:
                         # delete corresponding record.
                         for report in reports:
-                            if report.get("type") == "unsafe" and report.get("error traces")[0] == base_name:
-                                reports.remove(report)
-                                failed_reports += 1
+                            if report.get("type") == "unsafe" and \
+                                    report.get("error traces")[0] == base_name:
+                                failed_reports.add(report)
                                 break
 
                 for base_name, abs_path in proofs.items():
@@ -503,25 +534,32 @@ class Exporter(Component):
                         # delete corresponding record.
                         for report in reports:
                             if report.get("type") == "safe" and report.get("proof")[0] == base_name:
-                                reports.remove(report)
-                                failed_reports += 1
+                                failed_reports.add(report)
                                 break
 
                 for report in reports:
                     if report.get("type") == "component" and report.get("name") == COMPONENT_MEA:
                         percent_of_unsafe_incomplete = 0
                         if mea_all_unsafes != 0:
-                            percent_of_unsafe_incomplete = round(100 * mea_unsafe_incomplete / mea_all_unsafes, 2)
+                            percent_of_unsafe_incomplete = \
+                                round(100 * mea_unsafe_incomplete / mea_all_unsafes, 2)
 
                         report["attrs"].append(self.__format_attr("Unsafes", str(mea_all_unsafes)))
                         report["attrs"].append(self.__format_attr("Unsafe-incomplete",
-                                                                  str(percent_of_unsafe_incomplete) + "%"))
-                        report["attrs"].append(self.__format_attr("Initial traces", str(mea_overall_initial_traces)))
-                        report["attrs"].append(self.__format_attr("Filtered traces", str(mea_overall_filtered_traces)))
+                                                                  f"{percent_of_unsafe_incomplete}"
+                                                                  f"%"))
+                        report["attrs"].append(self.__format_attr("Initial traces",
+                                                                  str(mea_overall_initial_traces)))
+                        report["attrs"].append(self.__format_attr("Filtered traces",
+                                                                  str(mea_overall_filtered_traces)))
                         break
 
                 if failed_reports:
-                    self.logger.warning("Failed error traces: {0} of {1}".format(failed_reports, len(unsafes)))
+                    self.logger.warning(f"Failed witnesses to process: {len(failed_reports)} "
+                                        f"of {len(unsafes)}")
+                    for report in failed_reports:
+                        reports.remove(report)
+
                 self.memory += int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) * 1024
                 exporter_wall_time = round((time.time() - start_wall_time) * 1000)
                 overall_wall += exporter_wall_time
@@ -537,18 +575,20 @@ class Exporter(Component):
                     "wall time": overall_wall
                 }
                 reports.append(root_element)
-                with zipfile.ZipFile(DEFAULT_SOURCES_ARCH, mode='w', compression=zipfile.ZIP_DEFLATED) as zfp:
+                with zipfile.ZipFile(DEFAULT_SOURCES_ARCH, mode='w',
+                                     compression=zipfile.ZIP_DEFLATED) as arch_obj:
                     for src_file in source_files:
-                        zfp.write(src_file)
+                        arch_obj.write(src_file)
                 final_zip.write(DEFAULT_SOURCES_ARCH)
                 os.remove(DEFAULT_SOURCES_ARCH)
 
                 # TODO: those sources may be duplicated.
-                with zipfile.ZipFile(DEFAULT_COVERAGE_SOURCES_ARCH, mode='w', compression=zipfile.ZIP_DEFLATED) as zfp:
+                with zipfile.ZipFile(DEFAULT_COVERAGE_SOURCES_ARCH, mode='w',
+                                     compression=zipfile.ZIP_DEFLATED) as arch_obj:
                     src_paths = set()
                     for src_file, arch_path in coverage_sources.items():
                         if arch_path not in src_paths:
-                            zfp.write(src_file, arcname=arch_path)
+                            arch_obj.write(src_file, arcname=arch_path)
                             src_paths.add(arch_path)
                 final_zip.write(DEFAULT_COVERAGE_SOURCES_ARCH)
                 os.remove(DEFAULT_COVERAGE_SOURCES_ARCH)

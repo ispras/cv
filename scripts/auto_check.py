@@ -17,6 +17,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=too-few-public-methods
+
+"""
+This script is intended to check specified repository for new commits in accordance with the
+specified config files. If new commits were found, then launcher will start for each config file.
+This script can replace BuildBot.
+"""
 
 import argparse
 import json
@@ -54,16 +61,21 @@ DEFAULT_LAUNCHER_LOG = "launcher.log"
 LAUNCHER_SCRIPT = "./scripts/launch.py"
 
 
-def branch_corrector(branch: str):
+def _branch_corrector(branch: str):
     return branch.replace("/", "_")
 
 
 class AutoChecker:
+    """
+    Represents automatic checker of new commits.
+    """
+
     def __init__(self, config_file: str):
-        with open(config_file) as fd:
-            config = json.load(fd)
-        repository = "https://{}:{}@{}".format(config[TAG_SOURCES][TAG_USERNAME], config[TAG_SOURCES][TAG_PASSWORD],
-                                               config[TAG_SOURCES][TAG_REPOSITORY])
+        with open(config_file, encoding="ascii") as file_obj:
+            config = json.load(file_obj)
+        repository = f"https://{config[TAG_SOURCES][TAG_USERNAME]}:" \
+                     f"{config[TAG_SOURCES][TAG_PASSWORD]}@" \
+                     f"{config[TAG_SOURCES][TAG_REPOSITORY]}"
         self.source_dir = os.path.abspath(config[TAG_SOURCES][TAG_PATH])
         self.work_dir = os.getcwd()
         self.poll_interval = config[TAG_POLL_INTERVAL]
@@ -75,110 +87,115 @@ class AutoChecker:
         else:
             self.output_desc = subprocess.DEVNULL
         logger_level = logging.DEBUG if self.debug else logging.INFO
-        logging.basicConfig(format='%(asctime)s: %(name)s: %(levelname)s: %(message)s', level=logger_level,
-                            datefmt='%Y-%m-%d %H:%M:%S')
+        logging.basicConfig(format='%(asctime)s: %(name)s: %(levelname)s: %(message)s',
+                            level=logger_level, datefmt='%Y-%m-%d %H:%M:%S')
         self.logger = logging.getLogger(name=COMPONENT_AUTO_CHECKER)
         self.logger.setLevel(logger_level)
 
         self.hostname = None
-        self.hostname = self.command_caller("hostname", get_stdout=True)
+        self.hostname = self.__command_caller("hostname", get_stdout=True)
 
         # Download repository for the first time
-        self.command_caller("rm -rf {}".format(self.source_dir))
-        self.command_caller("git clone {} {}".format(repository, self.source_dir))
+        self.__command_caller(f"rm -rf {self.source_dir}")
+        self.__command_caller(f"git clone {repository} {self.source_dir}")
 
         self.configs = {}
         for launcher_config in config[TAG_CONFIGS]:
-            launcher_config_file = os.path.join(self.work_dir, CONFIGS_DIR, launcher_config + ".json")
+            launcher_config_file = os.path.join(self.work_dir, CONFIGS_DIR,
+                                                launcher_config + ".json")
             if not os.path.exists(launcher_config_file):
-                sys.exit("File {} does not exists".format(launcher_config_file))
-            with open(launcher_config_file) as fd:
-                tmp = json.load(fd)
+                sys.exit(f"File {launcher_config_file} does not exists")
+            with open(launcher_config_file, encoding="ascii") as file_obj:
+                tmp = json.load(file_obj)
             branch = tmp[TAG_BUILDER][TAG_SOURCES][0][TAG_BRANCH]
             if branch in self.configs:
                 self.configs.get(branch, []).append(launcher_config_file)
             else:
                 self.configs[branch] = [launcher_config_file]
 
-    def get_last_commit_file(self, branch):
-        return os.path.join(self.work_dir, BUILDBOT_DIR, "last_checked_commit_{}".format(branch_corrector(branch)))
+    def __get_last_commit_file(self, branch):
+        return os.path.join(self.work_dir, BUILDBOT_DIR,
+                            f"last_checked_commit_{_branch_corrector(branch)}")
 
-    def get_last_commit(self, branch: str):
-        file = self.get_last_commit_file(branch)
+    def __get_last_commit(self, branch: str):
+        file = self.__get_last_commit_file(branch)
         if os.path.exists(file):
-            with open(file) as fd:
-                return fd.read().rstrip()
+            with open(file, encoding="ascii") as file_obj:
+                return file_obj.read().rstrip()
         return None
 
-    def set_last_commit(self, commit: str, branch: str):
-        file = self.get_last_commit_file(branch)
-        with open(file, "w") as fd:
-            fd.write(commit)
+    def __set_last_commit(self, commit: str, branch: str):
+        file = self.__get_last_commit_file(branch)
+        with open(file, "w", encoding="ascii") as file_obj:
+            file_obj.write(commit)
 
-    def check_for_new_commits(self, branch: str):
-        last_commit = self.command_caller("git rev-parse HEAD", get_stdout=True)
-        last_checked_commit = self.get_last_commit(branch)
+    def __check_for_new_commits(self, branch: str):
+        last_commit = self.__command_caller("git rev-parse HEAD", get_stdout=True)
+        last_checked_commit = self.__get_last_commit(branch)
         is_check = True
         if last_checked_commit:
-            is_different = self.command_caller("git diff {}..{}".format(last_checked_commit, last_commit),
-                                               get_stdout=True)
+            is_different = self.__command_caller(f"git diff {last_checked_commit}..{last_commit}",
+                                                 get_stdout=True)
             if not is_different:
-                self.logger.debug("No differences were found for branch {}".format(branch))
+                self.logger.debug(f"No differences were found for branch {branch}")
                 is_check = False
             else:
-                self.logger.debug("New commits were found for branch {}".format(branch))
+                self.logger.debug(f"New commits were found for branch {branch}")
         else:
-            self.logger.debug("Performing initial verification for branch {}".format(branch))
+            self.logger.debug(f"Performing initial verification for branch {branch}")
         return is_check, last_checked_commit, last_commit
 
-    def create_temp_configs(self, configs, last_checked_commit, last_commit):
+    def __create_temp_configs(self, configs, last_checked_commit, last_commit):
         shutil.rmtree(BUILDBOT_CONFIGS_DIR, ignore_errors=True)
         os.makedirs(BUILDBOT_CONFIGS_DIR)
         temp_configs = []
         for file in configs:
             temp_file = os.path.abspath(os.path.join(BUILDBOT_CONFIGS_DIR, os.path.basename(file)))
             temp_configs.append(temp_file)
-            with open(file) as f_old, open(temp_file, "w") as f_new:
+            with open(file, encoding="ascii") as f_old, \
+                    open(temp_file, "w", encoding="ascii") as f_new:
                 data = json.load(f_old)
                 if not last_checked_commit:
-                    self.logger.info("Performing initial full verification for {}".format(temp_file))
+                    self.logger.info(f"Performing initial full verification for {temp_file}")
                 else:
-                    self.logger.info("Checking commit {} for {}".format(last_commit, temp_file))
-                    data[TAG_COMMITS] = ["{}..{}".format(last_checked_commit, last_commit)]
+                    self.logger.info(f"Checking commit {last_commit} for {temp_file}")
+                    data[TAG_COMMITS] = [f"{last_checked_commit}..{last_commit}"]
                 json.dump(data, f_new, indent=4)
         return temp_configs
 
-    def send_a_message(self, subject, msg):
-        subprocess.call("echo \"{}\" | mail -s \"{}\" -r {} {}".
-                        format(msg, subject, self.server, " ".join(self.receivers)), shell=True)
+    def __send_a_message(self, subject, msg):
+        subprocess.call(f"echo \"{msg}\" | mail -s \"{subject}\" -r {self.server} "
+                        f"{' '.join(self.receivers)}", shell=True)
 
     def __get_text(self, branch, last_checked_commit, last_commit, configs, aux=""):
-        return "Last commit:\t{}\n" \
-               "Last checked commit:\t{}\n" \
-               "Branch:\t{}\n" \
-               "Host name:\t{}\n" \
-               "Configs:\t{}\n" \
-               "{}".format(last_commit, last_checked_commit, branch, self.hostname, ", ".join(configs), aux)
+        return f"Last commit:\t{last_commit}\n" \
+               f"Last checked commit:\t{last_checked_commit}\n" \
+               f"Branch:\t{branch}\n" \
+               f"Host name:\t{self.hostname}\n" \
+               f"Configs:\t{', '.join(configs)}\n" \
+               f"{aux}"
 
-    def command_caller(self, cmd: str, get_stdout=False, ignore_errors=False):
-        self.logger.debug("Executing command {}".format(cmd))
+    def __command_caller(self, cmd: str, get_stdout=False, ignore_errors=False):
+        self.logger.debug(f"Executing command {cmd}")
         try:
             if get_stdout:
-                return subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(errors='ignore').rstrip()
-            else:
-                subprocess.check_call(cmd, shell=True, stdout=self.output_desc)
-        except subprocess.CalledProcessError as e:
+                return subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT). \
+                    decode(errors='ignore').rstrip()
+            subprocess.check_call(cmd, shell=True, stdout=self.output_desc)
+            return 0
+        except subprocess.CalledProcessError as exception:
             if ignore_errors:
-                self.logger.warning("Cannot execute the following command: '{}' due to '{}'".format(cmd, e))
+                self.logger.warning(
+                    f"Cannot execute the following command: '{cmd}' due to '{exception}'")
                 if get_stdout:
                     return ""
-            else:
-                self.send_a_message("Failure on automatic checking of new commits",
-                                    "Failed command:\t{}\n"
-                                    "Host name:\t{}\n"
-                                    "Return code:\t{}\n"
-                                    "Output:\n{}".format(cmd, self.hostname, e.returncode, e))
-                sys.exit(1)
+                return 0
+            self.__send_a_message("Failure on automatic checking of new commits",
+                                  f"Failed command:\t{cmd}\n"
+                                  f"Host name:\t{self.hostname}\n"
+                                  f"Return code:\t{exception.returncode}\n"
+                                  f"Output:\n{exception}")
+            sys.exit(1)
 
     def __get_new_branches(self, output: str):
         result = set()
@@ -188,75 +205,78 @@ class AutoChecker:
                 if res:
                     branch = res.group(1)
                     result.add(branch)
-                    self.logger.debug("Found new commits for branch {}".format(branch))
-                res = re.search(r'\s*\[new branch\]\s+(\S+)\s*->\s*\S+', line)
+                    self.logger.debug(f"Found new commits for branch {branch}")
+                res = re.search(r'\s*\[new branch]\s+(\S+)\s*->\s*\S+', line)
                 if res:
                     branch = res.group(1)
                     result.add(branch)
-                    self.logger.info("Found new branch {}".format(branch))
+                    self.logger.info(f"Found new branch {branch}")
         return result
 
     def loop(self):
+        """
+        Main loop, in which new commits are checked.
+        """
         informed_branches = set()
         while True:
             is_empty_run = True
             new_branches = set()
             for branch, configs in self.configs.items():
                 os.chdir(self.source_dir)
-                self.command_caller("git reset --hard")
-                new_branches = new_branches.union(self.__get_new_branches(self.command_caller("git fetch",
-                                                                                              get_stdout=True,
-                                                                                              ignore_errors=True)))
+                self.__command_caller("git reset --hard")
+                new_branches = new_branches.union(self.__get_new_branches(
+                    self.__command_caller("git fetch", get_stdout=True, ignore_errors=True)))
 
                 if branch in new_branches:
                     new_branches.remove(branch)
-                self.command_caller("git checkout {}".format(branch))
-                self.command_caller("git reset --hard")
-                self.command_caller("git pull origin {}".format(branch), ignore_errors=True)
+                self.__command_caller(f"git checkout {branch}")
+                self.__command_caller("git reset --hard")
+                self.__command_caller(f"git pull origin {branch}", ignore_errors=True)
 
-                is_check, last_checked_commit, last_commit = self.check_for_new_commits(branch)
+                is_check, last_checked_commit, last_commit = self.__check_for_new_commits(branch)
                 os.chdir(self.work_dir)
                 if is_check:
                     is_empty_run = False
-                    temp_configs = self.create_temp_configs(configs, last_checked_commit, last_commit)
-                    self.send_a_message("Starting verification of new commits",
-                                        self.__get_text(branch, last_checked_commit, last_commit, configs))
+                    temp_configs = self.__create_temp_configs(configs, last_checked_commit,
+                                                              last_commit)
+                    self.__send_a_message("Starting verification of new commits",
+                                          self.__get_text(branch, last_checked_commit, last_commit,
+                                                          configs))
                     log_file = os.path.join(BUILDBOT_CONFIGS_DIR, DEFAULT_LAUNCHER_LOG)
-                    self.logger.info("Using log file '{}' for launcher".format(log_file))
-                    fd = open(log_file, "w")
-                    command = "{} -c {}".format(LAUNCHER_SCRIPT, " ".join(temp_configs))
-                    self.logger.debug("Starting launcher via command: '{}'".format(command))
-                    exitcode = subprocess.call(command, stderr=fd, stdout=fd, shell=True)
-                    fd.close()
+                    self.logger.info(f"Using log file '{log_file}' for launcher")
+                    with open(log_file, "w", encoding="ascii") as file_obj:
+                        command = f"{LAUNCHER_SCRIPT} -c {' '.join(temp_configs)}"
+                        self.logger.debug(f"Starting launcher via command: '{command}'")
+                        exitcode = subprocess.call(command, stderr=file_obj, stdout=file_obj,
+                                                   shell=True)
                     if exitcode:
-                        self.send_a_message("Failure on verification of new commits",
-                                            self.__get_text(branch, last_checked_commit, last_commit, configs,
-                                                            "Launcher log: {}".format(log_file)))
-                        self.logger.error("Stopping verification of branch {} due to failure".format(branch))
+                        self.__send_a_message(
+                            "Failure on verification of new commits",
+                            self.__get_text(branch, last_checked_commit, last_commit, configs,
+                                            f"Launcher log: {log_file}"))
+                        self.logger.error(
+                            f"Stopping verification of branch {branch} due to failure")
                         self.configs.pop(branch, None)
                         break
-                    else:
-                        self.set_last_commit(last_commit, branch)
-                        self.send_a_message("Successful verification of new commits",
-                                            self.__get_text(branch, last_checked_commit, last_commit, configs,
-                                                            "Launcher log: {}".format(log_file)))
+                    self.__set_last_commit(last_commit, branch)
+                    self.__send_a_message(
+                        "Successful verification of new commits",
+                        self.__get_text(branch, last_checked_commit, last_commit, configs,
+                                        f"Launcher log: {log_file}"))
             if not self.configs:
-                self.logger.error("Stopping script due to previous failures")
-                sys.exit(1)
+                sys.exit("Stopping script due to previous failures")
             new_branches = new_branches - informed_branches
             if new_branches:
-                self.send_a_message("Found new untracked commits",
-                                    "New commits are not tracked for the following branches: {}".
-                                    format(", ".join(new_branches)))
+                self.__send_a_message(
+                    "Found new untracked commits",
+                    f"New commits are not tracked for the following branches: "
+                    f"{', '.join(new_branches)}")
                 informed_branches = informed_branches.union(new_branches)
             if is_empty_run:
-                self.logger.debug("Sleep for {} seconds".format(self.poll_interval))
+                self.logger.debug(f"Sleep for {self.poll_interval} seconds")
                 time.sleep(self.poll_interval)
 
 
-# This script is intended to check specified repository for new commits in accordance with the specified config files.
-# If new commits were found, then launcher will start for each config file.
-# This script can replace BuildBot.
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", "-c", help="auto.json config file", required=True)

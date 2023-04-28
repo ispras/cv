@@ -16,12 +16,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=attribute-defined-outside-init, too-many-lines
+
+"""
+Main component for CV benchmark launches.
+"""
 
 import resource
 from collections import deque
 from time import sleep
 from xml.dom import minidom
 
+from aux.common import *
 from components.builder import Builder
 from components.exporter import Exporter
 from components.launcher import *
@@ -33,14 +39,15 @@ from models.verification_result import *
 
 class FullLauncher(Launcher):
     """
-    Main component, which creates verification tasks for the given system, launches them and processes results.
+    Main component, which creates verification tasks for the given system,
+    launches them and processes results.
     """
+
     def __init__(self, config_file):
-        super(FullLauncher, self).__init__(COMPONENT_LAUNCHER, config_file)
+        super().__init__(COMPONENT_LAUNCHER, config_file)
 
         if not self.scheduler or self.scheduler not in SCHEDULERS:
-            self.logger.error("Scheduler '{}' is not known. Choose from {}".format(self.scheduler, SCHEDULERS))
-            exit(1)
+            sys.exit(f"Scheduler '{self.scheduler}' is not known. Choose from {SCHEDULERS}")
 
         self.entrypoints_dir = os.path.join(self.root_dir, DEFAULT_ENTRYPOINTS_DIR)
         self.models_dir = os.path.join(self.root_dir, DEFAULT_PROPERTIES_DIR, DEFAULT_MODELS_DIR)
@@ -54,10 +61,13 @@ class FullLauncher(Launcher):
         self.verifier_options = {}
 
         # Properties description.
-        plugin_properties_desc_file = self.__get_file_for_system(DEFAULT_PROPERTIES_DIR, DEFAULT_PROPERTIES_DESC_FILE)
+        plugin_properties_desc_file = self.__get_file_for_system(DEFAULT_PROPERTIES_DIR,
+                                                                 DEFAULT_PROPERTIES_DESC_FILE)
         self.properties_desc = PropertiesDescription(plugin_properties_desc_file)
-        self.is_cgroup_v2 = "cgroup2" in \
-                            self.command_caller_with_output("mount | grep '^cgroup' | awk '{print $1}' | uniq")
+        self.is_cgroup_v2 = "cgroup2" in self.command_caller_with_output(
+            "mount | grep '^cgroup' | awk '{print $1}' | uniq")
+        self.mea_input_queue = multiprocessing.Queue()
+        self.build_results = None
 
     def __perform_filtering(self, result: VerificationResults, queue: multiprocessing.Queue,
                             resource_queue_filter: multiprocessing.Queue):
@@ -86,7 +96,7 @@ class FullLauncher(Launcher):
         cpu_start = time.process_time()
         for i in range(number_of_processes):
             process_pool.append(None)
-        self.logger.debug("Starting scheduler for filtering with {} processes".format(number_of_processes))
+        self.logger.debug(f"Starting scheduler for filtering with {number_of_processes} processes")
         resource_queue_filter = multiprocessing.Queue()
         self.mea_memory_usage = 0
         self.mea_wall_time = 0.0
@@ -103,18 +113,19 @@ class FullLauncher(Launcher):
                             continue
                         if not result:
                             raise NestedLoop
-                        self.logger.info("Scheduling new filtering process: subsystem '{0}', rule '{1}', "
-                                         "entrypoint '{2}'".format(result.id, result.rule, result.entrypoint))
-                        process_pool[i] = multiprocessing.Process(target=self.__perform_filtering,
-                                                                  name="MEA_{0}".format(i),
-                                                                  args=(result, output_queue, resource_queue_filter))
+                        self.logger.info(
+                            f"Scheduling new filtering process: subsystem '{result.id}', "
+                            f"rule '{result.rule}', entrypoint '{result.entrypoint}'")
+                        process_pool[i] = multiprocessing.Process(
+                            target=self.__perform_filtering, name=f"MEA_{i}",
+                            args=(result, output_queue, resource_queue_filter))
                         if self.debug:
                             load = 0
                             for process in process_pool:
                                 if process:
                                     load += 1
-                            self.logger.debug("Scheduler for filtering load is {}%".
-                                              format(round(100 * load / number_of_processes, 2)))
+                            self.logger.debug(f"Scheduler for filtering load is "
+                                              f"{round(100 * load / number_of_processes, 2)}%")
 
                         process_pool[i].start()
                 sleep(BUSY_WAITING_INTERVAL * 10)
@@ -122,15 +133,17 @@ class FullLauncher(Launcher):
         except NestedLoop:
             wait_for_launches(process_pool)
             self.__count_filter_resources(resource_queue_filter)
-        except:
-            self.logger.error("Process for filtering results was terminated:", exc_info=True)
+        except Exception as exception:
+            self.logger.error(f"Process for filtering results was terminated: {exception}",
+                              exc_info=True)
             kill_launches(process_pool)
         self.logger.info("Stopping filtering scheduler")
         cpu_time = time.process_time() - cpu_start
-        self.logger.debug("Filtering took {0} seconds of overheads".format(cpu_time))
+        self.logger.debug(f"Filtering took {cpu_time} seconds of overheads")
         scheduler_memory_usage = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) * 1024
-        self.mea_memory_usage += scheduler_memory_usage  # There is main thread and children processes.
-        self.logger.debug("Filtering maximum memory usage: {}B".format(self.mea_memory_usage))
+        # There is main thread and children processes.
+        self.mea_memory_usage += scheduler_memory_usage
+        self.logger.debug(f"Filtering maximum memory usage: {self.mea_memory_usage}B")
         self.mea_input_queue.put({TAG_MEMORY_USAGE: self.mea_memory_usage,
                                   TAG_CPU_TIME: cpu_time,
                                   TAG_WALL_TIME: self.mea_wall_time})
@@ -142,19 +155,23 @@ class FullLauncher(Launcher):
 
         # Add specific options.
         self.__resolve_property_file(benchmark, launch)
-        ElementTree.SubElement(benchmark.find("rundefinition"), "option", {"name": "-setprop"}).text = \
-            "output.path={0}".format(launch_directory)
-        ElementTree.SubElement(benchmark.find("rundefinition"), "option", {"name": "-entryfunction"}).text = \
-            launch.entrypoint
-        ElementTree.SubElement(ElementTree.SubElement(benchmark, "tasks"), "include").text = launch.cil_file
+        ElementTree.SubElement(benchmark.find("rundefinition"), "option", {"name": "-setprop"}). \
+            text = f"output.path={launch_directory}"
+        ElementTree.SubElement(benchmark.find("rundefinition"), "option",
+                               {"name": "-entryfunction"}).text = launch.entrypoint
+        ElementTree.SubElement(ElementTree.SubElement(benchmark, "tasks"), "include").text = \
+            launch.cil_file
         if not launch.entry_desc.optimize:
             for option in VERIFIER_OPTIONS_NOT_OPTIMIZED:
-                ElementTree.SubElement(benchmark.find("rundefinition"), "option", {"name": "-setprop"}).text = option
+                ElementTree.SubElement(benchmark.find("rundefinition"), "option",
+                                       {"name": "-setprop"}).text = option
 
         # Create benchmark file.
-        benchmark_name = "{0}/benchmark_{1}.xml".format(DEFAULT_LAUNCHES_DIR, os.path.basename(launch_directory))
-        with open(benchmark_name, "w", encoding="ascii") as fp:
-            fp.write(minidom.parseString(ElementTree.tostring(benchmark)).toprettyxml(indent="\t"))
+        benchmark_name = f"{DEFAULT_LAUNCHES_DIR}/benchmark_" \
+                         f"{os.path.basename(launch_directory)}.xml"
+        with open(benchmark_name, "w", encoding="ascii") as file_obj:
+            file_obj.write(minidom.parseString(ElementTree.tostring(benchmark)).
+                           toprettyxml(indent="\t"))
 
         return launch_directory, benchmark_name
 
@@ -181,7 +198,8 @@ class FullLauncher(Launcher):
         result.work_dir = launch_directory
 
         # If output directory is hardcoded in a verifier, then we need to move it.
-        is_move_output_dir = self.properties_desc.get_property_arg(result.rule, PROPERTY_IS_MOVE_OUTPUT)
+        is_move_output_dir = self.properties_desc.get_property_arg(result.rule,
+                                                                   PROPERTY_IS_MOVE_OUTPUT)
         cur_cwd = os.getcwd()
         if is_move_output_dir:
             shutil.move(benchmark_name, launch_directory)
@@ -189,14 +207,14 @@ class FullLauncher(Launcher):
             os.chdir(launch_directory)
 
         # Verifier launch.
-        subprocess.check_call("benchexec --no-compress-results --no-container -o {0} {1} {2}".
-                              format(launch_directory, benchmark_name, self.benchmark_args),
+        subprocess.check_call(f"benchexec --no-compress-results --no-container -o "
+                              f"{launch_directory} {benchmark_name} {self.benchmark_args}",
                               shell=True, stderr=self.output_desc, stdout=self.output_desc)
 
         # Make output directory similar to the other properties.
         if is_move_output_dir:
             if os.path.exists(HARDCODED_RACES_OUTPUT_DIR):
-                for file in glob.glob("{}/witness*".format(HARDCODED_RACES_OUTPUT_DIR)):
+                for file in glob.glob(f"{HARDCODED_RACES_OUTPUT_DIR}/witness*"):
                     shutil.move(file, launch_directory)
                 os.rmdir(HARDCODED_RACES_OUTPUT_DIR)
             if not self.debug:
@@ -207,10 +225,6 @@ class FullLauncher(Launcher):
                 os.remove(benchmark_name)
 
         self.__process_single_launch_results(result, launch_directory, queue)
-
-    def __get_preset_property_info(self):
-        # Get from basic/plugin config
-        pass
 
     def __prepare_sources(self, sources_queue: multiprocessing.Queue):
         """
@@ -227,7 +241,8 @@ class FullLauncher(Launcher):
         builder_resources = {}
         specific_sources = set()
         specific_functions = set()
-        build_results = {}  # Information, that will be used by Preparator (source directories and build commands).
+        # Information, that will be used by Preparator (source directories and build commands).
+        build_results = {}
         cur_dir = os.getcwd()
 
         self.logger.info("Preparing source directories")
@@ -235,8 +250,7 @@ class FullLauncher(Launcher):
         commits = self.config.get(TAG_COMMITS, None)
 
         if not sources:
-            self.logger.error("Sources to be verified were not specified")
-            exit(1)
+            sys.exit("Sources to be verified were not specified")
 
         builders = {}
         for sources_config in sources:
@@ -248,26 +262,25 @@ class FullLauncher(Launcher):
             build_config = sources_config.get(TAG_BUILD_CONFIG, {})
             cached_commands = sources_config.get(TAG_CACHED_COMMANDS, None)
             repository = sources_config.get(TAG_REPOSITORY, None)
-            build_commands = os.path.join(cur_dir, "cmds_{}.json".format(re.sub("\W", "_", identifier)))
+            id_str = re.sub('\\W', '_', identifier)
+            build_commands = os.path.join(cur_dir, f"cmds_{id_str}.json")
 
             if not source_dir or not os.path.exists(source_dir):
-                self.logger.error("Source directory '{}' does not exist".format(source_dir))
-                exit(1)
+                sys.exit(f"Source directory '{source_dir}' does not exist")
 
             if build_config:
                 build_results[source_dir] = build_commands
 
             if skip:
-                self.logger.debug("Skipping building of sources '{}' (directory {})".format(identifier, source_dir))
+                self.logger.debug(
+                    f"Skipping building of sources '{identifier}' (directory {source_dir})")
                 if build_config:
                     if not (cached_commands and os.path.exists(cached_commands)):
-                        self.logger.error("Cached build commands were not specified for sources '{}', "
-                                          "preparation of which was skipped".format(identifier))
-                        exit(1)
+                        sys.exit(f"Cached build commands were not specified for sources "
+                                 f"'{identifier}', preparation of which was skipped")
                     shutil.copy(cached_commands, build_commands)
                 continue
-            else:
-                self.logger.debug("Building of sources '{}' (directory {})".format(identifier, source_dir))
+            self.logger.debug(f"Building of sources '{identifier}' (directory {source_dir})")
 
             builder = Builder(self.install_dir, self.config, source_dir, build_config, repository)
             builder.clean()
@@ -282,10 +295,10 @@ class FullLauncher(Launcher):
             builders[builder] = None
             if build_config:
                 if cached_commands and os.path.exists(cached_commands):
-                    self.logger.debug("Taking build commands from cached file {}".format(cached_commands))
+                    self.logger.debug(f"Taking build commands from cached file {cached_commands}")
                     shutil.copy(cached_commands, build_commands)
                 else:
-                    self.logger.debug("Generating build commands in file {}".format(build_commands))
+                    self.logger.debug(f"Generating build commands in file {build_commands}")
                     builders[builder] = build_commands
 
         for sources_config in sources:
@@ -293,7 +306,7 @@ class FullLauncher(Launcher):
             patches = sources_config.get(TAG_PATCH, [])
 
             builder = None
-            for tmp_builder in builders.keys():
+            for tmp_builder, _ in builders.items():
                 if tmp_builder.source_dir == source_dir:
                     builder = tmp_builder
                     break
@@ -302,16 +315,17 @@ class FullLauncher(Launcher):
                 build_commands = builders[builder]
                 if build_commands:
                     builder.build(build_commands)
-                builder_resources = self.add_resources(builder.get_component_full_stats(), builder_resources)
+                builder_resources = self.add_resources(builder.get_component_full_stats(),
+                                                       builder_resources)
 
                 if commits and commits[0]:
                     if not builder.repository:
-                        self.logger.error("Cannot check commits without repository")
-                        exit(1)
-                    self.logger.debug("Finding all entrypoints for specified commits {}".format(commits))
-                    qualifier = Qualifier(builder,
-                                          self.__get_files_for_system(self.entrypoints_dir, "*" + JSON_EXTENSION))
-                    specific_sources_new, specific_functions_new = qualifier.analyse_commits(commits)
+                        sys.exit("Cannot check commits without repository")
+                    self.logger.debug(f"Finding all entrypoints for specified commits {commits}")
+                    qualifier = Qualifier(builder, self.__get_files_for_system(
+                        self.entrypoints_dir, "*" + JSON_EXTENSION))
+                    specific_sources_new, specific_functions_new = \
+                        qualifier.analyse_commits(commits)
                     specific_functions_new = qualifier.find_functions(specific_functions_new)
                     specific_sources = specific_sources.union(specific_sources_new)
                     specific_functions = specific_functions.union(specific_functions_new)
@@ -319,7 +333,7 @@ class FullLauncher(Launcher):
 
                 if patches:
                     for patch in patches:
-                        self.logger.debug("Apply patch {}".format(patch))
+                        self.logger.debug(f"Apply patch {patch}")
                         patch = self.__get_file_for_system(self.patches_dir, patch)
                         builder.patch(patch)
 
@@ -332,7 +346,8 @@ class FullLauncher(Launcher):
         })
         sys.exit(0)
 
-    def __resolve_property_file(self, rundefinition: ElementTree.Element, launch: VerificationTask) -> None:
+    def __resolve_property_file(self, rundefinition: ElementTree.Element,
+                                launch: VerificationTask) -> None:
         """
         Property file is resolved in the following way:
          - rule specific automaton (*.spc file);
@@ -342,14 +357,17 @@ class FullLauncher(Launcher):
         """
         # TODO: support several properties here
         # Use specified automaton file.
-        automaton_file = self.properties_desc.get_property_arg(launch.rule, PROPERTY_SPECIFICATION_AUTOMATON)
+        automaton_file = self.properties_desc.get_property_arg(launch.rule,
+                                                               PROPERTY_SPECIFICATION_AUTOMATON)
         if automaton_file:
             automaton_file = self.__get_file_for_system(
-                os.path.join(self.root_dir, DEFAULT_PROPERTIES_DIR, DEFAULT_AUTOMATA_DIR), automaton_file)
+                os.path.join(self.root_dir, DEFAULT_PROPERTIES_DIR, DEFAULT_AUTOMATA_DIR),
+                automaton_file)
         else:
             # Use default automaton file.
             automaton_file = self.__get_file_for_system(
-                os.path.join(self.root_dir, DEFAULT_PROPERTIES_DIR, DEFAULT_AUTOMATA_DIR), launch.rule + ".spc")
+                os.path.join(self.root_dir, DEFAULT_PROPERTIES_DIR, DEFAULT_AUTOMATA_DIR),
+                launch.rule + ".spc")
         if os.path.exists(automaton_file):
             automaton_file = os.path.join(DEFAULT_AUTOMATA_DIR, os.path.basename(automaton_file))
             ElementTree.SubElement(rundefinition, "option", {"name": "-spec"}).text = automaton_file
@@ -362,35 +380,40 @@ class FullLauncher(Launcher):
                 if values:
                     for value in values:
                         if name == "-config":
-                            potential_abs_path = os.path.join(self.install_dir, self.__get_mode(prop), value)
+                            potential_abs_path = os.path.join(self.install_dir,
+                                                              self.__get_mode(prop), value)
                             if os.path.exists(potential_abs_path):
                                 value = potential_abs_path
                         if name == "-setprop":
-                            (key, val) = str(value).split("=")
-                            parsed_options[key] = val
+                            (parsed_key, parsed_val) = str(value).split("=")
+                            parsed_options[parsed_key] = parsed_val
                         else:
-                            ElementTree.SubElement(rundefinition, "option", {"name": name}).text = value
+                            ElementTree.SubElement(rundefinition, "option", {"name": name}).text = \
+                                value
                 else:
                     ElementTree.SubElement(rundefinition, "option", {"name": name})
+
         common_options = self.properties_desc.get_property_arg(PROPERTY_COMMON, PROPERTY_OPTIONS)
         specific_options = self.properties_desc.get_property_arg(prop, PROPERTY_OPTIONS)
 
         parse_options(common_options)
         parse_options(specific_options)
         for key, val in parsed_options.items():
-            ElementTree.SubElement(rundefinition, "option", {"name": "-setprop"}).text = "{}={}".format(key, val)
+            ElementTree.SubElement(rundefinition, "option", {"name": "-setprop"}).text \
+                = f"{key}={val}"
 
-    def __process_single_group(self, mode, launches, time_limit, memory_limit, core_limit, heap_limit,
-                               internal_time_limit, queue):
+    def __process_single_group(self, mode, launches, time_limit, memory_limit, core_limit,
+                               heap_limit, internal_time_limit, queue):
         # TODO: This is for vcloud only - not supported!
         # Prepare benchmark file for the whole group.
         benchmark_cur = self.__create_benchmark_config(time_limit, core_limit, memory_limit)
         ElementTree.SubElement(benchmark_cur, "resultfiles").text = "**/*"
         ElementTree.SubElement(benchmark_cur, "requiredfiles").text = "properties/*"
         for launch in launches:
-            name = "{}_{}_{}".format(launch.entrypoint, launch.rule, os.path.basename(launch.cil_file))
+            name = f"{launch.entrypoint}_{launch.rule}_{os.path.basename(launch.cil_file)}"
             rundefinition = ElementTree.SubElement(benchmark_cur, "rundefinition", {"name": name})
-            ElementTree.SubElement(rundefinition, "option", {"name": "-heap"}).text = "{}m".format(heap_limit)
+            ElementTree.SubElement(rundefinition, "option", {"name": "-heap"}).text = \
+                f"{heap_limit}m"
             ElementTree.SubElement(rundefinition, "option", {"name": "-timelimit"}).text = str(
                 internal_time_limit)
             self.__resolve_property_file(rundefinition, launch)
@@ -399,12 +422,14 @@ class FullLauncher(Launcher):
                 launch.entrypoint
             if not launch.entry_desc.optimize:
                 for option in VERIFIER_OPTIONS_NOT_OPTIMIZED:
-                    ElementTree.SubElement(rundefinition, "option", {"name": "-setprop"}).text = option
+                    ElementTree.SubElement(rundefinition, "option", {"name": "-setprop"}).text = \
+                        option
             ElementTree.SubElement(ElementTree.SubElement(rundefinition, "tasks"),
                                    "include").text = os.path.relpath(launch.cil_file)
-        benchmark_name = "{0}/benchmark_{1}.xml".format(DEFAULT_LAUNCHES_DIR, mode)
-        with open(benchmark_name, "w", encoding="ascii") as fp:
-            fp.write(minidom.parseString(ElementTree.tostring(benchmark_cur)).toprettyxml(indent="\t"))
+        benchmark_name = f"{DEFAULT_LAUNCHES_DIR}/benchmark_{mode}.xml"
+        with open(benchmark_name, "w", encoding="ascii") as file_obj:
+            file_obj.write(minidom.parseString(ElementTree.tostring(benchmark_cur)).toprettyxml(
+                indent="\t"))
 
         # Create temp directory for group.
         group_directory = os.path.abspath(tempfile.mkdtemp(dir=DEFAULT_LAUNCHES_DIR))
@@ -436,11 +461,12 @@ class FullLauncher(Launcher):
         os.symlink(benchmark_abs_dir, benchmark_rel_dir)
 
         log_file_name = os.path.join(group_directory, CLOUD_BENCHMARK_LOG)
-        with open(log_file_name, 'w') as f_log:
+        with open(log_file_name, 'w', encoding="utf8") as f_log:
             # Launch group.
-            command = "python3 scripts/benchmark.py --no-compress-results -o {0} --container {1} {2}". \
-                format(group_directory, os.path.basename(benchmark_name), self.benchmark_args)
-            self.logger.debug("Launching benchmark: {}".format(command))
+            command = f"python3 scripts/benchmark.py --no-compress-results -o " \
+                      f"{group_directory} --container {os.path.basename(benchmark_name)} " \
+                      f"{self.benchmark_args}"
+            self.logger.debug(f"Launching benchmark: {command}")
             subprocess.check_call(command, shell=True, stderr=f_log, stdout=f_log)
 
         # Process results (in parallel -- we assume, that the master host is free).
@@ -448,19 +474,18 @@ class FullLauncher(Launcher):
         for i in range(self.cpu_cores):
             process_pool.append(None)
         for launch in launches:
-            files = glob.glob(os.path.join(group_directory, "*.logfiles", "{0}_{2}_{1}.{3}*".
-                                           format(launch.entrypoint, os.path.basename(launch.cil_file),
-                                                  launch.rule, os.path.basename(launch.cil_file)))) +\
-                    glob.glob(os.path.join(group_directory, "*.files", "{0}_{2}_{1}.{3}*".
-                                   format(launch.entrypoint, os.path.basename(launch.cil_file),
-                                          launch.rule, os.path.basename(launch.cil_file)), 'output'))
+            benchexec_id_regexp = f"{launch.entrypoint}_{launch.rule}_" \
+                                  f"{os.path.basename(launch.cil_file)}." \
+                                  f"{os.path.basename(launch.cil_file)}*"
+            files = glob.glob(os.path.join(group_directory, "*.logfiles", benchexec_id_regexp)) + \
+                glob.glob(os.path.join(group_directory, "*.files", benchexec_id_regexp, 'output'))
 
             launch_dir = self._copy_result_files(files, group_directory)
-            xml_files = glob.glob(os.path.join(group_directory, 'benchmark*results.{}_{}_{}.xml'.format(
-                launch.entrypoint, launch.rule, os.path.basename(launch.cil_file)
-            )))
+            xml_file_regexp = f'benchmark*results.{launch.entrypoint}_{launch.rule}_' \
+                              f'{os.path.basename(launch.cil_file)}.xml'
+            xml_files = glob.glob(os.path.join(group_directory, xml_file_regexp))
             if not xml_files:
-                self.logger.warning("There is no xml file for launch {}".format(launch))
+                self.logger.warning(f"There is no xml file for launch {launch}")
             else:
                 shutil.move(xml_files[0], launch_dir)
 
@@ -474,28 +499,30 @@ class FullLauncher(Launcher):
                             process_pool[i].join()
                             process_pool[i] = None
                         if not process_pool[i]:
-                            process_pool[i] = multiprocessing.Process(target=self.__process_single_launch_results,
-                                                                      name=result.entrypoint,
-                                                                      args=(result, launch_dir, queue))
+                            process_pool[i] = multiprocessing.Process(
+                                target=self.__process_single_launch_results, name=result.entrypoint,
+                                args=(result, launch_dir, queue))
                             process_pool[i].start()
                             raise NestedLoop
                     sleep(BUSY_WAITING_INTERVAL)
             except NestedLoop:
                 pass
-            except:
-                self.logger.error("Error during processing results:", exc_info=True)
+            except Exception as exception:
+                self.logger.error(f"Error during processing results: {exception}", exc_info=True)
                 kill_launches(process_pool)
         wait_for_launches(process_pool)
         os.chdir(cur_dir)
 
     def __get_groups_with_established_connections(self):
         result = set()
-        log_files = glob.glob(os.path.join(self.work_dir, DEFAULT_LAUNCHES_DIR, "*", CLOUD_BENCHMARK_LOG))
+        log_files = glob.glob(os.path.join(self.work_dir, DEFAULT_LAUNCHES_DIR, "*",
+                                           CLOUD_BENCHMARK_LOG))
         for log_file in log_files:
             if os.path.exists(log_file):
-                with open(log_file, errors='ignore') as f_log:
+                with open(log_file, errors='ignore', encoding="utf8") as f_log:
                     for line in f_log.readlines():
-                        res = re.search(r'INFO	BenchmarkClient:OutputHandler\$1\.onSuccess	Received run result for run 1 of', line)
+                        res = re.search(r'INFO	BenchmarkClient:OutputHandler\$1\.onSuccess	'
+                                        r'Received run result for run 1 of', line)
                         if res:
                             group_id = os.path.basename(os.path.dirname(log_file))
                             result.add(group_id)
@@ -505,7 +532,8 @@ class FullLauncher(Launcher):
     def __get_file_for_system(self, prefix: str, file: str) -> str:
         if not file:
             return ""
-        plugin_dir = os.path.join(self.plugin_dir, self.system_id, os.path.relpath(prefix, self.root_dir))
+        plugin_dir = os.path.join(self.plugin_dir, self.system_id, os.path.relpath(prefix,
+                                                                                   self.root_dir))
         if self.system_id:
             new_path = os.path.join(plugin_dir, file)
             if os.path.exists(new_path):
@@ -516,7 +544,8 @@ class FullLauncher(Launcher):
         return ""
 
     def __get_files_for_system(self, prefix: str, pattern: str) -> list:
-        plugin_dir = os.path.join(self.plugin_dir, self.system_id, os.path.relpath(prefix, self.root_dir))
+        plugin_dir = os.path.join(self.plugin_dir, self.system_id, os.path.relpath(prefix,
+                                                                                   self.root_dir))
         if self.system_id:
             result = glob.glob(os.path.join(plugin_dir, pattern))
             if result:
@@ -524,8 +553,8 @@ class FullLauncher(Launcher):
         result = glob.glob(os.path.join(prefix, pattern))
         if result:
             return result
-        self.logger.debug("Cannot find any files by pattern {} neither in basic directory {} nor in plugin directory {}"
-                          .format(pattern, prefix, plugin_dir))
+        self.logger.debug(f"Cannot find any files by pattern {pattern} neither in basic "
+                          f"directory {prefix} nor in plugin directory {plugin_dir}")
         return []
 
     def __get_mode(self, prop: str) -> str:
@@ -542,11 +571,15 @@ class FullLauncher(Launcher):
         return ElementTree.Element("benchmark", base_config)
 
     def launch(self):
+        """
+        Main method
+        """
+
         # Process common directories.
 
         results = []  # Verification results.
         backup_read = self.component_config.get(TAG_BACKUP_READ, False)
-        self.logger.debug("Clearing old working directory '{}'".format(self.work_dir))
+        self.logger.debug(f"Clearing old working directory '{self.work_dir}'")
         is_cached = self.config.get(TAG_CACHED, False) or backup_read
         if not is_cached:
             shutil.rmtree(self.work_dir, ignore_errors=True)
@@ -570,58 +603,58 @@ class FullLauncher(Launcher):
         self.logger.debug("Check resource limitations")
         max_cores = multiprocessing.cpu_count()
         self.cpu_cores = max_cores
-        self.logger.debug("Machine has {} CPU cores".format(max_cores))
-        max_memory = int(int(subprocess.check_output("free -m", shell=True).splitlines()[1].split()[1]) / 1000)
-        self.logger.debug("Machine has {}GB of RAM".format(max_memory))
+        self.logger.debug(f"Machine has {max_cores} CPU cores")
+        max_memory = int(int(subprocess.check_output("free -m", shell=True).
+                             splitlines()[1].split()[1]) / 1000)
+        self.logger.debug(f"Machine has {max_memory}GB of RAM")
 
         if self.component_config.get(TAG_BACKUP_WRITE, False):
-            self.backup = "{0}{1}.csv".format(DEFAULT_BACKUP_PREFIX, self._get_result_file_prefix())
+            self.backup = f"{DEFAULT_BACKUP_PREFIX}{self._get_result_file_prefix()}.csv"
 
         resource_limits = self.component_config.get(TAG_RESOURCE_LIMITATIONS)
         memory_limit = resource_limits.get(TAG_LIMIT_MEMORY, max_memory)
         if not self.scheduler == SCHEDULER_CLOUD and max_memory < memory_limit:
-            self.logger.error("There is not enough memory to start scheduler: {0}GB are required, "
-                              "whereas only {1}GB are available.".format(memory_limit, max_memory))
-            exit(1)
-        heap_limit = int(memory_limit * 1000 * 13 / 15)  # Basic conversion to get Java heap size (in MB)
+            sys.exit(f"There is not enough memory to start scheduler: {memory_limit}GB are "
+                     f"required, whereas only {max_memory}GB are available.")
+        # Basic conversion to get Java heap size (in MB)
+        heap_limit = int(memory_limit * 1000 * 13 / 15)
 
         time_limit = resource_limits[TAG_LIMIT_CPU_TIME]
 
-        statistics_time = self.component_config.get(TAG_STATISTICS_TIME, DEFAULT_TIME_FOR_STATISTICS)
+        statistics_time = self.component_config.get(TAG_STATISTICS_TIME,
+                                                    DEFAULT_TIME_FOR_STATISTICS)
         if statistics_time >= time_limit:
-            self.logger.warning("Specified time for printing statistics {}s is bigger than overall time limit. "
-                                "Ignoring statistics time".format(statistics_time))
+            self.logger.warning(f"Specified time for printing statistics {statistics_time}s is "
+                                f"bigger than overall time limit. Ignoring statistics time")
             statistics_time = 0
         internal_time_limit = time_limit - statistics_time
 
         core_limit = resource_limits.get(TAG_LIMIT_CPU_CORES, max_cores)
         if not self.scheduler == SCHEDULER_CLOUD and max_cores < core_limit:
-            self.logger.error("There is not enough CPU cores to start scheduler: {0} are required, "
-                              "whereas only {1} are available.".format(core_limit, max_cores))
-            exit(1)
+            sys.exit(f"There is not enough CPU cores to start scheduler: {core_limit} "
+                     f"are required, whereas only {max_cores} are available.")
 
         specific_functions = set(self.config.get(TAG_CALLERS, set()))
         specific_sources = set()
         qualifier_resources = {}
         builder_resources = {}
         if self.config.get(TAG_COMMITS) and specific_functions:
-            self.logger.error("Sanity check failed: it is forbidden to specify both callers and commits tags")
-            exit(1)
+            sys.exit(
+                "Sanity check failed: it is forbidden to specify both callers and commits tags")
 
         proc_by_memory = int(max_memory / memory_limit)
         proc_by_cores = int(max_cores / core_limit)
         parallel_launches = int(self.component_config.get(TAG_PARALLEL_LAUNCHES, 0))
         if parallel_launches < 0:
-            self.logger.error("Incorrect value for number of parallel launches: {}".format(parallel_launches))
-            exit(1)
+            sys.exit(f"Incorrect value for number of parallel launches: {parallel_launches}")
         if not parallel_launches:
             number_of_processes = min(proc_by_memory, proc_by_cores)
         else:
             # Careful with this number: if it is too big, memory may be exhausted.
             number_of_processes = parallel_launches
-        self.logger.debug("Max parallel verifier launches on current host: {}".format(number_of_processes))
-        self.logger.debug("Each verifier launch will be limited to {0}GB of RAM, "
-                          "{1} seconds of CPU time and {2} CPU cores".format(memory_limit, time_limit, core_limit))
+        self.logger.debug(f"Max parallel verifier launches on current host: {number_of_processes}")
+        self.logger.debug(f"Each verifier launch will be limited to {memory_limit}GB of RAM, "
+                          f"{time_limit} seconds of CPU time and {core_limit} CPU cores")
 
         # We need to perform sanity checks before complex operation of building.
         rules = self.config.get("properties")
@@ -634,34 +667,37 @@ class FullLauncher(Launcher):
             sys.exit("No file with description of entry points to be checked were specified")
         else:
             for group in ep_desc_files:
-                self.logger.debug("Processing given group of files: {}".format(group))
+                self.logger.debug(f"Processing given group of files: {group}")
                 files = []
-                if type(group) == list:
+                if isinstance(group, list):
                     for elem in group:
-                        files.extend(self.__get_files_for_system(self.entrypoints_dir, elem + JSON_EXTENSION))
+                        files.extend(self.__get_files_for_system(self.entrypoints_dir,
+                                                                 elem + JSON_EXTENSION))
                     identifier = "_".join(group)
-                    self.logger.debug("Processing joint files with entry point description '{}'".format(identifier))
+                    self.logger.debug(f"Processing joint files with entry point description "
+                                      f"'{identifier}'")
                     entrypoints_desc.add(EntryPointDesc(files, identifier))
                 else:
                     # Wildcards are supported here.
-                    files = self.__get_files_for_system(self.entrypoints_dir, group + JSON_EXTENSION)
+                    files = self.__get_files_for_system(self.entrypoints_dir,
+                                                        group + JSON_EXTENSION)
                     for file in files:
-                        self.logger.debug("Processing file with entry point description '{}'".format(file))
+                        self.logger.debug(f"Processing file with entry point description '{file}'")
                         identifier = os.path.basename(file)[:-len(JSON_EXTENSION)]
                         entrypoints_desc.add(EntryPointDesc([file], identifier))
                 if not files:
-                    sys.exit("No file with description of entry points for '{}' were found".format(group))
+                    sys.exit(f"No file with description of entry points for '{group}' were found")
 
         # Process sources in separate process.
         sources_queue = multiprocessing.Queue()
         sources_process = multiprocessing.Process(target=self.__prepare_sources, name="sources",
-                                                  args=(sources_queue, ))
+                                                  args=(sources_queue,))
         sources_process.start()
-        sources_process.join()  # Wait here since this information may reduce future preparation work.
+        sources_process.join()
+        # Wait here since this information may reduce future preparation work.
 
         if not sources_queue.empty():
             data = sources_queue.get()
-            print(data)
             if not specific_functions:
                 specific_functions = data.get(SOURCE_QUEUE_FUNCTIONS)
             specific_sources = data.get(SOURCE_QUEUE_FILES)
@@ -670,12 +706,13 @@ class FullLauncher(Launcher):
             self.build_results = data.get(SOURCE_QUEUE_RESULTS)
         else:
             if not sources_process.exitcode:
-                self.logger.error("Sanity check failed: builder data is missed with none-error exit code")
-                exit(sources_process.exitcode)
+                self.logger.error(
+                    "Sanity check failed: builder data is missed with none-error exit code")
+                sys.exit(sources_process.exitcode)
 
         if sources_process.exitcode:
             self.logger.error("Source directories were not prepared")
-            exit(sources_process.exitcode)
+            sys.exit(sources_process.exitcode)
 
         if specific_functions:
             static_callers = set()
@@ -684,9 +721,10 @@ class FullLauncher(Launcher):
             specific_functions.update(static_callers)
 
         self.logger.info("Preparing verification tasks based on the given configuration")
-        preparator_processes = self.config.get(COMPONENT_PREPARATOR, {}).get(TAG_PROCESSES, max_cores)
-        self.logger.debug("Starting scheduler for verification tasks preparation with {} processes".
-                          format(preparator_processes))
+        preparator_processes = self.config.get(COMPONENT_PREPARATOR, {}).get(TAG_PROCESSES,
+                                                                             max_cores)
+        self.logger.debug(f"Starting scheduler for verification tasks preparation with "
+                          f"{preparator_processes} processes")
 
         find_coverage = self.config.get(COMPONENT_COVERAGE, {}).get(TAG_MAX_COVERAGE, False)
         if find_coverage:
@@ -706,8 +744,8 @@ class FullLauncher(Launcher):
             os.path.join(self.root_dir, DEFAULT_PREPARATION_PATCHES_DIR),
             self.config.get(TAG_PREPARATION_CONFIG, DEFAULT_PREPARATION_CONFIG))
         if preparation_config_file:
-            with open(preparation_config_file) as fd:
-                preparation_config = json.load(fd)
+            with open(preparation_config_file, encoding="ascii") as file_obj:
+                preparation_config = json.load(file_obj)
         else:
             preparation_config = {}
 
@@ -720,20 +758,21 @@ class FullLauncher(Launcher):
                             is_skip = False
                             break
                 if is_skip:
-                    self.logger.debug("Skipping subsystem '{}' because it does not relate with the checking commits".
-                                      format(entry_desc.id))
+                    self.logger.debug(f"Skipping subsystem '{entry_desc.id}' "
+                                      f"because it does not relate with the checking commits")
                     continue
             main_generator = MainGenerator(self.config, entry_desc.data, self.properties_desc)
             main_generator.process_sources()
             for rule in rules:
                 strategy = main_generator.get_strategy(rule)
                 mode = self.__get_mode(rule)
-                object_name = "{0}_{1}_{2}".format(entry_desc.short_name, re.sub('\W+','_', rule), strategy)
-                main_file_name = os.path.join(DEFAULT_MAIN_DIR, "{}.c".format(object_name))
+                prop_plain_name = re.sub('\\W+', '_', rule)
+                object_name = f"{entry_desc.short_name}_{prop_plain_name}_{strategy}"
+                main_file_name = os.path.join(DEFAULT_MAIN_DIR, f"{object_name}.c")
                 entrypoints = main_generator.generate_main(strategy, main_file_name, rule)
-                model = self.__get_file_for_system(self.models_dir, "{0}.c".format(rule))
+                model = self.__get_file_for_system(self.models_dir, f"{rule}.c")
                 common_file = self.__get_file_for_system(self.models_dir, COMMON_HEADER_FOR_RULES)
-                cil_file = os.path.abspath(os.path.join(DEFAULT_CIL_DIR, "{}.i".format(object_name)))
+                cil_file = os.path.abspath(os.path.join(DEFAULT_CIL_DIR, f"{object_name}.i"))
                 try:
                     while True:
                         for i in range(preparator_processes):
@@ -742,33 +781,38 @@ class FullLauncher(Launcher):
                                 process_pool[i] = None
                             if not process_pool[i]:
                                 if is_cached and os.path.exists(cil_file):
-                                    self.logger.debug("Using cached CIL-file {0}".format(cil_file))
+                                    self.logger.debug(f"Using cached CIL-file {cil_file}")
                                 else:
-                                    self.logger.debug("Generating verification task {0} for entrypoints {1}, rule {2}".
-                                                      format(cil_file, entry_desc.id, rule))
-                                    preparator = Preparator(self.install_dir, self.config,
-                                                            subdirectory_patterns=entry_desc.subsystems, model=model,
-                                                            main_file=main_file_name, output_file=cil_file,
-                                                            preparation_config=preparation_config,
-                                                            common_file=common_file, build_results=self.build_results)
-                                    process_pool[i] = multiprocessing.Process(target=preparator.prepare_task,
-                                                                              name=cil_file, args=(resource_queue,))
+                                    self.logger.debug(
+                                        f"Generating verification task {cil_file} for entrypoints "
+                                        f"{entry_desc.id}, rule {rule}")
+                                    preparator = Preparator(
+                                        self.install_dir, self.config,
+                                        subdirectory_patterns=entry_desc.subsystems, model=model,
+                                        main_file=main_file_name, output_file=cil_file,
+                                        preparation_config=preparation_config,
+                                        common_file=common_file, build_results=self.build_results)
+                                    process_pool[i] = multiprocessing.Process(
+                                        target=preparator.prepare_task, name=cil_file,
+                                        args=(resource_queue,))
                                     process_pool[i].start()
                                 raise NestedLoop
                         sleep(BUSY_WAITING_INTERVAL)
                 except NestedLoop:
                     pass
-                except:
-                    self.logger.error("Could not prepare verification task:", exc_info=True)
+                except Exception as exception:
+                    self.logger.error(f"Could not prepare verification task: {exception}",
+                                      exc_info=True)
                     kill_launches(process_pool)
                 for entrypoint in entrypoints:
-                    path_to_verifier = self.get_tool_path(os.path.join(mode, DEFAULT_CPACHECKER_SCRIPTS_PATH))
+                    path_to_verifier = self.get_tool_path(
+                        os.path.join(mode, DEFAULT_CPACHECKER_SCRIPTS_PATH))
 
                     if not specific_functions or \
                             entrypoint.replace(ENTRY_POINT_SUFFIX, "") in specific_functions or \
                             entrypoint == DEFAULT_MAIN:
-                        launches.append(VerificationTask(entry_desc, rule, self.__get_mode(rule), entrypoint,
-                                                         path_to_verifier, cil_file))
+                        launches.append(VerificationTask(entry_desc, rule, self.__get_mode(rule),
+                                                         entrypoint, path_to_verifier, cil_file))
         wait_for_launches(process_pool)
 
         # Filter problem launches
@@ -781,8 +825,8 @@ class FullLauncher(Launcher):
                 cil_files = glob.glob(launch.cil_file + "*")
                 if not cil_files:
                     # Nothing was prepared -- error during preparation.
-                    self.logger.warning("The file {0} was not found, skip the corresponding launch".
-                                        format(launch.cil_file))
+                    self.logger.warning(f"The file {launch.cil_file} was not found, "
+                                        f"skip the corresponding launch")
                 else:
                     # Several CIL files were found - need to multiply this launch for each CIL file.
                     cil_files.sort()
@@ -807,8 +851,8 @@ class FullLauncher(Launcher):
         preparation_cpu_time = time.process_time() - self.start_cpu_time
         preparation_memory_usage_all = []
         preparator_unknowns = []
-        component_attrs = {COMPONENT_PREPARATOR: dict()}
-        build_commands = dict()
+        component_attrs = {COMPONENT_PREPARATOR: {}}
+        build_commands = {}
         while not resource_queue.empty():
             prep_data = resource_queue.get()
             preparator_wall_time = prep_data.get(TAG_WALL_TIME, 0.0)
@@ -818,7 +862,7 @@ class FullLauncher(Launcher):
             preparation_cpu_time += preparator_cpu_time
             if TAG_LOG_FILE in prep_data:
                 cil_file = prep_data.get(TAG_CIL_FILE, "")
-                attrs = list()
+                attrs = []
                 if cil_file:
                     res = re.search(r"(\w+)_([^_]+)_(\w+)\.i", os.path.basename(cil_file))
                     if res:
@@ -837,14 +881,14 @@ class FullLauncher(Launcher):
                         TAG_ATTRS: attrs
                     })
             if TAG_PREP_RESULTS in prep_data:
-                with open(prep_data[TAG_PREP_RESULTS]) as fd:
-                    data = json.load(fd)
+                with open(prep_data[TAG_PREP_RESULTS], encoding="utf8") as file_obj:
+                    data = json.load(file_obj)
                     for cmd, args in data.items():
                         if cmd not in build_commands:
                             build_commands[cmd] = args
                         else:
-                            for i in range(0, len(args)):
-                                build_commands[cmd][i] = build_commands[cmd][i] or args[i]
+                            for index, arg in enumerate(args):
+                                build_commands[cmd][index] = build_commands[cmd][index] or arg
 
         if build_commands:
             overall_build_commands = len(build_commands)
@@ -872,11 +916,11 @@ class FullLauncher(Launcher):
                     ]
                 }
             ]
-            self.logger.info("Number of build commands: {}; potentially can be used (not ignored): {}; "
-                              "filtered for checked subsystems: {}; compiled: {}; processed: {}".format(
-                overall_build_commands, potential_build_commands, filtered_build_commands, compiled_build_commands,
-                processed_build_commands
-            ))
+            self.logger.info(f"Number of build commands: {overall_build_commands}; "
+                             f"potentially can be used (not ignored): {potential_build_commands}; "
+                             f"filtered for checked subsystems: {filtered_build_commands}; "
+                             f"compiled: {compiled_build_commands}; "
+                             f"processed: {processed_build_commands}")
             # TODO: upload those unused build commands for common coverage data
 
         for memory_usage in sorted(preparation_memory_usage_all):
@@ -887,9 +931,9 @@ class FullLauncher(Launcher):
 
         if backup_read:
             self.logger.info("Restoring from backup copy")
-            backup_files = glob.glob(os.path.join(self.work_dir, "{}*".format(DEFAULT_BACKUP_PREFIX)))
+            backup_files = glob.glob(os.path.join(self.work_dir, f"{DEFAULT_BACKUP_PREFIX}*"))
             for file in backup_files:
-                with open(file, "r", errors='ignore') as f_res:
+                with open(file, "r", errors='ignore', encoding="ascii") as f_res:
                     for line in f_res.readlines():
                         result = VerificationResults(None, self.config)
                         result.parse_line(line)
@@ -900,58 +944,66 @@ class FullLauncher(Launcher):
                                 break
                 os.remove(file)
             if self.backup:
-                with open(self.backup, "a") as f_report:
+                with open(self.backup, "a", encoding="ascii") as f_report:
                     for result in results:
                         f_report.write(str(result) + "\n")
-            if len(results):
-                self.logger.info("Successfully restored {} results".format(len(results)))
+            if results:
+                self.logger.info(f"Successfully restored {len(results)} results")
             else:
                 self.logger.info("No results were restored")
 
         self.logger.info("Preparation of verification tasks has been completed")
         preparation_wall_time = time.time() - preparator_start_wall
-        self.logger.debug("Preparation wall time: {} seconds".format(round(preparation_wall_time, 2)))
-        self.logger.debug("Preparation CPU time: {} seconds".format(round(preparation_cpu_time, 2)))
-        self.logger.debug("Preparation memory usage: {} Mb".format(round(preparation_memory_usage / 2**20, 2)))
+        self.logger.debug(f"Preparation wall time: "
+                          f"{round(preparation_wall_time, 2)} seconds")
+        self.logger.debug(f"Preparation CPU time: "
+                          f"{round(preparation_cpu_time, 2)} seconds")
+        self.logger.debug(f"Preparation memory usage: "
+                          f"{round(preparation_memory_usage / 2 ** 20, 2)} Mb")
         self.logger.info("Starting to solve verification tasks")
-        self.logger.info("Expected number of verifier launches is {}".format(len(launches)))
+        self.logger.info(f"Expected number of verifier launches is {len(launches)}")
 
         # Prepare BenchExec commands.
         path_to_benchexec = self.get_tool_path(DEFAULT_TOOL_PATH[BENCHEXEC],
                                                self.config.get(TAG_TOOLS, {}).get(BENCHEXEC))
-        self.logger.debug("Using BenchExec, found in: '{0}'".format(path_to_benchexec))
+        self.logger.debug(f"Using BenchExec, found in: '{path_to_benchexec}'")
         os.environ["PATH"] += os.pathsep + path_to_benchexec
         benchmark = {}
         for prop in self.properties_desc.get_properties():
             # Specify resource limitations.
             benchmark[prop] = self.__create_benchmark_config(time_limit, core_limit, memory_limit)
             rundefinition = ElementTree.SubElement(benchmark[prop], "rundefinition")
-            ElementTree.SubElement(rundefinition, "option", {"name": "-heap"}).text = "{}m".format(heap_limit)
-            ElementTree.SubElement(rundefinition, "option", {"name": "-timelimit"}).text = str(internal_time_limit)
+            ElementTree.SubElement(rundefinition, "option", {"name": "-heap"}).text = \
+                f"{heap_limit}m"
+            ElementTree.SubElement(rundefinition, "option", {"name": "-timelimit"}).text = \
+                str(internal_time_limit)
 
             # Create links to the properties.
-            for file in glob.glob(os.path.join(self.root_dir, DEFAULT_PROPERTIES_DIR, DEFAULT_AUTOMATA_DIR, "*")):
+            for file in glob.glob(os.path.join(self.root_dir, DEFAULT_PROPERTIES_DIR,
+                                               DEFAULT_AUTOMATA_DIR, "*")):
                 if os.path.isfile(file):
                     shutil.copy(file, DEFAULT_AUTOMATA_DIR)
             if self.system_id:
-                for file in glob.glob(os.path.join(self.plugin_dir, self.system_id, DEFAULT_PROPERTIES_DIR,
-                                                   DEFAULT_AUTOMATA_DIR, "*")):
+                for file in glob.glob(os.path.join(self.plugin_dir, self.system_id,
+                                                   DEFAULT_PROPERTIES_DIR, DEFAULT_AUTOMATA_DIR,
+                                                   "*")):
                     if os.path.isfile(file):
                         shutil.copy(file, DEFAULT_AUTOMATA_DIR)
 
             # Get options from files.
             self.__parse_verifier_options(prop, rundefinition)
 
-        self.logger.debug("Starting scheduler for verifier launches with {} processes".format(number_of_processes))
+        self.logger.debug(f"Starting scheduler for verifier launches with {number_of_processes} "
+                          f"processes")
         counter = 1
         number_of_launches = len(launches)
         if number_of_launches == 0:
             self.logger.warning("No launches were set by the given configuration")
             sys.exit(0)
         queue = multiprocessing.Queue()
-        self.mea_input_queue = multiprocessing.Queue()
         if self.scheduler == SCHEDULER_CLOUD:
-            mea_processes = self.config.get(COMPONENT_MEA, {}).get(TAG_PARALLEL_LAUNCHES, self.cpu_cores)
+            mea_processes = self.config.get(COMPONENT_MEA, {}).get(TAG_PARALLEL_LAUNCHES,
+                                                                   self.cpu_cores)
         else:
             mea_processes = max(1, max_cores - number_of_processes)
         filtering_process = multiprocessing.Process(target=self.__filter_scheduler, name="MEA",
@@ -959,7 +1011,7 @@ class FullLauncher(Launcher):
         filtering_process.start()
 
         if self.scheduler == SCHEDULER_CLOUD:
-            launch_groups = dict()
+            launch_groups = {}
             for launch in launches:
                 mode = self.__get_mode(launch.rule)
                 if mode in launch_groups:
@@ -967,13 +1019,14 @@ class FullLauncher(Launcher):
                 else:
                     launch_groups[mode] = [launch]
             del launches
-            self.logger.info("Divided all tasks into {} group(s) for solving on cloud".format(len(launch_groups)))
-            process_pool = list()
+            self.logger.info(f"Divided all tasks into {len(launch_groups)} group(s) for solving on "
+                             f"cloud")
+            process_pool = []
             for mode, launches in launch_groups.items():
-                process_single_group = multiprocessing.Process(target=self.__process_single_group, name=mode,
-                                                               args=(mode, launches, time_limit, memory_limit,
-                                                                     core_limit, heap_limit, internal_time_limit,
-                                                                     queue))
+                process_single_group = multiprocessing.Process(
+                    target=self.__process_single_group, name=mode,
+                    args=(mode, launches, time_limit, memory_limit, core_limit, heap_limit,
+                          internal_time_limit, queue))
                 process_single_group.start()
                 process_pool.append(process_single_group)
             connection_established = False
@@ -986,7 +1039,8 @@ class FullLauncher(Launcher):
                         for group in new_groups:
                             if group not in solving_groups:
                                 solving_groups.add(group)
-                                self.logger.info("Established connection to group {}".format(len(solving_groups)))
+                                self.logger.info(f"Established connection to group "
+                                                 f"{len(solving_groups)}")
                         if len(solving_groups) == len(launch_groups):
                             self.logger.info("Connection to all group(s) has been established")
                             connection_established = True
@@ -1007,12 +1061,14 @@ class FullLauncher(Launcher):
                         if not process_pool[i]:
                             launch = launches.popleft()
                             percent = 100 - 100 * counter / number_of_launches
-                            self.logger.info("Scheduling new launch: subsystem '{0}', rule '{1}', entrypoint '{2}' "
-                                             "({3}% remains)".format(launch.entry_desc.id, launch.rule,
-                                                                     launch.entrypoint, round(percent, 2)))
+                            self.logger.info(
+                                f"Scheduling new launch: subsystem '{launch.entry_desc.id}'"
+                                f", rule '{launch.rule}', entrypoint '{launch.entrypoint}' "
+                                f"({round(percent, 2)}% remains)")
                             counter += 1
-                            process_pool[i] = multiprocessing.Process(target=self.local_launch, name=launch.name,
-                                                                      args=(launch, benchmark[launch.rule], queue))
+                            process_pool[i] = multiprocessing.Process(
+                                target=self.local_launch, name=launch.name,
+                                args=(launch, benchmark[launch.rule], queue))
                             process_pool[i].start()
                             if len(launches) == 0:
                                 raise NestedLoop
@@ -1021,11 +1077,11 @@ class FullLauncher(Launcher):
                 # All entry points has been checked.
                 wait_for_launches(process_pool)
                 self._get_from_queue_into_list(queue, results)
-            except:
-                self.logger.error("Process scheduler was terminated:", exc_info=True)
+            except Exception as exception:
+                self.logger.error(f"Process scheduler was terminated: {exception}", exc_info=True)
                 filtering_process.terminate()
                 kill_launches(process_pool)
-                exit(1)
+                sys.exit(1)
         else:
             raise NotImplementedError
 
@@ -1047,11 +1103,12 @@ class FullLauncher(Launcher):
 
         overall_cpu_time = time.process_time() - self.start_cpu_time
         overall_wall_time = time.time() - self.start_time
-        self.logger.debug("Overall wall time of script: {}".format(overall_wall_time))
-        self.logger.debug("Overall CPU time of script: {}".format(overall_cpu_time))
+        self.logger.debug(f"Overall wall time of script: {overall_wall_time}")
+        self.logger.debug(f"Overall CPU time of script: {overall_cpu_time}")
         self.logger.info("Solving of verification tasks has been completed")
 
-        report_launches, result_archive, report_components, short_report, report_resources = self._get_results_names()
+        report_launches, result_archive, report_components, short_report, report_resources = \
+            self._get_results_names()
 
         self.logger.debug("Processing results")
         cov_lines = {}
@@ -1059,7 +1116,7 @@ class FullLauncher(Launcher):
         stats_by_rules = {}
         cov_cpu = 0
         wall_cov = 0
-        cov_mem_array = list()
+        cov_mem_array = []
         for rule in rules:
             if rule == PROPERTY_COVERAGE:
                 continue
@@ -1086,52 +1143,58 @@ class FullLauncher(Launcher):
         else:
             wall_cov /= min(number_of_processes, self.cpu_cores)
 
-        self._print_launches_report(report_launches, report_resources, results, cov_lines, cov_funcs)
-        self.logger.info("Preparing report on components into file: '{}'".format(report_components))
-        with open(report_components, "w") as f_report:
+        self._print_launches_report(report_launches, report_resources, results, cov_lines,
+                                    cov_funcs)
+        self.logger.info(f"Preparing report on components into file: '{report_components}'")
+        with open(report_components, "w", encoding="ascii") as f_report:
             f_report.write("Name;CPU;Wall;Memory\n")  # Header.
-            f_report.write("{0};{1};{2};{3}\n".format(COMPONENT_PREPARATOR, round(preparation_cpu_time, ROUND_DIGITS),
-                                                      round(preparation_wall_time, ROUND_DIGITS),
-                                                      preparation_memory_usage))
-            f_report.write("{0};{1};{2};{3}\n".format(COMPONENT_LAUNCHER, round(overall_cpu_time, ROUND_DIGITS),
-                                                      round(overall_wall_time, ROUND_DIGITS),
-                                                      int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) * 1024))
-            f_report.write("{0};{1};{2};{3}\n".format(COMPONENT_MEA, round(mea_cpu, ROUND_DIGITS),
-                                                      round(mea_wall, ROUND_DIGITS), mea_memory))
-            f_report.write("{0};{1};{2};{3}\n".format(COMPONENT_COVERAGE, round(cov_cpu, ROUND_DIGITS),
-                                                      round(wall_cov, ROUND_DIGITS), cov_mem))
+            f_report.write(
+                f"{COMPONENT_PREPARATOR};{round(preparation_cpu_time, ROUND_DIGITS)};"
+                f"{round(preparation_wall_time, ROUND_DIGITS)};{preparation_memory_usage}\n")
+            f_report.write(
+                f"{COMPONENT_LAUNCHER};{round(overall_cpu_time, ROUND_DIGITS)};"
+                f"{round(overall_wall_time, ROUND_DIGITS)};"
+                f"{int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) * 1024}\n")
+            f_report.write(
+                f"{COMPONENT_MEA};{round(mea_cpu, ROUND_DIGITS)};{round(mea_wall, ROUND_DIGITS)};"
+                f"{mea_memory}\n")
+            f_report.write(
+                f"{COMPONENT_COVERAGE};{round(cov_cpu, ROUND_DIGITS)};"
+                f"{round(wall_cov, ROUND_DIGITS)};{cov_mem}\n")
             if qualifier_resources:
-                f_report.write("{0};{1};{2};{3}\n".format(COMPONENT_QUALIFIER,
-                                                          round(qualifier_resources[TAG_CPU_TIME], ROUND_DIGITS),
-                                                          round(qualifier_resources[TAG_WALL_TIME], ROUND_DIGITS),
-                                                          round(qualifier_resources[TAG_MEMORY_USAGE], ROUND_DIGITS)))
+                f_report.write(
+                    f"{COMPONENT_QUALIFIER};"
+                    f"{round(qualifier_resources[TAG_CPU_TIME], ROUND_DIGITS)};"
+                    f"{round(qualifier_resources[TAG_WALL_TIME], ROUND_DIGITS)};"
+                    f"{round(qualifier_resources[TAG_MEMORY_USAGE], ROUND_DIGITS)}\n")
             if builder_resources:
-                f_report.write("{0};{1};{2};{3}\n".format(COMPONENT_BUILDER,
-                                                          round(builder_resources[TAG_CPU_TIME], ROUND_DIGITS),
-                                                          round(builder_resources[TAG_WALL_TIME], ROUND_DIGITS),
-                                                          round(builder_resources[TAG_MEMORY_USAGE], ROUND_DIGITS)))
+                f_report.write(
+                    f"{COMPONENT_BUILDER};{round(builder_resources[TAG_CPU_TIME], ROUND_DIGITS)};"
+                    f"{round(builder_resources[TAG_WALL_TIME], ROUND_DIGITS)};"
+                    f"{round(builder_resources[TAG_MEMORY_USAGE], ROUND_DIGITS)}\n")
 
-        self.logger.info("Preparing short report into file: '{}'".format(short_report))
-        with open(short_report, "w") as f_report:
+        self.logger.info(f"Preparing short report into file: '{short_report}'")
+        with open(short_report, "w", encoding="ascii") as f_report:
             f_report.write("Rule;Safes;Unsafes;Unknowns;Relevant;Traces;Filtered;CPU;Wall;Mem\n")
             overall_stats = GlobalStatistics()
             for rule, info in sorted(stats_by_rules.items()):
                 info.sum_memory()
-                f_report.write("{0};{1}\n".format(rule, info))
+                f_report.write(f"{rule};{info}\n")
                 overall_stats.sum(info)
-            f_report.write("Overall;{0}\n".format(overall_stats))
+            f_report.write(f"Overall;{overall_stats}\n")
 
-        self.logger.info("Exporting results into archive: '{}'".format(result_archive))
+        self.logger.info(f"Exporting results into archive: '{result_archive}'")
 
         config = {
             TAG_CONFIG_MEMORY_LIMIT: str(memory_limit) + "GB",
             TAG_CONFIG_CPU_TIME_LIMIT: time_limit,
             TAG_CONFIG_CPU_CORES_LIMIT: core_limit
         }
-        exporter = Exporter(self.config, DEFAULT_EXPORT_DIR, self.install_dir, properties_desc=self.properties_desc)
+        exporter = Exporter(self.config, DEFAULT_EXPORT_DIR, self.install_dir,
+                            properties_desc=self.properties_desc)
         exporter.export(report_launches, report_resources, report_components, result_archive,
-                        unknown_desc={COMPONENT_PREPARATOR: preparator_unknowns}, component_attrs=component_attrs,
-                        verifier_config=config)
+                        unknown_desc={COMPONENT_PREPARATOR: preparator_unknowns},
+                        component_attrs=component_attrs, verifier_config=config)
 
         uploader_config = self.config.get(UPLOADER, {})
         if uploader_config and uploader_config.get(TAG_UPLOADER_UPLOAD_RESULTS, False):
@@ -1139,18 +1202,11 @@ class FullLauncher(Launcher):
 
         if not self.debug:
             self.logger.info("Cleaning working directories")
-            # TODO: cloud
-            '''
-            for mode, path in DEFAULT_CPACHECKER_CLOUD.items():
-                cpa_path = self.get_tool_path(path)
-                shutil.rmtree(os.path.join(cpa_path, DEFAULT_CIL_DIR), ignore_errors=True)
-                shutil.rmtree(os.path.join(cpa_path, DEFAULT_AUTOMATA_DIR), ignore_errors=True)
-            '''
             shutil.rmtree(DEFAULT_MAIN_DIR, ignore_errors=True)
             shutil.rmtree(DEFAULT_EXPORT_DIR, ignore_errors=True)
             if self.backup and os.path.exists(self.backup):
                 os.remove(self.backup)
             shutil.rmtree(DEFAULT_LAUNCHES_DIR, ignore_errors=True)
             shutil.rmtree(DEFAULT_PREPROCESS_DIR, ignore_errors=True)
-        self.logger.info("Finishing verification of '{}' configuration".format(self.config_file))
+        self.logger.info(f"Finishing verification of '{self.config_file}' configuration")
         os.chdir(self.root_dir)
