@@ -166,7 +166,7 @@ def deploy(deploy_dir: str):
                 shutil.move(cpa_dir_old, deploy_dir_full)
             except ValueError:
                 sys.exit(f"Cannot find CPAchecker build arch for mode {mode}")
-        print("Tool {mode} has successfully been deployed into {deploy_dir_full}")
+        print(f"Tool {mode} has successfully been deployed into {deploy_dir_full}")
 
 
 def download():
