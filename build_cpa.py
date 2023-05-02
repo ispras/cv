@@ -134,7 +134,7 @@ def build():
     for mode, _ in cpa_configs.items():
         if __is_installed(mode):
             _command_caller("ant build dist-unix-tar", "Cannot build CPAchecker",
-                           cwd=__get_tool_dir_name(mode))
+                            cwd=__get_tool_dir_name(mode))
             try:
                 cpa_arch_old = glob.glob(os.path.join(__get_tool_dir_name(mode),
                                                       CPA_WILDCARD_ARCH))[0]
@@ -157,7 +157,7 @@ def deploy(deploy_dir: str):
         if __is_installed(mode):
             cpa_arch = os.path.join(__get_tool_dir_name(mode), CPA_ARCH)
             _command_caller(f"tar -xf {cpa_arch}", "Cannot extract build arch",
-                           cwd=__get_tool_dir_name(mode))
+                            cwd=__get_tool_dir_name(mode))
             os.makedirs(tools_dir_full, exist_ok=True)
             _command_caller(f"rm -rf {deploy_dir_full}", "Cannot clear old deploy directory")
             try:
@@ -206,7 +206,7 @@ def update():
                 continue
             print(f"Applying patch {patch} for tool {mode}")
             _command_caller(f"git apply --ignore-space-change --ignore-whitespace {patch}",
-                           "Cannot apply patch", cwd=tool_dir, is_check=False)
+                            "Cannot apply patch", cwd=tool_dir, is_check=False)
         print(f"Tool {mode} has successfully been updated")
 
 
@@ -217,8 +217,10 @@ if __name__ == "__main__":
     script_mode = options.mode
     install_dir = options.install_dir
     if script_mode == MODE_INSTALL:
-        if not install_dir or not os.path.exists(install_dir):
+        if not install_dir:
             sys.exit("Deploy directory was not specified")
+        if not os.path.exists(install_dir):
+            os.makedirs(install_dir, exist_ok=True)
     if is_clear or script_mode == MODE_CLEAN:
         delete()
     if script_mode == MODE_CLEAN:
