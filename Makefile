@@ -177,6 +177,7 @@ install-cif-compiled: build-cif-compiled check-deploy-dir
 
 install-scripts: check-deploy-dir
 	@mkdir -p ${DEPLOY_DIR}
+	@mkdir -p ${root_dir}/${plugin_dir}
 	@cd ${DEPLOY_DIR} ; \
 	cp -r ${root_dir}/patches/ . ; \
 	cp -r ${root_dir}/properties/ . ; \
@@ -185,7 +186,7 @@ install-scripts: check-deploy-dir
 	cp -r ${root_dir}/scripts/ . ; \
 	rm -f scripts/${bv_script} ; \
 	rm -f scripts/${wv_script} ; \
-	cp -r ${root_dir}/plugin/ . ; \
+	cp -r ${root_dir}/${plugin_dir} . ; \
 	mkdir -p buildbot
 
 install-witness-visualizer: check-deploy-dir build-klever
