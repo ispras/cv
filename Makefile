@@ -50,7 +50,7 @@ compiled_cif_arch="cif.xz"
 # Repositories
 klever_repo="https://github.com/mutilin/klever.git"
 benchexec_repo="https://github.com/sosy-lab/benchexec.git"
-cif_repo="https://forge.ispras.ru/git/cif.git"
+cif_repo="https://github.com/ldv-klever/cif.git"
 cif_compiled_link="https://github.com/ldv-klever/cif/releases/download/v1.2/linux-x86_64-cif-1.2.tar.xz"
 
 # Aux constants.
