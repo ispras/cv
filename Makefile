@@ -167,7 +167,7 @@ install-cif: build-cif check-deploy-dir
 	@echo "*** Installing ${cif} ***"
 	@mkdir -p ${DEPLOY_DIR}/${install_dir}
 	@rm -rf ${DEPLOY_DIR}/${cif_dir}
-	@cd ${cif_dir}; DESTDIR=${DEPLOY_DIR}/${cif_dir} make install
+	@cd ${cif_dir}; DESTDIR=$(realpath ${DEPLOY_DIR})/${cif_dir} make install
 
 install-cif-compiled: build-cif-compiled check-deploy-dir
 	@echo "*** Installing compiled ${cif} ***"
