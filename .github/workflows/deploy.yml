@@ -20,8 +20,8 @@ jobs:
         pip install requests ujson graphviz ply pytest atomicwrites more-itertools pluggy py attrs setuptools six django==2.1 psycopg2
     - name: Deployment of CV
       run: |
-        DEPLOY_DIR=build make install -j8
-        DEPLOY_DIR=build make install-cif-compiled -j8
+        DEPLOY_DIR=build make install -j$(nproc)
+        DEPLOY_DIR=build make install-cif-compiled -j$(nproc)
   build-visualizer:
     runs-on: ubuntu-latest
     strategy:
@@ -39,4 +39,4 @@ jobs:
         pip install requests ujson graphviz ply pytest atomicwrites more-itertools pluggy py attrs setuptools six django==2.1 psycopg2
     - name: Deployment of CV
       run: |
-        DEPLOY_DIR=build make install-benchmark-visualizer -j8
+        DEPLOY_DIR=build make install-benchmark-visualizer -j$(nproc)
