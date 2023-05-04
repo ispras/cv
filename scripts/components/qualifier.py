@@ -33,6 +33,9 @@ from components.component import Component
 
 DEFAULT_CALLGRAPH_FILE = "callgraph.json"
 TAG_CACHE = "cached call graph"
+CLADE_BASIC_CONFIG = {
+    "CC.which_list": [".*?gcc$"]
+}
 
 
 class Qualifier(Component):
@@ -62,8 +65,8 @@ class Qualifier(Component):
             try:
                 # noinspection PyUnresolvedReferences
                 from clade import Clade
-                clade = Clade(CLADE_WORK_DIR, CLADE_BASE_FILE)
-                clade.parse_all()
+                clade = Clade(CLADE_WORK_DIR, CLADE_BASE_FILE, conf=CLADE_BASIC_CONFIG)
+                clade.parse_list(["SrcGraph", "Callgraph"])
                 self.content = clade.get_callgraph()
             except Exception as exception:
                 error_msg = f"Clade has failed: {exception}\n{traceback.format_exc()}"
