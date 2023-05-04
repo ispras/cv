@@ -50,13 +50,13 @@ compiled_cif_arch="cif.xz"
 # Repositories
 klever_repo="https://github.com/mutilin/klever.git"
 benchexec_repo="https://github.com/sosy-lab/benchexec.git"
-cif_repo="https://forge.ispras.ru/git/cif.git"
-cif_compiled_link="https://github.com/17451k/cif/releases/download/2019-03-12/cif-20190312-linux-x64.tar.xz"
+cif_repo="https://github.com/ldv-klever/cif.git"
+cif_compiled_link="https://github.com/ldv-klever/cif/releases/download/v1.2/linux-x86_64-cif-1.2.tar.xz"
 
 # Aux constants.
 cvwi_branch=cv-v2.0
 benchexec_branch=3.16
-cif_revision=ca907524  # TODO: fix versions
+cif_revision=master
 
 
 download-klever:
@@ -167,7 +167,7 @@ install-cif: build-cif check-deploy-dir
 	@echo "*** Installing ${cif} ***"
 	@mkdir -p ${DEPLOY_DIR}/${install_dir}
 	@rm -rf ${DEPLOY_DIR}/${cif_dir}
-	@cd ${cif_dir}; prefix=${DEPLOY_DIR}/${cif_dir} make install
+	@cd ${cif_dir}; DESTDIR=$(realpath ${DEPLOY_DIR})/${cif_dir} make install
 
 install-cif-compiled: build-cif-compiled check-deploy-dir
 	@echo "*** Installing compiled ${cif} ***"
