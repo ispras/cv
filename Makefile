@@ -46,7 +46,8 @@ plugin_dir="plugin"
 deployment_dir="deployment"
 
 compiled_cif_arch="cif.xz"
-compiled_cil_arch="cil.xz"
+cil_arch="cil.xz"
+compiled_cil_arch="frama_c_cil.xz"
 
 # Repositories
 klever_repo="https://github.com/mutilin/klever.git"
@@ -108,7 +109,7 @@ build-cif-compiled: download-cif-compiled
 build-cil:
 	@echo "*** Building ${cil} ***"
 	@rm -rf ${cil_dir}
-	@cd ${install_dir}; tar -xf cil.xz
+	@cd ${install_dir}; tar -xf ${cil_arch}
 
 build-frama-c-cil: download-frama-c-cil
 	@echo "*** Building ${frama_c_cil} ***"
