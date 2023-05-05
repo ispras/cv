@@ -21,6 +21,7 @@
 Class for representation of an arbitrary component.
 """
 
+import json
 import logging
 import os
 import re
@@ -30,17 +31,29 @@ import sys
 import tempfile
 import time
 
-from components import TAG_DIRS, TAG_DEBUG, TAG_TOOLS, DEFAULT_TOOL_PATH, BENCHEXEC, \
+from components import TAG_DIRS, TAG_DEBUG, TAG_TOOLS, BENCHEXEC, DEFAULT_INSTALL_DIR, \
     TAG_MEMORY_USAGE, TAG_CPU_TIME, TAG_WALL_TIME, TAG_LOG_FILE
 
 DEFAULT_MEMORY_LIMIT = "3GB"
 TAG_RUNEXEC = "runexec"
+TOOL_CONFIG_FILE = os.path.join(DEFAULT_INSTALL_DIR, "config.json")
+TAG_DEFAULT_TOOL_PATH = "default tool path"
 
 
 class Component:
     """
     Class for representation of an arbitrary component.
     """
+
+    tools_config = {}
+
+    @staticmethod
+    def _get_tool_default_path(tool_name: str):
+        default_tool_path = Component.tools_config[TAG_DEFAULT_TOOL_PATH]
+        if tool_name not in default_tool_path:
+            sys.exit(f"Path for {tool_name} is not defined in config file {TOOL_CONFIG_FILE}")
+        return default_tool_path[tool_name]
+
     def __init__(self, name: str, config: dict):
         self.start_time = time.time()
         self.start_cpu_time = time.process_time()
@@ -65,6 +78,9 @@ class Component:
         self.install_dir = None
         self.error_logs = set()
         self.temp_logs = set()
+        if not Component.tools_config:
+            with open(TOOL_CONFIG_FILE, encoding='ascii') as file_obj:
+                Component.tools_config = json.load(file_obj)
 
     def __propagate_config(self):
         """
@@ -89,7 +105,7 @@ class Component:
         """
         if not self.runexec:
             return self.command_caller(cmd)
-        path_to_benchexec = self.get_tool_path(DEFAULT_TOOL_PATH[BENCHEXEC])
+        path_to_benchexec = self.get_tool_path(self._get_tool_default_path(BENCHEXEC))
         os.environ["PATH"] += os.pathsep + path_to_benchexec
 
         if not output_file:
@@ -162,7 +178,7 @@ class Component:
             self.logger.debug(f"Cannot execute command '{cmd}' due to {exception}")
             return ""
 
-    def command_caller(self, cmd, output_dir=None, keep_log=True):
+    def command_caller(self, cmd, output_dir=None, keep_log=True) -> int:
         """
         Call a command and redirect its output into log file.
         :param cmd: a command to be run.
@@ -215,7 +231,7 @@ class Component:
         if self.command_caller(sed_cmd):
             self.logger.warning("Can not execute sed command: '%s'", sed_cmd)
 
-    def get_tool_path(self, default_path, abs_path=None):
+    def get_tool_path(self, default_path, abs_path=None, all_paths=False):
         """
         Get absolute path for a specified tool.
         """
@@ -226,13 +242,19 @@ class Component:
         else:
             # Take default path.
             if isinstance(default_path, list):
-                result_path = None
+                results_path = []
                 for path in default_path:
                     result_path = os.path.abspath(os.path.join(self.install_dir, path))
                     if os.path.exists(result_path):
-                        break
-            else:
-                result_path = os.path.abspath(os.path.join(self.install_dir, default_path))
+                        results_path.append(result_path)
+                        if not all_paths:
+                            break
+                if not all_paths:
+                    if not results_path:
+                        sys.exit(f"Tool paths {default_path} do not exist")
+                    return results_path[0]
+                return results_path
+            result_path = os.path.abspath(os.path.join(self.install_dir, default_path))
         return result_path
 
     def get_component_full_stats(self):

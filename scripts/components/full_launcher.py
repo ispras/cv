@@ -964,7 +964,7 @@ class FullLauncher(Launcher):
         self.logger.info(f"Expected number of verifier launches is {len(launches)}")
 
         # Prepare BenchExec commands.
-        path_to_benchexec = self.get_tool_path(DEFAULT_TOOL_PATH[BENCHEXEC],
+        path_to_benchexec = self.get_tool_path(self._get_tool_default_path(BENCHEXEC),
                                                self.config.get(TAG_TOOLS, {}).get(BENCHEXEC))
         self.logger.debug(f"Using BenchExec, found in: '{path_to_benchexec}'")
         os.environ["PATH"] += os.pathsep + path_to_benchexec

@@ -26,8 +26,7 @@ import os
 import sys
 import traceback
 
-from components import COMPONENT_QUALIFIER, DEFAULT_TOOL_PATH, CIF, CLADE_BASE_FILE, \
-    CLADE_WORK_DIR, JSON_EXTENSION
+from components import COMPONENT_QUALIFIER, CIF, CLADE_BASE_FILE, CLADE_WORK_DIR, JSON_EXTENSION
 from components.builder import Builder
 from components.component import Component
 
@@ -51,7 +50,7 @@ class Qualifier(Component):
 
         os.chdir(self.source_dir)
 
-        path_cif = self.get_tool_path(DEFAULT_TOOL_PATH[CIF])
+        path_cif = self.get_tool_path(self._get_tool_default_path(CIF))
         self.logger.debug(f"Using CIF found in directory '{path_cif}'")
         os.environ["PATH"] += os.pathsep + path_cif
 

@@ -31,18 +31,6 @@ CIF = "cif"
 CLADE = "clade"
 UPLOADER = "uploader"
 DEFAULT_CPACHECKER_SCRIPTS_PATH = "scripts"
-DEFAULT_TOOL_PATH = {
-    CIL: [
-        "astraver-cil/bin/toplevel.opt",
-        "cil/obj/x86_LINUX/cilly.asm.exe",
-        "cil/bin/cilly.native"
-    ],
-    ET_LIB: "klever/core",
-    ET_HTML_LIB: "klever/bridge",
-    UPLOADER: "klever/utils/bin/upload-reports.py",
-    BENCHEXEC: "benchexec/bin",
-    CIF: "cif/bin",
-}
 
 # Components.
 COMPONENT_MAIN_GENERATOR = "Generator"

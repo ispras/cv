@@ -252,7 +252,7 @@ class Launcher(Component):
             self.logger.error("User name was not provided for uploading results, skipping it.")
             return
         self.logger.info("Uploading results into server %s with identifier %s", server, identifier)
-        uploader = self.get_tool_path(DEFAULT_TOOL_PATH[UPLOADER])
+        uploader = self.get_tool_path(self._get_tool_default_path(UPLOADER))
         uploader_python_path = os.path.abspath(os.path.join(os.path.dirname(uploader),
                                                             os.path.pardir))
         commits = self.config.get(TAG_COMMITS)
