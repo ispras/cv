@@ -1,7 +1,7 @@
 {
   "default tool path": {
     "cil": [
-        "cil/toplevel.opt",
+        "frama_c_cil/toplevel.opt",
         "cil/obj/x86_LINUX/cilly.asm.exe"
     ],
     "klever": "klever/core",
