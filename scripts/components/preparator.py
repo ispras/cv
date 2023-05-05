@@ -37,6 +37,7 @@ TAG_STRATEGY = "strategy"
 TAG_FILES_SUFFIX = "files suffix"
 TAG_CIL_OPTIONS = "cil options"
 TAG_FAIL_ON_ANY_CIL_FAIL = "fail on any cil fail"
+TAG_CIL_ARGS = "cil args"
 COMMAND_COMPILER = "command"
 
 # Take all single build commands for specific directory.
@@ -49,16 +50,11 @@ CONF_UNSUPPORTED_OPTIONS = "unsupported compiler options"
 STAGE_NONE = 0
 STAGE_PREPROCESS = 1
 
-DEFAULT_CIL_OPTIONS = [
-    "--printCilAsIs", "--domakeCFG", "--decil", "--noInsertImplicitCasts", "--useLogicalOperators",
-    "--ignore-merge-conflicts", "--no-convert-direct-calls", "--no-convert-field-offsets",
-    "--no-split-structs", "--rmUnusedInlines", "--out"
-]
-
 NOT_SUPPORTED_FUNCTIONS = ["__builtin_va_arg"]
 ADDED_PREFIX = "ldv_"
 
 DEFAULT_PREP_RESULT = "build_commands.json"
+DEFAULT_FILES_SUFFIX = ".i"
 
 EMPTY_ASPECT_TEXT = "before: file (\"$this\")\n{\n}"
 
@@ -87,17 +83,21 @@ class Preparator(Component):
         # Configure CIL.
         self.cil_out = self.component_config.get('cil_out',
                                                  os.path.join(self.work_dir, output_file))
-        cil_bin = self.get_tool_path(DEFAULT_TOOL_PATH[CIL],
-                                     self.component_config.get(TAG_TOOLS, {}).get(CIL))
-        cil_options = self.component_config.get(TAG_CIL_OPTIONS, DEFAULT_CIL_OPTIONS)
-        self.cil_command = [cil_bin] + cil_options
+        self.cil_commands = []
+        for cil_path in self._get_tool_default_path(CIL):
+            cil_abs_path = self.get_tool_path(cil_path,
+                                              self.component_config.get(TAG_TOOLS, {}).get(CIL))
+            cil_options = self.component_config.get(
+                TAG_CIL_OPTIONS, self.tools_config.get(TAG_CIL_ARGS, {}).get(cil_path, []))
+            cil_command = [cil_abs_path] + cil_options
+            self.cil_commands.append(cil_command)
 
         self.white_list = self.component_config.get(TAG_FILTER_WHITE_LIST, [])
         self.black_list = self.component_config.get(TAG_FILTER_BLACK_LIST, [])
         self.subdirectory_patterns = subdirectory_patterns
 
         # Auxiliary (optional) arguments.
-        self.files_suffix = self.component_config.get(TAG_FILES_SUFFIX, None)
+        self.files_suffix = self.component_config.get(TAG_FILES_SUFFIX, DEFAULT_FILES_SUFFIX)
         self.use_cil = self.component_config.get(TAG_USE_CIL, True)
         self.max_num = self.component_config.get(TAG_MAX_FILES_NUM, sys.maxsize)
         self.compiler = self.component_config.get(TAG_PREPROCESSOR, "gcc")
@@ -543,8 +543,13 @@ class Preparator(Component):
         return checked_files
 
     def __execute_cil(self, output_file: str, input_files: list) -> int:
-        cil_args = self.cil_command + [output_file] + input_files
-        return self.command_caller(cil_args, self.preprocessing_dir)
+        exit_code = 1
+        for cil_command in self.cil_commands:
+            cil_args = cil_command + [output_file] + input_files
+            exit_code = self.command_caller(cil_args, self.preprocessing_dir)
+            if not exit_code:
+                break
+        return exit_code
 
     def __merge_cil(self, output_file: str, input_files: list) -> None:
         if self.__execute_cil(output_file, input_files):
