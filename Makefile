@@ -23,7 +23,7 @@ cpu_cores=$(shell nproc)
 # Additional tools.
 klever="klever"
 cil="cil"
-astraver_cil="astraver-cil"
+frama_c_cil="frama_c_cil"
 benchexec="benchexec"
 cif="cif"
 
@@ -39,24 +39,28 @@ install_dir=tools
 klever_dir=${install_dir}/${klever}
 mea_lib=${install_dir}/${klever}/bridge/reports/mea/core.py
 cil_dir=${install_dir}/${cil}
-astraver_cil_dir=${install_dir}/${astraver_cil}
+frama_c_cil_dir=${install_dir}/${frama_c_cil}
 benchexec_dir=${install_dir}/${benchexec}
 cif_dir=${install_dir}/${cif}
 plugin_dir="plugin"
 deployment_dir="deployment"
 
 compiled_cif_arch="cif.xz"
+compiled_cil_arch="cil.xz"
 
 # Repositories
 klever_repo="https://github.com/mutilin/klever.git"
 benchexec_repo="https://github.com/sosy-lab/benchexec.git"
 cif_repo="https://github.com/ldv-klever/cif.git"
 cif_compiled_link="https://github.com/ldv-klever/cif/releases/download/v1.2/linux-x86_64-cif-1.2.tar.xz"
+cil_compiled_link="https://forge.ispras.ru/attachments/download/9905/frama-c-cil-c012809.tar.xz"
 
 # Aux constants.
 cvwi_branch=cv-v2.0
 benchexec_branch=3.16
 cif_revision=master
+
+tools_config_file=${install_dir}/config.json
 
 
 download-klever:
@@ -74,6 +78,10 @@ download-cif:
 download-cif-compiled:
 	@rm -f ${compiled_cif_arch}
 	@cd ${install_dir}; wget ${cif_compiled_link} -O ${compiled_cif_arch}
+
+download-frama-c-cil:
+	@rm -f ${compiled_cil_arch}
+	@cd ${install_dir}; wget ${cil_compiled_link} -O ${compiled_cil_arch}
 
 download: download-klever download-benchexec download-cpa
 	@echo "*** Downloading has been completed ***"
@@ -102,10 +110,11 @@ build-cil:
 	@rm -rf ${cil_dir}
 	@cd ${install_dir}; tar -xf cil.xz
 
-build-astraver-cil:
-	@echo "*** Building ${astraver_cil} ***"
-	@rm -rf ${astraver_cil_dir}
-	@cd ${install_dir}; tar -xf astraver-cil.xz
+build-frama-c-cil: download-frama-c-cil
+	@echo "*** Building ${frama_c_cil} ***"
+	@rm -rf ${frama_c_cil_dir}
+	@mkdir -p ${frama_c_cil_dir}
+	@cd ${frama_c_cil_dir}; tar -xf ../${compiled_cil_arch}
 
 build: build-klever build-benchexec build-cil build-cpa
 	@echo "*** Building has been completed ***"
@@ -157,11 +166,11 @@ install-cil: build-cil check-deploy-dir
 	@rm -rf ${DEPLOY_DIR}/${cil_dir}
 	@cp -r ${cil_dir} ${DEPLOY_DIR}/${cil_dir}
 
-install-astraver-cil: build-astraver-cil check-deploy-dir
-	@echo "*** Installing ${astraver_cil} ***"
+install-frama-c-cil: build-frama-c-cil check-deploy-dir
+	@echo "*** Installing ${frama_c_cil} ***"
 	@mkdir -p ${DEPLOY_DIR}/${install_dir}
-	@rm -rf ${DEPLOY_DIR}/${astraver_cil_dir}
-	@cp -r ${astraver_cil_dir} ${DEPLOY_DIR}/${astraver_cil_dir}
+	@rm -rf ${DEPLOY_DIR}/${frama_c_cil_dir}
+	@cp -r ${frama_c_cil_dir} ${DEPLOY_DIR}/${frama_c_cil_dir}
 
 install-cif: build-cif check-deploy-dir
 	@echo "*** Installing ${cif} ***"
@@ -176,8 +185,9 @@ install-cif-compiled: build-cif-compiled check-deploy-dir
 	@cp -r ${cif_dir} ${DEPLOY_DIR}/${cif_dir}
 
 install-scripts: check-deploy-dir
-	@mkdir -p ${DEPLOY_DIR}
+	@mkdir -p ${DEPLOY_DIR}/${install_dir}
 	@mkdir -p ${root_dir}/${plugin_dir}
+	@cp ${tools_config_file} ${DEPLOY_DIR}/${install_dir}
 	@cd ${DEPLOY_DIR} ; \
 	cp -r ${root_dir}/patches/ . ; \
 	cp -r ${root_dir}/properties/ . ; \
