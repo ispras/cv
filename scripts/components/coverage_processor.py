@@ -272,7 +272,7 @@ class Coverage(Component):
                 break
 
         # Export libs.
-        et_parser_lib = self.get_tool_path(DEFAULT_TOOL_PATH[ET_LIB],
+        et_parser_lib = self.get_tool_path(self._get_tool_default_path(ET_LIB),
                                            self.config.get(TAG_TOOLS, {}).get(ET_LIB))
         sys.path.append(et_parser_lib)
         # noinspection PyUnresolvedReferences

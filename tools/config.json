@@ -1,0 +1,27 @@
+{
+  "default tool path": {
+    "cil": [
+        "frama_c_cil/toplevel.opt",
+        "cil/obj/x86_LINUX/cilly.asm.exe"
+    ],
+    "klever": "klever/core",
+    "et html": "klever/bridge",
+    "uploader": "klever/utils/bin/upload-reports.py",
+    "benchexec": "benchexec/bin",
+    "cif": "cif/bin"
+  },
+  "cil args": {
+    "frama_c_cil/toplevel.opt": [
+      "-no-autoload-plugins", "-no-findlib", "-machdep", "gcc_x86_64", "-c11", "-kernel-warn-key",
+      "CERT:MSC:38=active", "-remove-unused-inline-functions", "-remove-unused-static-functions",
+      "-no-annot", "-no-single-return", "-fold-temp-vars", "-keep-logical-operators",
+      "-aggressive-merging", "-print", "-print-lines", "-no-print-annot", "-print-cil-as-is",
+      "-shrink-initializers", "-allow-duplication", "-ocode"
+    ],
+    "cil/obj/x86_LINUX/cilly.asm.exe": [
+      "--printCilAsIs", "--domakeCFG", "--decil", "--noInsertImplicitCasts",
+      "--useLogicalOperators", "--ignore-merge-conflicts", "--no-convert-direct-calls",
+      "--no-convert-field-offsets", "--no-split-structs", "--rmUnusedInlines", "--out"
+    ]
+  }
+}
