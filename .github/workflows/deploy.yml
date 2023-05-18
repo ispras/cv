@@ -17,7 +17,7 @@ jobs:
     - name: Install dependencies
       run: |
         python3 -m pip install --upgrade pip
-        pip3 install requests ujson graphviz ply pytest atomicwrites more-itertools pluggy py attrs setuptools six django==2.1 psycopg2 clade
+        pip3 install requests ujson graphviz ply pytest atomicwrites more-itertools pluggy py attrs setuptools six django==2.1 psycopg2 clade pyyaml
     - name: Deployment of CV
       run: |
         DEPLOY_DIR=build make install -j$(nproc)
