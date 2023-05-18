@@ -24,6 +24,8 @@ jobs:
         DEPLOY_DIR=build make install-cif-compiled -j$(nproc)
         cp -r docs/examples/sources/ build/
         cd build && ./scripts/launch.py -c configs/it.json
+        grep "it;smg;no_memory_leak_caller;TRUE;SUCCESS" results/report_launches_ci_*.csv || exit 1
+        grep "it;smg;memory_leak_caller;FALSE;SUCCESS" results/report_launches_ci_*.csv || exit 1
   build-visualizer:
     runs-on: ubuntu-latest
     strategy:
