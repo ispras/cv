@@ -563,9 +563,11 @@ class FullLauncher(Launcher):
     def __create_benchmark_config(self, time_limit, core_limit, memory_limit):
         base_config = {
             "tool": CPACHECKER,
-            "timelimit": str(time_limit),
-            "cpuCores": str(core_limit)
         }
+        if time_limit > 0:
+            base_config["timelimit"] = str(time_limit)
+        if core_limit > 0:
+            base_config["cpuCores"] = str(core_limit)
         if not self.is_cgroup_v2:
             base_config["memlimit"] = str(memory_limit) + "GB"
         return ElementTree.Element("benchmark", base_config)
@@ -642,8 +644,14 @@ class FullLauncher(Launcher):
             sys.exit(
                 "Sanity check failed: it is forbidden to specify both callers and commits tags")
 
-        proc_by_memory = int(max_memory / memory_limit)
-        proc_by_cores = int(max_cores / core_limit)
+        if memory_limit > 0:
+            proc_by_memory = int(max_memory / memory_limit)
+        else:
+            proc_by_memory = max_memory
+        if core_limit > 0:
+            proc_by_cores = int(max_cores / core_limit)
+        else:
+            proc_by_cores = max_cores
         parallel_launches = int(self.component_config.get(TAG_PARALLEL_LAUNCHES, 0))
         if parallel_launches < 0:
             sys.exit(f"Incorrect value for number of parallel launches: {parallel_launches}")
@@ -975,8 +983,9 @@ class FullLauncher(Launcher):
             rundefinition = ElementTree.SubElement(benchmark[prop], "rundefinition")
             ElementTree.SubElement(rundefinition, "option", {"name": "-heap"}).text = \
                 f"{heap_limit}m"
-            ElementTree.SubElement(rundefinition, "option", {"name": "-timelimit"}).text = \
-                str(internal_time_limit)
+            if internal_time_limit > 0:
+                ElementTree.SubElement(rundefinition, "option", {"name": "-timelimit"}).text = \
+                    str(internal_time_limit)
 
             # Create links to the properties.
             for file in glob.glob(os.path.join(self.root_dir, DEFAULT_PROPERTIES_DIR,

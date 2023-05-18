@@ -19,9 +19,9 @@
   "Launcher": {
     "scheduler": "local",
     "resource limits": {
-      "CPU time": 100,
+      "CPU time": 0,
       "memory size": 3,
-      "number of cores": 2
+      "number of cores": 0
     }
   },
   "entrypoints desc": [
