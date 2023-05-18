@@ -87,10 +87,14 @@ class Preparator(Component):
         for cil_path in self._get_tool_default_path(CIL):
             cil_abs_path = self.get_tool_path(cil_path,
                                               self.component_config.get(TAG_TOOLS, {}).get(CIL))
+            if not os.path.exists(cil_abs_path):
+                continue
             cil_options = self.component_config.get(
                 TAG_CIL_OPTIONS, self.tools_config.get(TAG_CIL_ARGS, {}).get(cil_path, []))
             cil_command = [cil_abs_path] + cil_options
             self.cil_commands.append(cil_command)
+        if not self.cil_commands:
+            sys.exit("CIL does not exist")
 
         self.white_list = self.component_config.get(TAG_FILTER_WHITE_LIST, [])
         self.black_list = self.component_config.get(TAG_FILTER_BLACK_LIST, [])
