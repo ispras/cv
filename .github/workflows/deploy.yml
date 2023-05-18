@@ -22,6 +22,8 @@ jobs:
       run: |
         DEPLOY_DIR=build make install -j$(nproc)
         DEPLOY_DIR=build make install-cif-compiled -j$(nproc)
+        cp -r docs/examples/sources/ build/
+        cd build && ./scripts/launch.py -c configs/it.json
   build-visualizer:
     runs-on: ubuntu-latest
     strategy:
