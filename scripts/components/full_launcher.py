@@ -255,7 +255,7 @@ class FullLauncher(Launcher):
         builders = {}
         for sources_config in sources:
             identifier = sources_config.get(TAG_ID)
-            source_dir = sources_config.get(TAG_SOURCE_DIR)
+            source_dir = os.path.abspath(sources_config.get(TAG_SOURCE_DIR))
             branch = sources_config.get(TAG_BRANCH, None)
             build_patch = sources_config.get(TAG_BUILD_PATCH, None)
             skip = sources_config.get(TAG_SKIP, False)
@@ -302,7 +302,7 @@ class FullLauncher(Launcher):
                     builders[builder] = build_commands
 
         for sources_config in sources:
-            source_dir = sources_config.get(TAG_SOURCE_DIR)
+            source_dir = os.path.abspath(sources_config.get(TAG_SOURCE_DIR))
             patches = sources_config.get(TAG_PATCH, [])
 
             builder = None
