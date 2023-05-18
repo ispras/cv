@@ -44,6 +44,9 @@ jobs:
     - name: Deployment of CV
       run: |
         DEPLOY_DIR=build make install-benchmark-visualizer -j$(nproc)
+        cd build
+        ./scripts/visualize_witnesses.py -r results/ -d ../docs/examples/witnesses/violation/
+        ./scripts/visualize_witnesses.py -r results/ -d ../docs/examples/witnesses/correctness/
   build-frama-c-cil:
     runs-on: ubuntu-latest
     strategy:
