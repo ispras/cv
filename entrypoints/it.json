@@ -1,0 +1,9 @@
+{
+    "metadata": {
+        "subsystem": "."
+    },
+    "entrypoints": {
+        "memory_leak": {},
+        "no_memory_leak": {}
+    }
+}
