@@ -1,0 +1,35 @@
+{
+  "Builder": {
+    "sources": [
+      {
+        "id": "integration_test",
+        "source dir": "../sources/",
+        "build config": {
+          "fail if build fails": true
+        }
+      }
+    ]
+  },
+  "Preparator": {
+    "preprocessor": "gcc",
+    "files suffix": ".i",
+    "resolve missed proto": true,
+    "strategy": "subsystem"
+  },
+  "Launcher": {
+    "scheduler": "local",
+    "resource limits": {
+      "CPU time": 0,
+      "memory size": 3,
+      "number of cores": 0
+    }
+  },
+  "entrypoints desc": [
+    "it"
+  ],
+  "properties": [
+    "smg"
+  ],
+  "debug": true,
+  "find coverage": true
+}

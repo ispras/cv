@@ -202,6 +202,7 @@ install-scripts: check-deploy-dir
 
 install-witness-visualizer: check-deploy-dir build-klever
 	@mkdir -p ${DEPLOY_DIR}/${install_dir}
+	@cp ${tools_config_file} ${DEPLOY_DIR}/${install_dir}
 	@rm -rf ${DEPLOY_DIR}/${klever_dir}
 	@mkdir -p ${DEPLOY_DIR}/${klever_dir}
 	@mkdir -p ${DEPLOY_DIR}/${klever_dir}/core/core/vrp/et/

@@ -16,12 +16,17 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install requests ujson graphviz ply pytest atomicwrites more-itertools pluggy py attrs setuptools six django==2.1 psycopg2
+        python3 -m pip install --upgrade pip
+        pip3 install requests ujson graphviz ply pytest atomicwrites more-itertools pluggy py attrs setuptools six django==2.1 psycopg2 clade pyyaml
     - name: Deployment of CV
       run: |
         DEPLOY_DIR=build make install -j$(nproc)
         DEPLOY_DIR=build make install-cif-compiled -j$(nproc)
+        cp -r docs/examples/sources/ build/
+        cd build
+        python3 ./scripts/launch.py -c configs/it.json
+        grep "it;smg;no_memory_leak_caller;TRUE;SUCCESS" results/report_launches_it_*.csv || exit 1
+        grep "it;smg;memory_leak_caller;FALSE;SUCCESS" results/report_launches_it_*.csv || exit 1
   build-visualizer:
     runs-on: ubuntu-latest
     strategy:
@@ -35,11 +40,14 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install requests ujson graphviz ply pytest atomicwrites more-itertools pluggy py attrs setuptools six django==2.1 psycopg2
-    - name: Deployment of CV
+        python3 -m pip install --upgrade pip
+        pip3 install requests ujson graphviz ply pytest atomicwrites more-itertools pluggy py attrs setuptools six django==2.1 psycopg2
+    - name: Deployment of Benchmark Visualizer
       run: |
         DEPLOY_DIR=build make install-benchmark-visualizer -j$(nproc)
+        cd build
+        python3 ./scripts/visualize_witnesses.py -r results/ -d ../docs/examples/witnesses/violation/
+        python3 ./scripts/visualize_witnesses.py -r results/ -d ../docs/examples/witnesses/correctness/
   build-frama-c-cil:
     runs-on: ubuntu-latest
     strategy:
@@ -51,6 +59,6 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Deployment of CV
+    - name: Deployment of Frama-C CIL
       run: |
         DEPLOY_DIR=build make install-frama-c-cil -j$(nproc)
