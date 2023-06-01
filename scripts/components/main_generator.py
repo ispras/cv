@@ -302,6 +302,11 @@ class MainGenerator(Component):
                                                  f"{_simplify_type(var_type)}();\n"
                         local_var_defs.append(var_def)
                     else:
+                        if strategy == PARTIAL_EXT_ALLOCATION_STRATEGY and _is_pointer(var_type):
+                            if var_type not in nondet_funcs:
+                                nondet_funcs.add(var_type)
+                                file.write(_get_memory_allocation_function(var_type))
+                            var_def = var_def + f" = __VERIFIER_nondet_{_simplify_type(var_type)}()"
                         local_var_defs.append(var_def + ";\n")
                     arg_names.append(var_name)
                     arg_defs.append(var_def)
