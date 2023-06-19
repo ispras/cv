@@ -11,7 +11,7 @@ sudo apt install git openjdk-11-jdk python3 python3-dev ant lcov cmake libmpc-de
 Модули python:
 
 ```shell
-sudo pip3 install requests ujson graphviz ply pytest atomicwrites pathlib2 more-itertools pluggy py attrs setuptools six django==2.1 clade psycopg2 pyyaml
+sudo pip3 install requests ujson graphviz ply pytest atomicwrites pathlib2 more-itertools pluggy py attrs setuptools six django==2.1 clade psycopg2 pyyaml pycparser sympy
 ```
 
 1. Инструмент klever — web-интерфейс, отвечающий за визуализацию результатов.
