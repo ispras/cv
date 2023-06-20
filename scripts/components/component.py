@@ -79,7 +79,10 @@ class Component:
         self.error_logs = set()
         self.temp_logs = set()
         if not Component.tools_config:
-            with open(TOOL_CONFIG_FILE, encoding='ascii') as file_obj:
+            install_dir = os.path.abspath(
+                os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir)
+            )
+            with open(os.path.join(install_dir, TOOL_CONFIG_FILE), encoding='ascii') as file_obj:
                 Component.tools_config = json.load(file_obj)
 
     def __propagate_config(self):
