@@ -86,11 +86,14 @@ class AutoChecker:
             self.output_desc = sys.stdout
         else:
             self.output_desc = subprocess.DEVNULL
-        logger_level = logging.DEBUG if self.debug else logging.INFO
-        logging.basicConfig(format='%(asctime)s: %(name)s: %(levelname)s: %(message)s',
-                            level=logger_level, datefmt='%Y-%m-%d %H:%M:%S')
+
         self.logger = logging.getLogger(name=COMPONENT_AUTO_CHECKER)
-        self.logger.setLevel(logger_level)
+        stream_handler = logging.StreamHandler(stream=sys.stdout)
+        stream_handler.setFormatter(logging.Formatter(
+            '%(asctime)s: %(name)s: %(levelname)s: %(message)s', '%Y-%m-%d %H:%M:%S')
+        )
+        self.logger.addHandler(stream_handler)
+        self.logger.setLevel(logging.DEBUG if self.debug else logging.INFO)
 
         self.hostname = None
         self.hostname = self.__command_caller("hostname", get_stdout=True)

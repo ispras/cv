@@ -30,7 +30,7 @@ make install-witness-visualizer DEPLOY_DIR=<deployment directory>
 After deployment Witness Visualizer can be used to convert witnesses from the `<deployment directory>` with command:
 
 ```
-scripts/visualize_witnesses.py OPTIONS
+<deployment directory>/scripts/visualize_witnesses.py OPTIONS
 ```
 
 Primary options:
@@ -44,7 +44,7 @@ Primary options:
 For example:
 
 ```bash
-scripts/visualize_witnesses.py --witness output/witness.graphml --result-dir results/ --source-dir ~/sv-benchmarks
+<deployment directory>/scripts/visualize_witnesses.py --witness output/witness.graphml --result-dir results/ --source-dir ~/sv-benchmarks
 ```
 
 There are some examples of [SV-COMP](https://sv-comp.sosy-lab.org) witnesses in the `docs/examples/witnesses` directory,
@@ -71,3 +71,23 @@ make install-benchmark-visualizer DEPLOY_DIR=<deployment directory>
 #### Usage
 
 See instruction [docs/benchmark_visualizer.md](docs/benchmark_visualizer.md).
+
+## Filtering of witnesses
+
+Multiple Error Analysis (MEA) stands for semi-automatic violation witnesses filtering.
+This framework provides part of MEA, which performs automatic filtering.
+In order to do it, some core elements are extracted from a violation witness by means of
+a specified `conversion` function and then compared with core elements of other witnesses
+by means of a specified `comparison` function.
+
+#### Deployment
+MEA library can be installed in the `<deployment directory>` with the following command:
+```shell
+make install-mea DEPLOY_DIR=<deployment directory>
+```
+
+#### Usage
+```shell
+<deployment directory>/scripts/mea.py -d <directory with violation witnesses>
+```
+All unique violation witnesses will be printed as a result.

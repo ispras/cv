@@ -352,12 +352,9 @@ class MEA(Component):
         from core.vrp.et import import_error_trace
 
         # Those messages are waste of space.
-        logger = logging.getLogger(name="Witness processor")
-        logging.basicConfig(format='%(name)s: %(levelname)s: %(message)s')
-        if self.debug:
-            logger.setLevel(logging.WARNING)
-        else:
-            logger.setLevel(logging.ERROR)
+        logger = self._create_logger(
+            "Witness processor", logging.WARNING if self.debug else logging.ERROR
+        )
         try:
             json_error_trace = import_error_trace(logger, error_trace_file, self.source_dir)
             if self.dry_run:

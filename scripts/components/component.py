@@ -69,17 +69,17 @@ class Component:
 
         # Debug and logging.
         self.debug = self.component_config.get(TAG_DEBUG, False)
-        logger_level = logging.DEBUG if self.debug else logging.INFO
-        logging.basicConfig(format='%(name)s: %(levelname)s: %(message)s', level=logger_level)
-        self.logger = logging.getLogger(name=self.name)
-        self.logger.setLevel(logger_level)
+        self.logger = self._create_logger(self.name, logging.DEBUG if self.debug else logging.INFO)
 
         # Should be rewritten.
         self.install_dir = None
         self.error_logs = set()
         self.temp_logs = set()
         if not Component.tools_config:
-            with open(TOOL_CONFIG_FILE, encoding='ascii') as file_obj:
+            install_dir = os.path.abspath(
+                os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir)
+            )
+            with open(os.path.join(install_dir, TOOL_CONFIG_FILE), encoding='ascii') as file_obj:
                 Component.tools_config = json.load(file_obj)
 
     def __propagate_config(self):
@@ -92,6 +92,15 @@ class Component:
             if tag in self.config and tag not in component_config:
                 component_config[tag] = self.config[tag]
         self.component_config = component_config
+
+    @staticmethod
+    def _create_logger(logger_name: str, logger_level):
+        logger = logging.getLogger(name=logger_name)
+        stream_handler = logging.StreamHandler(stream=sys.stdout)
+        stream_handler.setFormatter(logging.Formatter('%(name)s: %(levelname)s: %(message)s'))
+        logger.addHandler(stream_handler)
+        logger.setLevel(logger_level)
+        return logger
 
     def runexec_wrapper(self, cmd, output_dir=None, output_file=None):
         """

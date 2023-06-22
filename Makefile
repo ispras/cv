@@ -231,6 +231,12 @@ install-witness-visualizer: check-deploy-dir build-klever
 	cp ${klever_dir}/bridge/reports/mea/core.py scripts/aux/mea.py
 	@echo "*** Witness Visualizer has been successfully installed into the directory ${DEPLOY_DIR} ***"
 
+install-mea: install-witness-visualizer
+	@cd ${DEPLOY_DIR} ; \
+	rm -f scripts/${wv_script} ; \
+	rm -rf ${klever_dir}/bridge/
+	@echo "*** MEA has been successfully installed into the directory ${DEPLOY_DIR} ***"
+
 install-benchmark-visualizer: install-witness-visualizer
 	@cp -r ${klever_dir}/utils/ ${DEPLOY_DIR}/${klever_dir}/
 	@cp -f ${root_dir}/scripts/${bv_script} ${DEPLOY_DIR}/scripts/
