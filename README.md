@@ -71,3 +71,23 @@ make install-benchmark-visualizer DEPLOY_DIR=<deployment directory>
 #### Usage
 
 See instruction [docs/benchmark_visualizer.md](docs/benchmark_visualizer.md).
+
+## Filtering of witnesses
+
+Multiple Error Analysis (MEA) stands for semi-automatic violation witnesses filtering.
+This framework provides part of MEA, which performs automatic filtering.
+In order to do it, some core elements are extracted from a violation witness by means of
+a specified `conversion` function and then compared with core elements of other witnesses
+by means of a specified `comparison` function.
+
+#### Deployment
+MEA library can be installed in the `<deployment directory>` with the following command:
+```shell
+make install-mea DEPLOY_DIR=<deployment directory>
+```
+
+#### Usage
+```shell
+./mea/scripts/mea.py -d <directory with violation witnesses>
+```
+All unique violation witnesses will be printed as a result.
