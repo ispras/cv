@@ -27,6 +27,30 @@ import argparse
 from components.mea import *
 
 
+def _create_config(options=None, conversion_function="", comparison_function=""):
+    additional_mf = []
+    is_debug = False
+    if options:
+        conversion_function = options.conversion
+        comparison_function = options.comparison
+        additional_mf = options.mf or []
+        is_debug = options.debug
+    return {
+        COMPONENT_MEA: {
+            TAG_COMPARISON_FUNCTION: comparison_function,
+            TAG_CONVERSION_FUNCTION: conversion_function,
+            TAG_CONVERSION_FUNCTION_ARGUMENTS: {
+                TAG_ADDITIONAL_MODEL_FUNCTIONS: additional_mf
+            },
+            TAG_DEBUG: is_debug,
+            TAG_CLEAN: False,
+            TAG_UNZIP: False,
+            TAG_DRY_RUN: False,
+            TAG_SOURCE_DIR: None
+        }
+    }
+
+
 def _parse_cmdline() -> tuple:
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--directory", help="directory with witnesses to be filtered",
@@ -39,23 +63,9 @@ def _parse_cmdline() -> tuple:
                         help="additional model functions, separated by whitespace")
     parser.add_argument('--debug', action='store_true')
     options = parser.parse_args()
-    config = {
-        COMPONENT_MEA: {
-            TAG_COMPARISON_FUNCTION: options.comparison,
-            TAG_CONVERSION_FUNCTION: options.conversion,
-            TAG_CONVERSION_FUNCTION_ARGUMENTS: {
-                TAG_ADDITIONAL_MODEL_FUNCTIONS: options.mf or []
-            },
-            TAG_DEBUG: options.debug,
-            TAG_CLEAN: False,
-            TAG_UNZIP: False,
-            TAG_DRY_RUN: False,
-            TAG_SOURCE_DIR: None
-        }
-    }
 
     witnesses = glob.glob(os.path.join(options.directory, f"witness.*{GRAPHML_EXTENSION}"))
-    return witnesses, config
+    return witnesses, _create_config(options)
 
 
 def execute_filtering(witnesses: list, config=None, conversion_function="",
@@ -64,25 +74,21 @@ def execute_filtering(witnesses: list, config=None, conversion_function="",
     Filter the given violation witnesses.
     """
     if not config:
-        config = {}
-    if conversion_function:
-        config[TAG_CONVERSION_FUNCTION] = conversion_function
-    if comparison_function:
-        config[TAG_COMPARISON_FUNCTION] = comparison_function
+        config = _create_config(conversion_function=conversion_function,
+                                comparison_function=comparison_function)
     script_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir)
     install_dir = os.path.abspath(os.path.join(script_dir, DEFAULT_INSTALL_DIR))
 
     if not os.path.exists(install_dir):
         install_dir = os.path.abspath(os.path.join(os.pardir, DEFAULT_INSTALL_DIR))
     mea = MEA(config, witnesses, install_dir)
-    mea.logger.info(f"Processing {len(witnesses)} witnesses")
+    mea.logger.debug(f"Received {len(witnesses)} witnesses")
     processed_witnesses = mea.filter()
-    mea.logger.info(f"Successfully processed {len(processed_witnesses)} witnesses")
-    for witness in processed_witnesses:
-        mea.logger.info(f"Filtered witness '{witness}'")
+    mea.logger.debug(f"Number of unique witnesses is {len(processed_witnesses)}")
     return processed_witnesses
 
 
 if __name__ == "__main__":
     m_witnesses, m_config = _parse_cmdline()
-    execute_filtering(m_witnesses, m_config)
+    for witness in execute_filtering(m_witnesses, m_config):
+        print(f"Unique witness '{witness}'")
