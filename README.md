@@ -30,7 +30,7 @@ make install-witness-visualizer DEPLOY_DIR=<deployment directory>
 After deployment Witness Visualizer can be used to convert witnesses from the `<deployment directory>` with command:
 
 ```
-scripts/visualize_witnesses.py OPTIONS
+<deployment directory>/scripts/visualize_witnesses.py OPTIONS
 ```
 
 Primary options:
@@ -44,7 +44,7 @@ Primary options:
 For example:
 
 ```bash
-scripts/visualize_witnesses.py --witness output/witness.graphml --result-dir results/ --source-dir ~/sv-benchmarks
+<deployment directory>/scripts/visualize_witnesses.py --witness output/witness.graphml --result-dir results/ --source-dir ~/sv-benchmarks
 ```
 
 There are some examples of [SV-COMP](https://sv-comp.sosy-lab.org) witnesses in the `docs/examples/witnesses` directory,
@@ -88,6 +88,6 @@ make install-mea DEPLOY_DIR=<deployment directory>
 
 #### Usage
 ```shell
-./mea/scripts/mea.py -d <directory with violation witnesses>
+<deployment directory>/scripts/mea.py -d <directory with violation witnesses>
 ```
 All unique violation witnesses will be printed as a result.
