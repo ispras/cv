@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10"]
+        python-version: ["3.8"]
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10"]
+        python-version: ["3.8"]
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
@@ -48,6 +48,26 @@ jobs:
         cd build
         python3 ./scripts/visualize_witnesses.py -r results/ -d ../docs/examples/witnesses/violation/
         python3 ./scripts/visualize_witnesses.py -r results/ -d ../docs/examples/witnesses/correctness/
+  build-mea:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8"]
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python3 -m pip install --upgrade pip
+        pip3 install requests ujson graphviz ply pytest atomicwrites more-itertools pluggy py attrs setuptools six django==2.1 psycopg2 pycparser sympy
+    - name: Deployment of MEA
+      run: |
+        DEPLOY_DIR=build make install-mea -j$(nproc)
+        cd build
+        python3 ./scripts/mea.py -d ../docs/examples/witnesses/violation/
   build-frama-c-cil:
     runs-on: ubuntu-latest
     strategy:
