@@ -27,11 +27,11 @@ import multiprocessing
 import os
 import re
 import subprocess
-import sys
 import zipfile
 
 from components import *
 from components.component import Component
+from coverage.lcov import LCOV
 
 TAG_COVERAGE_MODE = "mode"
 TAG_COVERAGE_PERCENT_MODE = "percent mode"
@@ -270,13 +270,6 @@ class Coverage(Component):
             if os.path.exists(os.path.join(src_dir, CLADE_WORK_DIR)):
                 dummy_dir = os.path.join(src_dir, CLADE_WORK_DIR)
                 break
-
-        # Export libs.
-        et_parser_lib = self.get_tool_path(self._get_tool_default_path(ET_LIB),
-                                           self.config.get(TAG_TOOLS, {}).get(ET_LIB))
-        sys.path.append(et_parser_lib)
-        # noinspection PyUnresolvedReferences
-        from core.coverage import LCOV
 
         lcov = LCOV(self.internal_logger, coverage_file, dummy_dir, source_dirs, [],
                     self.launcher_dir, self.full_mode,
