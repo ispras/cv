@@ -4,7 +4,6 @@
         "frama_c_cil/toplevel.opt",
         "cil/obj/x86_LINUX/cilly.asm.exe"
     ],
-    "klever": "klever/core",
     "et html": "klever/bridge",
     "uploader": "klever/utils/bin/upload-reports.py",
     "benchexec": "benchexec/bin",

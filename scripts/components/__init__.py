@@ -23,12 +23,10 @@ Here global names are defined.
 
 # Default location of additional tools.
 CIL = "cil"
-ET_LIB = "klever"
 ET_HTML_LIB = "et html"
 BENCHEXEC = "benchexec"
 CPACHECKER = "cpachecker"
 CIF = "cif"
-CLADE = "clade"
 UPLOADER = "uploader"
 DEFAULT_CPACHECKER_SCRIPTS_PATH = "scripts"
 
