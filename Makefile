@@ -37,7 +37,7 @@ auto_script="auto_check.py"
 root_dir=$(shell pwd)
 install_dir=tools
 klever_dir=${install_dir}/${klever}
-mea_lib=${install_dir}/${klever}/bridge/reports/mea/core.py
+mea_lib=bridge/reports/mea/core.py
 cil_dir=${install_dir}/${cil}
 frama_c_cil_dir=${install_dir}/${frama_c_cil}
 benchexec_dir=${install_dir}/${benchexec}
@@ -91,7 +91,6 @@ build-klever: download-klever
 	@echo "*** Building ${klever} ***"
 	@echo "from bridge.development import *" > ${klever_dir}/bridge/bridge/settings.py
 	@echo "{}" > ${klever_dir}/bridge/bridge/db.json
-	@cp -r ${mea_lib} ${root_dir}/scripts/aux/mea.py
 
 build-benchexec: download-benchexec
 	@echo "*** Building ${benchexec} ***"
@@ -145,7 +144,6 @@ install-klever: build-klever check-deploy-dir
 	@rm -rf ${DEPLOY_DIR}/${klever_dir}
 	@cp -r ${klever_dir} ${DEPLOY_DIR}/${klever_dir}
 	@mkdir -p ${DEPLOY_DIR}/scripts/aux
-	@cp -r ${mea_lib} ${DEPLOY_DIR}/scripts/aux/mea.py
 	@$(call shrink_installation,${DEPLOY_DIR}/${klever_dir})
 
 deploy-klever-cv: build-klever check-deploy-dir
@@ -153,6 +151,7 @@ deploy-klever-cv: build-klever check-deploy-dir
 	@mkdir -p ${DEPLOY_DIR}
 	@rm -rf ${DEPLOY_DIR}
 	@cp -r ${klever_dir} ${DEPLOY_DIR}
+	@cp -r scripts/aux/mea.py ${DEPLOY_DIR}/${mea_lib}
 	@$(call shrink_installation,${DEPLOY_DIR})
 
 install-benchexec: build-benchexec check-deploy-dir
@@ -337,5 +336,5 @@ endef
 # $1 - deploy directory
 define shrink_installation
 	echo "Removing aux files in directory '$1'"
-	@cd ${1} && rm -rf presets/ .git bridge/reports/test_files/
+	@cd ${1} && rm -rf presets/ .git .idea scheduler docs core bridge/reports/test_files/ bridge/reports/test_files/ tools/klever/bridge/.idea
 endef
