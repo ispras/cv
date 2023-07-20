@@ -187,8 +187,10 @@ class BenchmarkLauncher(Launcher):
                 kill_launches(process_pool)
         wait_for_launches(process_pool)
         self._get_from_queue_into_list(queue, results)
+        return self._export_results(results, config)
 
-        self.logger.debug("Processing results")
+    def _export_results(self, results: list, config: dict, add_res: dict = None) -> str:
+        self.logger.info("Exporting results")
         coverage_resources = {TAG_CPU_TIME: 0.0, TAG_WALL_TIME: 0.0, TAG_MEMORY_USAGE: 0}
         mea_resources = {TAG_CPU_TIME: 0.0, TAG_WALL_TIME: 0.0, TAG_MEMORY_USAGE: 0}
         for result in results:
@@ -221,6 +223,12 @@ class BenchmarkLauncher(Launcher):
                            f"{round(coverage_resources[TAG_CPU_TIME], ROUND_DIGITS)};"
                            f"{round(coverage_resources[TAG_WALL_TIME], ROUND_DIGITS)};"
                            f"{coverage_resources[TAG_MEMORY_USAGE]}\n")
+            if add_res:
+                for name, res in add_res.items():
+                    f_report.write(f"{name};"
+                                   f"{round(res[TAG_CPU_TIME], ROUND_DIGITS)};"
+                                   f"{round(res[TAG_WALL_TIME], ROUND_DIGITS)};"
+                                   f"{res[TAG_MEMORY_USAGE]}\n")
 
         self.logger.info(f"Exporting results into archive: '{result_archive}'")
         upload_process = multiprocessing.Process(target=self.__upload, name="upload",
@@ -319,46 +327,7 @@ class BenchmarkLauncher(Launcher):
                 kill_launches(process_pool)
         wait_for_launches(process_pool)
         self._get_from_queue_into_list(queue, results)
-        self.logger.debug("Processing results")
-
-        coverage_resources = {TAG_CPU_TIME: 0.0, TAG_WALL_TIME: 0.0, TAG_MEMORY_USAGE: 0}
-        mea_resources = {TAG_CPU_TIME: 0.0, TAG_WALL_TIME: 0.0, TAG_MEMORY_USAGE: 0}
-        for result in results:
-            coverage_resources[TAG_MEMORY_USAGE] = \
-                max(coverage_resources[TAG_MEMORY_USAGE],
-                    result.coverage_resources.get(TAG_MEMORY_USAGE, 0))
-            mea_resources[TAG_MEMORY_USAGE] = max(mea_resources[TAG_MEMORY_USAGE],
-                                                  result.mea_resources.get(TAG_MEMORY_USAGE, 0))
-            coverage_resources[TAG_CPU_TIME] += result.coverage_resources.get(TAG_CPU_TIME, 0.0)
-            coverage_resources[TAG_WALL_TIME] += result.coverage_resources.get(TAG_WALL_TIME, 0.0)
-            mea_resources[TAG_CPU_TIME] += result.mea_resources.get(TAG_CPU_TIME, 0.0)
-            mea_resources[TAG_WALL_TIME] += result.mea_resources.get(TAG_WALL_TIME, 0.0)
-        report_launches, result_archive, report_components, _, report_resources = \
-            self._get_results_names()
-        self._print_launches_report(report_launches, report_resources, results)
-        overall_cpu_time = time.process_time() - self.start_cpu_time
-        overall_wall_time = time.time() - self.start_time
-        self.logger.info(f"Preparing report on components into file: '{report_components}'")
-        with open(report_components, "w", encoding='ascii') as f_report:
-            f_report.write("Name;CPU;Wall;Memory\n")  # Header.
-            f_report.write(f"{COMPONENT_BENCHMARK_LAUNCHER};"
-                           f"{round(overall_cpu_time, ROUND_DIGITS)};"
-                           f"{round(overall_wall_time, ROUND_DIGITS)};"
-                           f"{int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) * 1024}\n")
-            f_report.write(f"{COMPONENT_MEA};"
-                           f"{round(mea_resources[TAG_CPU_TIME], ROUND_DIGITS)};"
-                           f"{round(mea_resources[TAG_WALL_TIME], ROUND_DIGITS)};"
-                           f"{mea_resources[TAG_MEMORY_USAGE]}\n")
-            f_report.write(f"{COMPONENT_COVERAGE};"
-                           f"{round(coverage_resources[TAG_CPU_TIME], ROUND_DIGITS)};"
-                           f"{round(coverage_resources[TAG_WALL_TIME], ROUND_DIGITS)};"
-                           f"{coverage_resources[TAG_MEMORY_USAGE]}\n")
-        self.logger.info(f"Exporting results into archive: '{result_archive}'")
-        upload_process = multiprocessing.Process(target=self.__upload, name="upload",
-                                                 args=(report_launches, report_resources,
-                                                       report_components, result_archive, {}))
-        upload_process.start()
-        upload_process.join()
+        result_archive = self._export_results(results, {})
         if is_upload:
             self._upload_results(uploader_config, result_archive)
         if not self.debug:
