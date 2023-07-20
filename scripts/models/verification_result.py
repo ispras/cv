@@ -233,9 +233,9 @@ class VerificationResults:
                 self.mem = int(int(value) / 1000000)
             elif title in ADDITIONAL_RESOURCES:
                 value = column.attrib['value']
-                if str(value).endswith("B"):
+                if str(value).endswith("B") or str(value).endswith("J"):
                     value = value[:-1]
-                self.resources[title] = int(value)
+                self.resources[title] = int(float(value))
 
     def parse_output_dir(self, launch_dir: str, install_dir: str, result_dir: str,
                          parsed_columns=None):

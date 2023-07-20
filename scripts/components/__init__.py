@@ -157,5 +157,5 @@ WITNESS_VIOLATION = 'violation'
 WITNESS_CORRECTNESS = 'correctness'
 
 ADDITIONAL_RESOURCES = [
-    'blkio-read', 'blkio-write', 'error traces'
+    'blkio-read', 'blkio-write', 'error traces', 'cpuenergy'
 ]
