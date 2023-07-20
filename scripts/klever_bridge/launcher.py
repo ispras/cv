@@ -158,7 +158,7 @@ class KleverLauncher(BenchmarkLauncher):
         self.logger.info("Indexing klever tasks files")
         jobs_to_tasks, tasks_to_attrs = index_klever_tasks(self.output_dir, self.job_id)
         self.logger.info(f"Process job {self.job_id}")
-        processed_tasks = dict()
+        processed_tasks = {}
         self.job_name_suffix = self.job_id
         for task_id in jobs_to_tasks[self.job_id]:
             path_to_dir = os.path.join(self.output_dir, str(task_id), "output")

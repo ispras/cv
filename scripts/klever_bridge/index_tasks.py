@@ -78,7 +78,7 @@ def _iterate_over_tasks(tasks_dir: str, jobs: dict, tasks: dict, job_id=None):
                             module = res.group(1) + ".ko"
                             prop = PROP_NAMING.get(res.group(2), res.group(2))
                             if job_id not in jobs:
-                                jobs[job_id] = list()
+                                jobs[job_id] = []
                             jobs[job_id].append(task_id)
                             tasks[task_id] = [module, prop]
                             break
@@ -91,7 +91,7 @@ def _iterate_over_tasks(tasks_dir: str, jobs: dict, tasks: dict, job_id=None):
                             module = res.group(2) + ".ko"
                             prop = PROP_NAMING.get(res.group(3), res.group(3))
                             if new_job_id not in jobs:
-                                jobs[new_job_id] = list()
+                                jobs[new_job_id] = []
                             jobs[new_job_id].append(task_id)
                             tasks[task_id] = [module, prop]
                             break
@@ -110,7 +110,7 @@ def _upload_index() -> tuple:
         if os.path.exists(file_name):
             with open(file_name, "r", encoding="ascii") as index_fp:
                 return json.load(index_fp)
-        return dict()
+        return {}
     jobs = _proc_single_file(JOBS_FILE)
     tasks = _proc_single_file(TASKS_FILE)
     return jobs, tasks
