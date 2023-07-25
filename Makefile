@@ -53,7 +53,7 @@ compiled_cil_arch="frama_c_cil.xz"
 cvv_repo="https://github.com/vmordan/cvv.git"
 benchexec_repo="https://github.com/sosy-lab/benchexec.git"
 cif_repo="https://github.com/ldv-klever/cif.git"
-cif_compiled_link="https://github.com/ldv-cvv/cif/releases/download/v1.2/linux-x86_64-cif-1.2.tar.xz"
+cif_compiled_link="https://github.com/ldv-klever/cif/releases/download/v1.2/linux-x86_64-cif-1.2.tar.xz"
 cil_compiled_link="https://forge.ispras.ru/attachments/download/9905/frama-c-cil-c012809.tar.xz"
 
 # Aux constants.
@@ -147,11 +147,10 @@ install-cvv: build-cvv check-deploy-dir
 	@$(call shrink_installation,${DEPLOY_DIR}/${cvv_dir})
 
 deploy-cvv: build-cvv check-deploy-dir
-	@echo "*** Deploying ${cvv}-CV web-interface ***"
+	@echo "*** Deploying ${cvv} web-interface ***"
 	@mkdir -p ${DEPLOY_DIR}
 	@rm -rf ${DEPLOY_DIR}
 	@cp -r ${cvv_dir} ${DEPLOY_DIR}
-	@cp -r scripts/aux/mea.py ${DEPLOY_DIR}/${mea_lib}
 	@$(call shrink_installation,${DEPLOY_DIR})
 
 install-benchexec: build-benchexec check-deploy-dir
@@ -203,19 +202,7 @@ install-witness-visualizer: check-deploy-dir build-cvv
 	@mkdir -p ${DEPLOY_DIR}/${install_dir}
 	@cp ${tools_config_file} ${DEPLOY_DIR}/${install_dir}
 	@rm -rf ${DEPLOY_DIR}/${cvv_dir}
-	@mkdir -p ${DEPLOY_DIR}/${cvv_dir}
-	@mkdir -p ${DEPLOY_DIR}/${cvv_dir}/web/
-	@mkdir -p ${DEPLOY_DIR}/${cvv_dir}/web/templates/reports/
-	@mkdir -p ${DEPLOY_DIR}/${cvv_dir}/web/reports/
-	@mkdir -p ${DEPLOY_DIR}/${cvv_dir}/web/web/
-	@mkdir -p ${DEPLOY_DIR}/${cvv_dir}/web/media/
-	@cp -r ${cvv_dir}/web/static ${DEPLOY_DIR}/${cvv_dir}/web/
-	@cp ${cvv_dir}/web/templates/base.html ${DEPLOY_DIR}/${cvv_dir}/web/templates/
-	@cp ${cvv_dir}/web/reports/templates/reports/*.html ${DEPLOY_DIR}/${cvv_dir}/web/templates/reports/
-	@cp -r ${cvv_dir}/web/reports/mea ${DEPLOY_DIR}/${cvv_dir}/web/reports/
-	@cp -r ${cvv_dir}/web/reports/static ${DEPLOY_DIR}/${cvv_dir}/web/reports/
-	@cp ${cvv_dir}/web/reports/etv.py ${DEPLOY_DIR}/${cvv_dir}/web/reports/
-	@cp ${cvv_dir}/web/web/* ${DEPLOY_DIR}/${cvv_dir}/web/web/
+	@cp -r ${cvv_dir}/web ${DEPLOY_DIR}/${cvv_dir}
 	@rm -rf ${DEPLOY_DIR}/${cvv_dir}/web/static/codemirror
 	@rm -rf ${DEPLOY_DIR}/${cvv_dir}/web/static/calendar
 	@rm -rf ${DEPLOY_DIR}/${cvv_dir}/web/static/jstree
@@ -224,7 +211,7 @@ install-witness-visualizer: check-deploy-dir build-cvv
 	cp -r ${root_dir}/scripts/ . ; \
 	rm -f scripts/${launch_script} ; \
 	rm -f scripts/${auto_script} ; \
-	rm -f scripts/${bv_script} ; \
+	rm -f scripts/${bv_script}
 	@echo "*** Witness Visualizer has been successfully installed into the directory ${DEPLOY_DIR} ***"
 
 install-mea: install-witness-visualizer
