@@ -37,7 +37,7 @@ auto_script="auto_check.py"
 root_dir=$(shell pwd)
 install_dir=tools
 cvv_dir=${install_dir}/${cvv}
-mea_lib=bridge/reports/mea/core.py
+mea_lib=web/reports/mea/core.py
 cil_dir=${install_dir}/${cil}
 frama_c_cil_dir=${install_dir}/${frama_c_cil}
 benchexec_dir=${install_dir}/${benchexec}
@@ -89,8 +89,8 @@ download: download-cvv download-benchexec download-cpa
 
 build-cvv: download-cvv
 	@echo "*** Building ${cvv} ***"
-	@echo "from bridge.development import *" > ${cvv_dir}/bridge/bridge/settings.py
-	@echo "{}" > ${cvv_dir}/bridge/bridge/db.json
+	@echo "from web.development import *" > ${cvv_dir}/web/web/settings.py
+	@echo "{}" > ${cvv_dir}/web/web/db.json
 
 build-benchexec: download-benchexec
 	@echo "*** Building ${benchexec} ***"
@@ -204,22 +204,22 @@ install-witness-visualizer: check-deploy-dir build-cvv
 	@cp ${tools_config_file} ${DEPLOY_DIR}/${install_dir}
 	@rm -rf ${DEPLOY_DIR}/${cvv_dir}
 	@mkdir -p ${DEPLOY_DIR}/${cvv_dir}
-	@mkdir -p ${DEPLOY_DIR}/${cvv_dir}/bridge/
-	@mkdir -p ${DEPLOY_DIR}/${cvv_dir}/bridge/templates/reports/
-	@mkdir -p ${DEPLOY_DIR}/${cvv_dir}/bridge/reports/
-	@mkdir -p ${DEPLOY_DIR}/${cvv_dir}/bridge/bridge/
-	@mkdir -p ${DEPLOY_DIR}/${cvv_dir}/bridge/media/
-	@cp -r ${cvv_dir}/bridge/static ${DEPLOY_DIR}/${cvv_dir}/bridge/
-	@cp ${cvv_dir}/bridge/templates/base.html ${DEPLOY_DIR}/${cvv_dir}/bridge/templates/
-	@cp ${cvv_dir}/bridge/reports/templates/reports/*.html ${DEPLOY_DIR}/${cvv_dir}/bridge/templates/reports/
-	@cp -r ${cvv_dir}/bridge/reports/mea ${DEPLOY_DIR}/${cvv_dir}/bridge/reports/
-	@cp -r ${cvv_dir}/bridge/reports/static ${DEPLOY_DIR}/${cvv_dir}/bridge/reports/
-	@cp ${cvv_dir}/bridge/reports/etv.py ${DEPLOY_DIR}/${cvv_dir}/bridge/reports/
-	@cp ${cvv_dir}/bridge/bridge/* ${DEPLOY_DIR}/${cvv_dir}/bridge/bridge/
-	@rm -rf ${DEPLOY_DIR}/${cvv_dir}/bridge/static/codemirror
-	@rm -rf ${DEPLOY_DIR}/${cvv_dir}/bridge/static/calendar
-	@rm -rf ${DEPLOY_DIR}/${cvv_dir}/bridge/static/jstree
-	@rm -rf ${DEPLOY_DIR}/${cvv_dir}/bridge/static/js/population.js
+	@mkdir -p ${DEPLOY_DIR}/${cvv_dir}/web/
+	@mkdir -p ${DEPLOY_DIR}/${cvv_dir}/web/templates/reports/
+	@mkdir -p ${DEPLOY_DIR}/${cvv_dir}/web/reports/
+	@mkdir -p ${DEPLOY_DIR}/${cvv_dir}/web/web/
+	@mkdir -p ${DEPLOY_DIR}/${cvv_dir}/web/media/
+	@cp -r ${cvv_dir}/web/static ${DEPLOY_DIR}/${cvv_dir}/web/
+	@cp ${cvv_dir}/web/templates/base.html ${DEPLOY_DIR}/${cvv_dir}/web/templates/
+	@cp ${cvv_dir}/web/reports/templates/reports/*.html ${DEPLOY_DIR}/${cvv_dir}/web/templates/reports/
+	@cp -r ${cvv_dir}/web/reports/mea ${DEPLOY_DIR}/${cvv_dir}/web/reports/
+	@cp -r ${cvv_dir}/web/reports/static ${DEPLOY_DIR}/${cvv_dir}/web/reports/
+	@cp ${cvv_dir}/web/reports/etv.py ${DEPLOY_DIR}/${cvv_dir}/web/reports/
+	@cp ${cvv_dir}/web/web/* ${DEPLOY_DIR}/${cvv_dir}/web/web/
+	@rm -rf ${DEPLOY_DIR}/${cvv_dir}/web/static/codemirror
+	@rm -rf ${DEPLOY_DIR}/${cvv_dir}/web/static/calendar
+	@rm -rf ${DEPLOY_DIR}/${cvv_dir}/web/static/jstree
+	@rm -rf ${DEPLOY_DIR}/${cvv_dir}/web/static/js/population.js
 	@cd ${DEPLOY_DIR} ; \
 	cp -r ${root_dir}/scripts/ . ; \
 	rm -f scripts/${launch_script} ; \
@@ -230,7 +230,7 @@ install-witness-visualizer: check-deploy-dir build-cvv
 install-mea: install-witness-visualizer
 	@cd ${DEPLOY_DIR} ; \
 	rm -f scripts/${wv_script} ; \
-	rm -rf ${cvv_dir}/bridge/
+	rm -rf ${cvv_dir}/web/
 	@echo "*** MEA has been successfully installed into the directory ${DEPLOY_DIR} ***"
 
 install-benchmark-visualizer: install-witness-visualizer
