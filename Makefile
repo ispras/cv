@@ -52,7 +52,7 @@ compiled_cil_arch="frama_c_cil.xz"
 # Repositories
 cvv_repo="https://github.com/vmordan/cvv.git"
 benchexec_repo="https://github.com/sosy-lab/benchexec.git"
-cif_repo="https://github.com/ldv-cvv/cif.git"
+cif_repo="https://github.com/ldv-klever/cif.git"
 cif_compiled_link="https://github.com/ldv-cvv/cif/releases/download/v1.2/linux-x86_64-cif-1.2.tar.xz"
 cil_compiled_link="https://forge.ispras.ru/attachments/download/9905/frama-c-cil-c012809.tar.xz"
 
