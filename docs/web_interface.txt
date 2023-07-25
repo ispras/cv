@@ -1,9 +1,9 @@
 Deployment of the Continuous Verification web-interface for results visualization
 =================================================================================
 
-1. Deploy Klever-CV web-interface with command:
+1. Deploy CVV web-interface with command:
 
-make deploy-klever-cv DEPLOY_DIR=<deploy path>
+make deploy-cvv DEPLOY_DIR=<deploy path>
 
 WARNING: everything in the <deploy path> will be removed. This path will be used for keeping database files,
 therefore it should not be modified for correct visualization of results.

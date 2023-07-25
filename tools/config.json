@@ -4,8 +4,8 @@
         "frama_c_cil/toplevel.opt",
         "cil/obj/x86_LINUX/cilly.asm.exe"
     ],
-    "et html": "klever/bridge",
-    "uploader": "klever/utils/bin/upload-reports.py",
+    "et html": "cvv/bridge",
+    "uploader": "cvv/utils/bin/upload-reports.py",
     "benchexec": "benchexec/bin",
     "cif": "cif/bin"
   },
