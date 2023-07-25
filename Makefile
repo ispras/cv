@@ -57,7 +57,7 @@ cif_compiled_link="https://github.com/ldv-cvv/cif/releases/download/v1.2/linux-x
 cil_compiled_link="https://forge.ispras.ru/attachments/download/9905/frama-c-cil-c012809.tar.xz"
 
 # Aux constants.
-cvwi_branch=cv-v2.0
+cvv_branch=master
 benchexec_branch=3.16
 cif_revision=master
 
@@ -66,7 +66,7 @@ tools_config_file=${install_dir}/config.json
 
 download-cvv:
 	@$(call download_tool,${cvv},${cvv_dir},${cvv_repo})
-	@cd ${cvv_dir}; git checkout ${cvwi_branch}; git pull
+	@cd ${cvv_dir}; git checkout ${cvv_branch}; git pull
 
 download-benchexec:
 	@$(call download_tool,${benchexec},${benchexec_dir},${benchexec_repo})
