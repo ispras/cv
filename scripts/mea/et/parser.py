@@ -18,14 +18,21 @@
 # limitations under the License.
 #
 
+"""
+Parser for witnesses.
+"""
+
 import os
 import re
-import xml.etree.ElementTree as ET
+from xml.etree import ElementTree
 
-from mea.et.error_trace import ErrorTrace
+from mea.et.internal_witness import InternalWitness
 
 
-class ErrorTraceParser:
+class WitnessParser:
+    """
+    Class parses a given witness (both correctness and violation are supported).
+    """
     WITNESS_NS = {'graphml': 'http://graphml.graphdrawing.org/xmlns'}
 
     def __init__(self, logger, witness, source_dir=None):
@@ -35,13 +42,13 @@ class ErrorTraceParser:
         self._violation_hints = set()
         self.default_program_file = None  # default source file
         self.global_program_file = None  # ~CIL file
-        self.error_trace = ErrorTrace(logger)
+        self.internal_witness = InternalWitness(logger)
         self._parse_witness(witness)
         self._check_given_files()
 
     def __check_for_default_file(self, name: str, edge: dict):
         try:
-            identifier = self.error_trace.add_file(self.__resolve_src_path(name))
+            identifier = self.internal_witness.add_file(self.__resolve_src_path(name))
             last_used_file = identifier
             edge['file'] = last_used_file
             return last_used_file
@@ -51,7 +58,7 @@ class ErrorTraceParser:
 
     def _check_given_files(self):
         last_used_file = None
-        for edge in self.error_trace.get_edges():
+        for edge in self.internal_witness.get_edges():
             if 'file' in edge and edge['file'] is not None:
                 last_used_file = edge['file']
             elif self.default_program_file:
@@ -65,7 +72,7 @@ class ErrorTraceParser:
                 if tmp_file:
                     last_used_file = tmp_file
             else:
-                self._logger.warning("There is no source file for edge {}".format(edge))
+                self._logger.warning(f"There is no source file for edge {edge}")
 
     def __check_file_name(self, name: str):
         name = self.__resolve_src_path(name)
@@ -90,11 +97,11 @@ class ErrorTraceParser:
         return name
 
     def _parse_witness(self, witness):
-        self._logger.info('Parse witness {!r}'.format(witness))
+        self._logger.info(f'Parse witness {witness}')
         if os.stat(witness).st_size == 0:
-            raise ET.ParseError("Witness is empty")
-        with open(witness, encoding='utf8') as fp:
-            tree = ET.parse(fp)
+            raise ElementTree.ParseError("Witness is empty")
+        with open(witness, encoding='utf8') as witness_obj:
+            tree = ElementTree.parse(witness_obj)
         root = tree.getroot()
         graph = root.find('graphml:graph', self.WITNESS_NS)
         for data in root.findall('graphml:key', self.WITNESS_NS):
@@ -116,16 +123,16 @@ class ErrorTraceParser:
             elif key == 'witness-type':
                 witness_type = data.text
                 if witness_type == 'correctness_witness':
-                    self.error_trace.witness_type = 'correctness'
+                    self.internal_witness.witness_type = 'correctness'
                 elif witness_type == 'violation_witness':
-                    self.error_trace.witness_type = 'violation'
+                    self.internal_witness.witness_type = 'violation'
                 else:
-                    self._logger.warning("Unsupported witness type: {}".format(witness_type))
+                    self._logger.warning(f"Unsupported witness type: {witness_type}")
             elif key == 'specification':
                 automaton = data.text
                 for line in automaton.split('\n'):
                     note = None
-                    match = re.search(r'init\(([a-zA-Z0-9_]+)\(\)\)', line)
+                    match = re.search(r'init\((\w+)\(\)\)', line)
                     if match:
                         self.entry_point = match.group(1)
                     match = re.search(r'ERROR\(\"(.+)"\)', line)
@@ -134,14 +141,14 @@ class ErrorTraceParser:
                     match = re.search(r'MATCH\s*{\S+\s*=(\S+)\(.*\)}', line)
                     if match:
                         func_name = match.group(1)
-                        self.error_trace.add_model_function(func_name, note)
+                        self.internal_witness.add_model_function(func_name, note)
                         self._violation_hints.add(func_name)
                         continue
                     match = re.search(r'MATCH\s*{(\S+)\(.*\)}', line)
                     if match:
                         func_name = match.group(1)
                         self._violation_hints.add(func_name)
-                        self.error_trace.add_model_function(func_name, note)
+                        self.internal_witness.add_model_function(func_name, note)
                         continue
         self.__parse_witness_data(graph)
         sink_nodes_map = self.__parse_witness_nodes(graph)
@@ -150,9 +157,10 @@ class ErrorTraceParser:
     def __parse_witness_data(self, graph):
         for data in graph.findall('graphml:data', self.WITNESS_NS):
             if 'klever-attrs' in data.attrib and data.attrib['klever-attrs'] == 'true':
-                self.error_trace.add_attr(data.attrib.get('key'), data.text,
-                                          True if data.attrib.get('associate', "false") == 'true' else False,
-                                          True if data.attrib.get('compare', "false") == 'true' else False)
+                self.internal_witness.add_attr(
+                    data.attrib.get('key'), data.text,
+                    True if data.attrib.get('associate', "false") == 'true' else False,
+                    True if data.attrib.get('compare', "false") == 'true' else False)
 
     def __parse_witness_nodes(self, graph):
         sink_nodes_map = dict()
@@ -166,33 +174,34 @@ class ErrorTraceParser:
             for data in node.findall('graphml:data', self.WITNESS_NS):
                 data_key = data.attrib.get('key')
                 if data_key == 'entry':
-                    self.error_trace.add_entry_node_id(node_id)
-                    self._logger.debug('Parse entry node {!r}'.format(node_id))
+                    self.internal_witness.add_entry_node_id(node_id)
+                    self._logger.debug(f'Parse entry node {node_id}')
                 elif data_key == 'sink':
                     is_sink = True
-                    self._logger.debug('Parse sink node {!r}'.format(node_id))
+                    self._logger.debug(f'Parse sink node {node_id}')
                 elif data_key == 'violation':
                     pass
                 elif data_key == 'invariant':
-                    self.error_trace.add_invariant(data.text, node_id)
+                    self.internal_witness.add_invariant(data.text, node_id)
                 elif data_key not in unsupported_node_data_keys:
-                    self._logger.warning('Node data key {!r} is not supported'.format(data_key))
+                    self._logger.warning(f'Node data key {data_key} is not supported')
                     unsupported_node_data_keys[data_key] = None
 
-            # Do not track sink nodes as all other nodes. All edges leading to sink nodes will be excluded as well.
+            # Do not track sink nodes as all other nodes.
+            # All edges leading to sink nodes will be excluded as well.
             if is_sink:
                 sink_nodes_map[node_id] = None
             else:
                 nodes_number += 1
 
-        self._logger.debug('Parse {0} nodes and {1} sink nodes'.format(nodes_number, len(sink_nodes_map)))
+        self._logger.debug(
+            f'Parse {nodes_number} nodes and {len(sink_nodes_map)} sink nodes')
         return sink_nodes_map
 
     def __parse_witness_edges(self, graph, sink_nodes_map):
         unsupported_edge_data_keys = dict()
-
-        # Use maps for source files and functions as for nodes. Add artificial map to 0 for default file without
-        # explicitly specifying its path.
+        # Use maps for source files and functions as for nodes. Add artificial map to 0 for
+        # default file without explicitly specifying its path.
         # The number of edges leading to sink nodes. Such edges will be completely removed.
         sink_edges_num = 0
         edges_num = 0
@@ -208,7 +217,7 @@ class ErrorTraceParser:
                 continue
 
             # Update lists of input and output edges for source and target nodes.
-            _edge = self.error_trace.add_edge(source_node_id, target_node_id)
+            _edge = self.internal_witness.add_edge(source_node_id, target_node_id)
 
             start_offset = 0
             end_offset = 0
@@ -219,7 +228,8 @@ class ErrorTraceParser:
                 data_key = data.attrib.get('key')
                 if data_key == 'originfile':
                     try:
-                        identifier = self.error_trace.add_file(self.__resolve_src_path(data.text))
+                        identifier = self.internal_witness.add_file(
+                            self.__resolve_src_path(data.text))
                         _edge['file'] = identifier
                     except FileNotFoundError:
                         _edge['file'] = None
@@ -230,26 +240,28 @@ class ErrorTraceParser:
                 elif data_key == 'sourcecode':
                     is_source_file = True
                     _edge['source'] = data.text
-                elif data_key == 'enterFunction' or data_key == 'returnFrom' or data_key == 'assumption.scope':
+                elif data_key == 'enterFunction' or data_key == 'returnFrom' or \
+                        data_key == 'assumption.scope':
                     function_name = data.text
-                    func_index = self.error_trace.add_function(function_name)
+                    func_index = self.internal_witness.add_function(function_name)
                     if data_key == 'enterFunction':
                         if func_index - len(self._violation_hints) == 0:
                             if self.entry_point:
                                 if self.entry_point == function_name:
-                                    self.error_trace.is_main_function = True
-                                    if self.error_trace.witness_type == 'violation':
+                                    self.internal_witness.is_main_function = True
+                                    if self.internal_witness.witness_type == 'violation':
                                         _edge['env'] = "entry point"
                             else:
-                                self.error_trace.is_main_function = True
+                                self.internal_witness.is_main_function = True
                         else:
-                            self.error_trace.is_call_stack = True
-                        func_id = self.error_trace.resolve_function_id(function_name)
+                            self.internal_witness.is_call_stack = True
+                        func_id = self.internal_witness.resolve_function_id(function_name)
                         _edge['enter'] = func_id
                     elif data_key == 'returnFrom':
-                        _edge['return'] = self.error_trace.resolve_function_id(function_name)
+                        _edge['return'] = self.internal_witness.resolve_function_id(function_name)
                     else:
-                        _edge['assumption scope'] = self.error_trace.resolve_function_id(function_name)
+                        _edge['assumption scope'] = self.internal_witness.resolve_function_id(
+                            function_name)
                 elif data_key == 'control':
                     val = data.text
                     condition = val
@@ -257,32 +269,33 @@ class ErrorTraceParser:
                         _edge['condition'] = True
                     elif val == 'condition-false':
                         _edge['condition'] = False
-                    self.error_trace.is_conditions = True
+                    self.internal_witness.is_conditions = True
                 elif data_key == 'assumption':
                     _edge['assumption'] = data.text
                 elif data_key == 'threadId':
                     _edge['thread'] = data.text
-                    self.error_trace.add_thread(data.text)
+                    self.internal_witness.add_thread(data.text)
                 elif data_key == 'startoffset':
                     start_offset = int(data.text)
                 elif data_key == 'endoffset':
                     end_offset = int(data.text)
                 elif data_key in ('note', 'warning'):
-                    _edge[data_key if data_key == 'note' else 'warn'] = self.error_trace.process_comment(data.text)
-                    self.error_trace.is_notes = True
+                    _edge[data_key if data_key == 'note' else 'warn'] = \
+                        self.internal_witness.process_comment(data.text)
+                    self.internal_witness.is_notes = True
                 elif data_key == 'env':
-                    _edge['env'] = self.error_trace.process_comment(data.text)
+                    _edge['env'] = self.internal_witness.process_comment(data.text)
                 elif data_key not in unsupported_edge_data_keys:
-                    self._logger.warning('Edge data key {!r} is not supported'.format(data_key))
+                    self._logger.warning(f'Edge data key {data_key} is not supported')
                     unsupported_edge_data_keys[data_key] = None
 
             if invariant and invariant_scope:
-                self.error_trace.add_invariant(invariant, invariant_scope)
+                self.internal_witness.add_invariant(invariant, invariant_scope)
 
             if "source" not in _edge:
                 _edge['source'] = ""
                 if 'enter' in _edge:
-                    _edge['source'] = self.error_trace.get_func_name(_edge['enter'])
+                    _edge['source'] = self.internal_witness.get_func_name(_edge['enter'])
                 elif 'return' in _edge:
                     _edge['source'] = 'return'
                 elif not is_source_file:
@@ -292,7 +305,7 @@ class ErrorTraceParser:
                         if start_offset and self.global_program_file:
                             src_file = self.global_program_file
                         elif 'file' in _edge:
-                            src_file = self.error_trace.get_file_name(_edge['file'])
+                            src_file = self.internal_witness.get_file_name(_edge['file'])
                             if not src_file and self.global_program_file:
                                 src_file = self.global_program_file
                         elif self.global_program_file:
@@ -300,16 +313,16 @@ class ErrorTraceParser:
                         else:
                             src_file = None
                         if src_file:
-                            with open(src_file) as fd:
+                            with open(src_file, encoding='utf8') as src_obj:
                                 if start_offset:
                                     offset = 1
                                     if end_offset:
                                         offset += end_offset - start_offset
-                                    fd.seek(start_offset)
-                                    _edge['source'] = fd.read(offset)
+                                    src_obj.seek(start_offset)
+                                    _edge['source'] = src_obj.read(offset)
                                 else:
                                     counter = 1
-                                    for line in fd.readlines():
+                                    for line in src_obj.readlines():
                                         if counter == _edge['start line']:
                                             line = line.rstrip().lstrip()
                                             if 'condition' in _edge:
@@ -320,7 +333,7 @@ class ErrorTraceParser:
                                             break
                                         counter += 1
                                 if condition == 'condition-false':
-                                    _edge['source'] = "!({})".format(_edge['source'])
+                                    _edge['source'] = f"!({_edge['source']})"
 
             if 'thread' not in _edge:
                 _edge['thread'] = "0"
@@ -329,4 +342,4 @@ class ErrorTraceParser:
 
             edges_num += 1
 
-        self._logger.debug('Parse {0} edges and {1} sink edges'.format(edges_num, sink_edges_num))
+        self._logger.debug(f'Parse {edges_num} edges and {sink_edges_num} sink edges')

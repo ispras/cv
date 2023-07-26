@@ -19,9 +19,10 @@
 #
 
 """
-This library presents core functions for MEA, such as converting and comparison of error traces.
-
+This library presents core functions for MEA, such as conversion and comparison of error traces.
 """
+
+# pylint: disable=invalid-name
 
 import operator
 import re
@@ -96,7 +97,8 @@ def convert_error_trace(error_trace: dict, conversion_function: str, args: dict 
         conversion_function = DEFAULT_CONVERSION_FUNCTION
     result = functions[conversion_function](error_trace, args)
 
-    if (args.get(TAG_USE_NOTES, args.get(TAG_USE_WARNS, False)) or args.get(TAG_IGNORE_NOTES_TEXT, False)) and \
+    if (args.get(TAG_USE_NOTES, args.get(TAG_USE_WARNS, False)) or
+            args.get(TAG_IGNORE_NOTES_TEXT, False)) and \
             conversion_function not in [CONVERSION_FUNCTION_FULL, CONVERSION_FUNCTION_NOTES]:
         result += __convert_notes(error_trace, args)
         result = sorted(result, key=operator.itemgetter(CET_ID))
@@ -110,19 +112,22 @@ def convert_error_trace(error_trace: dict, conversion_function: str, args: dict 
 
 def is_equivalent(comparison_results: float, similarity_threshold: int) -> bool:
     """
-    Returns true, if compared error traces are considered to be equivalent in terms of specified threshold.
+    Returns true, if compared error traces are considered to be equivalent in terms of
+    specified threshold.
     """
     return comparison_results and (comparison_results * 100 >= similarity_threshold)
 
 
-def compare_error_traces(edited_error_trace: list, compared_error_trace: list, comparison_function: str) -> float:
+def compare_error_traces(edited_error_trace: list, compared_error_trace: list,
+                         comparison_function: str) -> float:
     """
     Compare two error traces by means of specified function and return similarity coefficient
     for their threads equivalence (in case of a single thread function returns True/False).
     """
     et1_threaded, et2_threaded = __transform_to_threads(edited_error_trace, compared_error_trace)
     if not et1_threaded and not et2_threaded:
-        # Return true for empty converted error traces (so they will be applied to all reports with the same attributes)
+        # Return true for empty converted error traces (so they will be applied to all
+        # reports with the same attributes)
         return 1.0
     functions = {
         COMPARISON_FUNCTION_EQUAL: __compare_equal,
@@ -140,7 +145,8 @@ def compare_error_traces(edited_error_trace: list, compared_error_trace: list, c
 
 
 # noinspection PyUnusedLocal
-def __convert_call_tree_filter(error_trace: dict, args: dict = {}) -> list:
+def __convert_call_tree_filter(error_trace: dict, args: dict = None) -> list:
+    # pylint: disable=unused-argument
     converted_error_trace = list()
     counter = 0
     # TODO: check this in core (one node for call and return edges).
@@ -190,7 +196,9 @@ def __convert_call_tree_filter(error_trace: dict, args: dict = {}) -> list:
     return converted_error_trace
 
 
-def __convert_model_functions(error_trace: dict, args: dict = {}) -> list:
+def __convert_model_functions(error_trace: dict, args: dict = None) -> list:
+    if args is None:
+        args = {}
     additional_model_functions = set(args.get(TAG_ADDITIONAL_MODEL_FUNCTIONS, []))
     model_functions = __get_model_functions(error_trace, additional_model_functions)
     converted_error_trace = __convert_call_tree_filter(error_trace, args)
@@ -224,8 +232,8 @@ def __convert_model_functions(error_trace: dict, args: dict = {}) -> list:
                         is_save = True
                         break
             if not is_save:
-                for x in range(counter, counter + remove_items):
-                    removed_indexes.add(x)
+                for index in range(counter, counter + remove_items):
+                    removed_indexes.add(index)
     resulting_error_trace = list()
     for counter, item in enumerate(converted_error_trace):
         if counter not in removed_indexes or counter in thread_start_indexes:
@@ -234,7 +242,7 @@ def __convert_model_functions(error_trace: dict, args: dict = {}) -> list:
 
 
 def __filter_functions(converted_error_trace: list, filtered_functions: set) -> list:
-    converted_error_trace_with_filter = list()
+    result = list()
     filtered_stack = list()
     cur_thread = None
     for item in converted_error_trace:
@@ -251,13 +259,13 @@ def __filter_functions(converted_error_trace: list, filtered_functions: set) -> 
                 if filtered_stack:
                     filtered_stack.pop()
         elif not filtered_stack:
-            converted_error_trace_with_filter.append(item)
-
-    return converted_error_trace_with_filter
+            result.append(item)
+    return result
 
 
 # noinspection PyUnusedLocal
-def __convert_conditions(error_trace: dict, args: dict = {}) -> list:
+def __convert_conditions(error_trace: dict, args: dict = None) -> list:
+    # pylint: disable=unused-argument
     converted_error_trace = list()
     counter = 0
     for edge in error_trace['edges']:
@@ -276,7 +284,8 @@ def __convert_conditions(error_trace: dict, args: dict = {}) -> list:
 
 
 # noinspection PyUnusedLocal
-def __convert_assignments(error_trace: dict, args: dict = {}) -> list:
+def __convert_assignments(error_trace: dict, args: dict = None) -> list:
+    # pylint: disable=unused-argument
     converted_error_trace = list()
     counter = 0
     for edge in error_trace['edges']:
@@ -295,7 +304,9 @@ def __convert_assignments(error_trace: dict, args: dict = {}) -> list:
     return converted_error_trace
 
 
-def __convert_notes(error_trace: dict, args: dict = {}) -> list:
+def __convert_notes(error_trace: dict, args=None) -> list:
+    if args is None:
+        args = {}
     converted_error_trace = list()
     counter = 0
     use_notes = args.get(TAG_USE_NOTES, False)
@@ -337,7 +348,8 @@ def __convert_notes(error_trace: dict, args: dict = {}) -> list:
 
 
 # noinspection PyUnusedLocal
-def __convert_full(error_trace: dict, args: dict = dict) -> list:
+def __convert_full(error_trace: dict, args: dict = None) -> list:
+    # pylint: disable=unused-argument
     converted_error_trace = __convert_call_tree_filter(error_trace, args) + \
                             __convert_conditions(error_trace, args) + \
                             __convert_assignments(error_trace, args) + \
@@ -369,38 +381,38 @@ def __get_model_functions(error_trace: dict, additional_model_functions: set) ->
             if stack:
                 stack.pop()
         if 'warn' in edge or 'note' in edge:
-            if len(stack) > 0:
+            if stack:
                 model_functions.add(stack[len(stack) - 1])
     model_functions = model_functions - patterns
     return model_functions
 
 
-def __prep_elem_for_cmp(elem: dict, et: dict) -> None:
+def __prep_elem_for_cmp(elem: dict, error_trace: dict) -> None:
     op = elem[CET_OP]
     thread = elem[CET_THREAD]
-    if thread not in et:
-        et[thread] = list()
+    if thread not in error_trace:
+        error_trace[thread] = list()
     if op in [CET_OP_RETURN, CET_OP_CALL]:
-        et[thread].append((op, elem[CET_DISPLAY_NAME]))
+        error_trace[thread].append((op, elem[CET_DISPLAY_NAME]))
     elif op == CET_OP_ASSUME:
-        thread_aux = "{}_aux".format(thread)
-        if thread_aux not in et:
-            et[thread_aux] = list()
-        et[thread_aux].append((op, elem[CET_DISPLAY_NAME], elem[CET_SOURCE]))
+        thread_aux = f"{thread}_aux"
+        if thread_aux not in error_trace:
+            error_trace[thread_aux] = list()
+        error_trace[thread_aux].append((op, elem[CET_DISPLAY_NAME], elem[CET_SOURCE]))
     elif op in [CET_OP_WARN, CET_OP_NOTE, CET_OP_ASSIGN]:
-        thread_aux = "{}_aux".format(thread)
-        if thread_aux not in et:
-            et[thread_aux] = list()
-        et[thread_aux].append((op, elem[CET_DISPLAY_NAME]))
+        thread_aux = f"{thread}_aux"
+        if thread_aux not in error_trace:
+            error_trace[thread_aux] = list()
+        error_trace[thread_aux].append((op, elem[CET_DISPLAY_NAME]))
 
 
 def __transform_to_threads(edited_error_trace: list, compared_error_trace: list) -> (dict, dict):
     et1 = dict()
     et2 = dict()
-    for i in range(len(edited_error_trace)):
-        __prep_elem_for_cmp(edited_error_trace[i], et1)
-    for i in range(len(compared_error_trace)):
-        __prep_elem_for_cmp(compared_error_trace[i], et2)
+    for et_elem in edited_error_trace:
+        __prep_elem_for_cmp(et_elem, et1)
+    for et_elem in compared_error_trace:
+        __prep_elem_for_cmp(et_elem, et2)
     et1_threaded = dict()
     et2_threaded = dict()
     for thread, trace in et1.items():
@@ -422,7 +434,7 @@ def __sublist(sublist: tuple, big_list: tuple) -> bool:
 
 
 def __compare_skip(edited_error_trace: dict, compared_error_trace: dict) -> int:
-    return min(len(edited_error_trace),  len(compared_error_trace))
+    return min(len(edited_error_trace), len(compared_error_trace))
 
 
 def __compare_equal(edited_error_trace: dict, compared_error_trace: dict) -> int:
@@ -462,7 +474,7 @@ def __convert_to_number_of_compared_threads(result: dict) -> int:
         number_of_threads = 0
         for id_1, ids_2 in result.items():
             for id_2 in ids_2:
-                id_str = "{}_{}".format(id_1, id_2)
+                id_str = f"{id_1}_{id_2}"
                 if id_2 not in used_ids_2 and id_str not in used_transitions:
                     used_ids_2.add(id_2)
                     used_transitions.add(id_str)
@@ -506,10 +518,10 @@ def __compare_include_partial_ordered(edited_error_trace: dict, compared_error_t
     return __convert_to_number_of_compared_threads(result)
 
 
-def __get_similarity_coefficient(l1: dict, l2: dict, common_elements: int) -> float:
+def __get_similarity_coefficient(et_threaded_1: dict, et_threaded_2: dict, common_elements: int) \
+        -> float:
     # Currently represented only as Jaccard index.
-    diff_elements = len(l1) + len(l2) - common_elements
+    diff_elements = len(et_threaded_1) + len(et_threaded_2) - common_elements
     if diff_elements:
         return round(common_elements / diff_elements, 2)
-    else:
-        return 0.0
+    return 0.0

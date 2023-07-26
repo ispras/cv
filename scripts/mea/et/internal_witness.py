@@ -17,15 +17,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=missing-docstring
+"""
+Internal representation of witness in CV format.
+"""
 
-import re
-import os
 import json
+import os
+import re
 
 
 # Capitalize first letters of attribute names.
 def capitalize_attr_names(attrs):
-    # Each attribute is dictionary with one element which value is either string or array of subattributes.
+    # Each attribute is dictionary with one element which value is either string or array of
+    # subattributes.
     for attr in attrs:
         # Does capitalize attribute name.
         attr['name'] = attr['name'][0].upper() + attr['name'][1:]
@@ -34,7 +39,10 @@ def capitalize_attr_names(attrs):
             capitalize_attr_names(attr['value'])
 
 
-class ErrorTrace:
+class InternalWitness:
+    """
+    This class keeps witness in CV internal format.
+    """
     MODEL_COMMENT_TYPES = 'AUX_FUNC|AUX_FUNC_CALLBACK|MODEL_FUNC|NOTE|ASSERT|ENVIRONMENT_MODEL'
     MAX_COMMENT_LENGTH = 128
 
@@ -75,8 +83,8 @@ class ErrorTrace:
         if edge:
             try:
                 return self._edges.index(edge)
-            except Exception as e:
-                self._logger.warning("Cannot get index for edge {} due to: ".format(edge, e))
+            except Exception as exception:
+                self._logger.warning(f"Cannot get index for edge {edge} due to: {exception}")
                 return default
         else:
             return default
@@ -117,7 +125,9 @@ class ErrorTrace:
     def add_entry_node_id(self, node_id):
         self._entry_node_id = node_id
 
+    # noinspection PyUnusedLocal
     def add_edge(self, source, target):
+        # pylint: disable=unused-argument
         # TODO: check coherence of source and target.
         edge = {}
         self._edges.append(edge)
@@ -129,46 +139,34 @@ class ErrorTrace:
         file_name = os.path.normpath(os.path.abspath(file_name))
         if file_name not in self._files:
             if not os.path.isfile(file_name):
-                no_file_str = "There is no file {!r}".format(file_name)
+                no_file_str = f"There is no file {file_name}"
                 self._logger.warning(no_file_str)
                 if no_file_str not in self._warnings:
-                    self._warnings.append("There is no file {!r}".format(file_name))
+                    self._warnings.append(f"There is no file {file_name}")
                 raise FileNotFoundError
             self._files.append(file_name)
-            return self.resolve_file_id(file_name)
-        else:
-            return self.resolve_file_id(file_name)
+            return self._resolve_file_id(file_name)
+        return self._resolve_file_id(file_name)
 
     def add_function(self, name):
         if name not in self._funcs:
             self._funcs.append(name)
             return len(self._funcs) - 1
-        else:
-            return self.resolve_function_id(name)
+        return self.resolve_function_id(name)
 
-    def add_action(self, comment, callback=False):
-        if comment not in self._actions:
-            self._actions.append(comment)
-            action_id = len(self._actions) - 1
-            if callback:
-                self._callback_actions.append(action_id)
-        else:
-            action_id = self.resolve_action_id(comment)
+    def _add_aux_func(self, identifier, is_callback, formal_arg_names):
+        self.aux_funcs[identifier] = {'is callback': is_callback,
+                                      'formal arg names': formal_arg_names}
 
-        return action_id
-
-    def add_aux_func(self, identifier, is_callback, formal_arg_names):
-        self.aux_funcs[identifier] = {'is callback': is_callback, 'formal arg names': formal_arg_names}
-
-    def add_emg_comment(self, file, line, data):
+    def _add_emg_comment(self, file, line, data):
         if file not in self.emg_comments:
             self.emg_comments[file] = dict()
         self.emg_comments[file][line] = data
 
-    def resolve_file_id(self, file):
+    def _resolve_file_id(self, file):
         return self._files.index(file)
 
-    def resolve_file(self, identifier):
+    def _resolve_file(self, identifier):
         return self._files[identifier]
 
     def resolve_function_id(self, name):
@@ -177,11 +175,8 @@ class ErrorTrace:
     def add_invariant(self, invariant, node_id):
         self.invariants[node_id] = invariant
 
-    def resolve_function(self, identifier):
+    def _resolve_function(self, identifier):
         return self._funcs[identifier]
-
-    def resolve_action_id(self, comment):
-        return self._actions.index(comment)
 
     def process_comment(self, comment: str) -> str:
         if len(comment) > self.MAX_COMMENT_LENGTH:
@@ -197,7 +192,7 @@ class ErrorTrace:
 
     def process_verifier_notes(self):
         # Get information from sources.
-        self.parse_model_comments()
+        self._parse_model_comments()
         self._logger.info('Mark witness with model comments')
         if self._model_funcs or self._notes:
             self.is_notes = True
@@ -208,7 +203,7 @@ class ErrorTrace:
                 warn_edges.append(edge['warn'])
             file_id = edge.get('file', None)
             if isinstance(file_id, int):
-                file = self.resolve_file(file_id)
+                file = self._resolve_file(file_id)
             else:
                 continue
 
@@ -218,22 +213,22 @@ class ErrorTrace:
                 func_id = edge['enter']
                 if func_id in self._model_funcs:
                     note = self._model_funcs[func_id]
-                    self._logger.debug("Add note {!r} for model function '{}'".
-                                       format(note,self.resolve_function(func_id)))
+                    self._logger.debug(f"Add note {note} for model function "
+                                       f"'{self._resolve_function(func_id)}'")
                     edge['note'] = self.process_comment(note)
                 if func_id in self._env_models:
                     env_note = self._env_models[func_id]
-                    self._logger.debug("Add note {!r} for environment function '{}'".
-                                       format(env_note,self.resolve_function(func_id)))
+                    self._logger.debug(f"Add note {env_note} for environment function '"
+                                       f"{self._resolve_function(func_id)}'")
                     edge['env'] = self.process_comment(env_note)
 
             if file_id in self._notes and start_line in self._notes[file_id]:
                 note = self._notes[file_id][start_line]
-                self._logger.debug("Add note {!r} for statement from '{}:{}'".format(note, file, start_line))
+                self._logger.debug(f"Add note {note} for statement from '{file}:{start_line}'")
                 edge['note'] = self.process_comment(note)
             elif file_id in self._asserts and start_line in self._asserts[file_id]:
                 warn = self._asserts[file_id][start_line]
-                self._logger.debug("Add warning {!r} for statement from '{}:{}'".format(warn, file, start_line))
+                self._logger.debug(f"Add warning {warn} for statement from '{file}:{start_line}'")
                 edge['warn'] = self.process_comment(warn)
                 warn_edges.append(warn)
             else:
@@ -247,25 +242,25 @@ class ErrorTrace:
             if self._edges:
                 last_edge = self._edges[-1]
                 if 'note' in last_edge:
-                    last_edge['warn'] = "Violation of '{}'".format(self.process_comment(last_edge['note']))
+                    last_edge['warn'] = f"Violation of '{self.process_comment(last_edge['note'])}'"
                     del last_edge['note']
                 else:
                     last_edge['warn'] = 'Property violation'
         del self._model_funcs, self._notes, self._asserts, self._env_models
 
-    def parse_model_comments(self):
+    def _parse_model_comments(self):
         self._logger.info('Parse model comments from source files referred by witness')
-        emg_comment = re.compile('/\*\sLDV\s(.*)\s\*/')
+        emg_comment = re.compile(r'/\*\sLDV\s(.*)\s\*/')
 
         for file_id, file in self.files:
             if not os.path.isfile(file):
                 continue
 
-            self._logger.debug('Parse model comments from {!r}'.format(file))
+            self._logger.debug(f'Parse model comments from {file}')
 
-            with open(file, encoding='utf8', errors='ignore') as fp:
+            with open(file, encoding='utf8', errors='ignore') as file_obj:
                 line = 0
-                for text in fp:
+                for text in file_obj:
                     line += 1
 
                     # Try match EMG comment
@@ -273,29 +268,30 @@ class ErrorTrace:
                     match = emg_comment.search(text)
                     if match:
                         data = json.loads(match.group(1))
-                        self.add_emg_comment(file_id, line, data)
+                        self._add_emg_comment(file_id, line, data)
 
                     # Match rest comments
-                    match = re.search(r'/\*\s+({0})\s+(\S+)\s+(.*)\*/'.format(self.MODEL_COMMENT_TYPES), text)
+                    match = re.search(
+                        rf'/\*\s+({self.MODEL_COMMENT_TYPES})\s+(\S+)\s+(.*)\*/', text)
                     if match:
                         kind, func_name, comment = match.groups()
 
                         comment = comment.rstrip()
                         if kind in ("NOTE", "WARN"):
-                            comment = "{} {}".format(func_name, comment)
+                            comment = f"{func_name} {comment}"
 
                             if file_id not in self._notes:
                                 self._notes[file_id] = dict()
                             self._notes[file_id][line + 1] = comment
                             self._logger.debug(
-                                "Get note '{0}' for statement from '{1}:{2}'".format(comment, file, line + 1))
+                                f"Get note '{comment}' for statement from '{file}:{line + 1}'")
                             # Some assertions will become warnings.
                             if kind == 'ASSERT':
                                 if file_id not in self._asserts:
                                     self._asserts[file_id] = dict()
                                 self._asserts[file_id][line + 1] = comment
-                                self._logger.debug("Get assertion '{0}' for statement from '{1}:{2}'".
-                                                   format(comment, file, line + 1))
+                                self._logger.debug(f"Get assertion '{comment}' for statement "
+                                                   f"from '{file}:{line + 1}'")
                         else:
                             func_name = func_name.rstrip()
                             if not comment:
@@ -305,19 +301,20 @@ class ErrorTrace:
                             if kind in ('AUX_FUNC', 'AUX_FUNC_CALLBACK'):
                                 # Get necessary function declaration located on following line.
                                 try:
-                                    func_decl = next(fp)
+                                    func_decl = next(file_obj)
                                     # Don't forget to increase counter.
                                     line += 1
 
-                                    # Try to get names for formal arguments (in form "type name") that is required for
-                                    # removing auxiliary function calls.
-                                    match = re.search(r'{0}\s*\((.+)\)'.format(func_name), func_decl)
+                                    # Try to get names for formal arguments (in form "type name")
+                                    # that is required for removing auxiliary function calls.
+                                    match = re.search(rf'{func_name}\s*\((.+)\)', func_decl)
                                     if match:
                                         formal_args_str = match.group(1)
 
-                                        # Remove arguments of function pointers and braces around corresponding argument
-                                        # names.
-                                        formal_args_str = re.sub(r'\((.+)\)\(.+\)', '\g<1>', formal_args_str)
+                                        # Remove arguments of function pointers and braces around
+                                        # corresponding argument names.
+                                        formal_args_str = re.sub(r'\((.+)\)\(.+\)', r'\g<1>',
+                                                                 formal_args_str)
 
                                         for formal_arg in formal_args_str.split(','):
                                             match = re.search(r'^.*\W+(\w+)\s*$', formal_arg)
@@ -329,7 +326,8 @@ class ErrorTrace:
 
                                             formal_arg_names.append(match.group(1))
                                 except StopIteration:
-                                    self._logger.warning('Auxiliary function definition does not exist')
+                                    self._logger.warning(
+                                        'Auxiliary function definition does not exist')
                                     continue
 
                             # Deal with functions referenced by witness.
@@ -340,21 +338,21 @@ class ErrorTrace:
                                 func_id = self.resolve_function_id(func_name)
 
                             if kind == 'AUX_FUNC':
-                                self.add_aux_func(func_id, False, formal_arg_names)
-                                self._logger.debug("Get auxiliary function '{0}' from '{1}:{2}'".
-                                                   format(func_name, file, line))
+                                self._add_aux_func(func_id, False, formal_arg_names)
+                                self._logger.debug(
+                                    f"Get auxiliary function '{func_name}' from '{file}:{line}'")
                             elif kind == 'AUX_FUNC_CALLBACK':
-                                self.add_aux_func(func_id, True, formal_arg_names)
-                                self._logger.debug("Get auxiliary function '{0}' for callback from '{1}:{2}'".
-                                                   format(func_name, file, line))
+                                self._add_aux_func(func_id, True, formal_arg_names)
+                                self._logger.debug(f"Get auxiliary function '{func_name}' for "
+                                                   f"callback from '{file}:{line}'")
                             elif kind == 'ENVIRONMENT_MODEL':
                                 self._env_models[func_id] = comment
-                                self._logger.debug("Get environment model '{0}' for function '{1}' from '{2}:{3}'".
-                                                   format(comment, func_name, file, line))
+                                self._logger.debug(f"Get environment model '{comment}' for "
+                                                   f"function '{func_name}' from '{file}:{line}'")
                             else:
                                 self._model_funcs[func_id] = comment
-                                self._logger.debug("Get note '{0}' for model function '{1}' from '{2}:{3}'".
-                                                   format(comment, func_name, file, line))
+                                self._logger.debug(f"Get note '{comment}' for model function "
+                                                   f"'{func_name}' from '{file}:{line}'")
 
     def add_thread(self, thread_id: str):
         self._threads.append(thread_id)
@@ -363,10 +361,11 @@ class ErrorTrace:
         # Check for warnings
         if self.witness_type == 'violation':
             if not self.is_call_stack:
-                self._warnings.append(
-                    'No call stack (please add tags "enterFunction" and "returnFrom" to improve visualization)')
+                self._warnings.append('No call stack (please add tags "enterFunction" and '
+                                      '"returnFrom" to improve visualization)')
             if not self.is_conditions:
-                self._warnings.append('No conditions (please add tags "control" to improve visualization)')
+                self._warnings.append(
+                    'No conditions (please add tags "control" to improve visualization)')
             if not self.is_main_function and self._edges:
                 self._warnings.append('No entry point (entry point call was generated)')
                 entry_elem = {
@@ -374,18 +373,17 @@ class ErrorTrace:
                     'start line': 0,
                     'file': 0,
                     'env': 'entry point',
-                    'source': "{}()".format(entry_point)
+                    'source': f"{entry_point}()"
                 }
                 if not self._threads:
                     entry_elem['thread'] = '1'
                 else:
                     entry_elem['thread'] = str(self._threads[0])
                 self._edges.insert(0, entry_elem)
-            '''
-            if not self.is_notes:
-                self._warnings.append(
-                    'Optional: no violation hints (please add tags "note" and "warn" to improve visualization)')
-            '''
+            # if not self.is_notes:
+            #     self._warnings.append(
+            #         'Optional: no violation hints (please add tags "note" and "warn" to '
+            #         'improve visualization)')
         if not self._threads:
             is_main_process = False
             for edge in self._edges:
@@ -402,13 +400,4 @@ class ErrorTrace:
     def get_file_name(self, identifier: int):
         if self._files:
             return self._files[identifier]
-        else:
-            return None
-
-
-def get_original_file(edge):
-    return edge.get('original file', edge['file'])
-
-
-def get_original_start_line(edge):
-    return edge.get('original start line', edge['start line'])
+        return None

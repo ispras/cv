@@ -301,7 +301,8 @@ class MEA(Component):
             zfp.write(source_files, arcname=ERROR_TRACE_SOURCES)
             zfp.write(converted_traces_files, arcname=CONVERTED_ERROR_TRACES)
         if self.result_dir:
-            os.environ.setdefault("DJANGO_SETTINGS_MODULE", "bridge.settings")
+            self.__export_et_parser_lib()
+            os.environ.setdefault("DJANGO_SETTINGS_MODULE", "web.settings")
             import django
             from django.conf import settings
             settings.INSTALLED_APPS = (
@@ -312,10 +313,9 @@ class MEA(Component):
                 'django.contrib.sessions',
                 'django.contrib.messages',
                 'django.contrib.staticfiles',
-                'reports',
+                'reports', 'jobs'
             )
             django.setup()
-            self.__export_et_parser_lib()
             # noinspection PyUnresolvedReferences
             from reports.etv import convert_json_trace_to_html
             with open(json_trace_name, encoding="utf8") as trace_file:

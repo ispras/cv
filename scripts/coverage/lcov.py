@@ -17,14 +17,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+"""
+Module for lcov coverage processing.
+"""
+
 import json
 import os
 import re
 
 
-# TODO: refactor this
-
-def add_to_coverage(merged_coverage_info, coverage_info):
+def _add_to_coverage(merged_coverage_info, coverage_info):
     for file_name in coverage_info:
         merged_coverage_info.setdefault(file_name, {
             'total functions': coverage_info[file_name][0]['total functions'],
@@ -44,7 +47,7 @@ def add_to_coverage(merged_coverage_info, coverage_info):
                         merged_coverage_info[file_name]['covered function names'].append(name)
 
 
-def get_coverage(merged_coverage_info):
+def _get_coverage(merged_coverage_info):
     # Map combined coverage to the required format
     line_coverage = dict()
     function_coverage = dict()
@@ -66,7 +69,8 @@ def get_coverage(merged_coverage_info):
                                           merged_coverage_info[file_name]['total functions']]
 
         if merged_coverage_info[file_name].get('covered function names'):
-            function_name_staticitcs[file_name] = list(merged_coverage_info[file_name]['covered function names'])
+            function_name_staticitcs[file_name] = \
+                list(merged_coverage_info[file_name]['covered function names'])
     function_name_staticitcs['overall'] = None
 
     # Merge covered lines into the range
@@ -120,16 +124,16 @@ def __build_ranges(lines):
     return res
 
 
-def make_relative_path(dirs, file_or_dir, absolutize=False):
+def _make_relative_path(dirs, file_or_dir, absolutize=False):
     # Normalize paths first of all.
-    dirs = [os.path.normpath(d) for d in dirs]
+    dirs = [os.path.normpath(directory) for directory in dirs]
     file_or_dir = os.path.normpath(file_or_dir)
 
     # Check all dirs are absolute or relative.
     is_dirs_abs = False
-    if all(os.path.isabs(d) for d in dirs):
+    if all(os.path.isabs(directory) for directory in dirs):
         is_dirs_abs = True
-    elif all(not os.path.isabs(d) for d in dirs):
+    elif all(not os.path.isabs(directory) for directory in dirs):
         pass
     else:
         raise ValueError('Can not mix absolute and relative dirs')
@@ -150,14 +154,17 @@ def make_relative_path(dirs, file_or_dir, absolutize=False):
             return file_or_dir
 
     # Find and return if so path relative to the longest directory.
-    for d in sorted(dirs, key=lambda t: len(t), reverse=True):
-        if os.path.commonpath([file_or_dir, d]) == d:
-            return os.path.relpath(file_or_dir, d)
+    for directory in sorted(dirs, key=lambda t: len(t), reverse=True):
+        if os.path.commonpath([file_or_dir, directory]) == directory:
+            return os.path.relpath(file_or_dir, directory)
 
     return file_or_dir
 
 
 class LCOV:
+    """
+    Coverage processor for lcov results
+    """
     NEW_FILE_PREFIX = "TN:"
     EOR_PREFIX = "end_of_record"
     FILENAME_PREFIX = "SF:"
@@ -166,9 +173,9 @@ class LCOV:
     FUNCTION_NAME_PREFIX = "FN:"
     PARIALLY_ALLOWED_EXT = ('.c', '.i', '.c.aux')
 
-    def __init__(self, logger, coverage_file, clade_dir, source_dirs, search_dirs, main_work_dir, completeness,
-                 coverage_id=None, coverage_info_dir=None, collect_functions=True, ignore_files=None,
-                 default_file=None):
+    def __init__(self, logger, coverage_file, clade_dir, source_dirs, search_dirs, main_work_dir,
+                 completeness, coverage_id=None, coverage_info_dir=None, collect_functions=True,
+                 ignore_files=None, default_file=None):
         # Public
         self.logger = logger
         self.coverage_file = coverage_file
@@ -187,7 +194,7 @@ class LCOV:
 
         # Sanity checks
         if self.completeness not in ('full', 'partial', 'lightweight', 'none', None):
-            raise NotImplementedError("Coverage type {!r} is not supported".format(self.completeness))
+            raise NotImplementedError(f"Coverage type {self.completeness} is not supported")
 
         # Import coverage
         try:
@@ -195,19 +202,24 @@ class LCOV:
                 self.coverage_info = self.parse()
 
                 if coverage_id:
-                    with open(coverage_id, 'w', encoding='utf-8') as fp:
-                        json.dump(self.coverage_info, fp, ensure_ascii=True, sort_keys=True, indent="\t")
+                    with open(coverage_id, 'w', encoding='utf-8') as file_obj:
+                        json.dump(self.coverage_info, file_obj, ensure_ascii=True, sort_keys=True,
+                                  indent="\t")
 
                 coverage = {}
-                add_to_coverage(coverage, self.coverage_info)
-                with open('coverage.json', 'w', encoding='utf-8') as fp:
-                    json.dump(get_coverage(coverage), fp, ensure_ascii=True, sort_keys=True, indent=None)
+                _add_to_coverage(coverage, self.coverage_info)
+                with open('coverage.json', 'w', encoding='utf-8') as file_obj:
+                    json.dump(_get_coverage(coverage), file_obj, ensure_ascii=True, sort_keys=True,
+                              indent=None)
         except Exception:
             if os.path.isfile('coverage.json'):
                 os.remove('coverage.json')
             raise
 
     def parse(self) -> dict:
+        """
+        Parses lcov results
+        """
         dir_map = (
             ('sources', self.source_dirs),
             ('specifications', (
@@ -221,23 +233,24 @@ class LCOV:
         ignore_file = False
 
         if not os.path.isfile(self.coverage_file):
-            raise Exception('There is no coverage file {0}'.format(self.coverage_file))
+            raise Exception(f'There is no coverage file {self.coverage_file}')
 
         # Gettings dirs, that should be excluded.
         excluded_dirs = set()
         if self.completeness in ('partial', 'lightweight'):
-            with open(self.coverage_file, encoding='utf-8') as fp:
+            with open(self.coverage_file, encoding='utf-8') as file_obj:
                 # Build map, that contains dir as key and list of files in the dir as value
                 all_files = {}
-                for line in fp:
+                for line in file_obj:
                     line = line.rstrip('\n')
                     if line.startswith(self.FILENAME_PREFIX):
                         file_name = line[len(self.FILENAME_PREFIX):]
                         file_name = os.path.normpath(file_name)
                         if os.path.isfile(file_name):
                             path, file = os.path.split(file_name)
-                            # All pathes should be absolute, otherwise we cannot match source dirs later
-                            path = os.path.join(os.path.sep, make_relative_path([self.clade_dir], path))
+                            # All pathes should be absolute, otherwise we cannot match source dirs
+                            path = os.path.join(os.path.sep,
+                                                _make_relative_path([self.clade_dir], path))
                             all_files.setdefault(path, [])
                             all_files[path].append(file)
 
@@ -245,7 +258,7 @@ class LCOV:
                     # Lightweight coverage keeps only source code dirs.
                     if self.completeness == 'lightweight' and \
                             all(os.path.commonpath([s, path]) != s for s in self.source_dirs):
-                        self.logger.debug('Excluded {0}'.format(path))
+                        self.logger.debug(f'Excluded {path}')
                         excluded_dirs.add(path)
                         continue
                     # Partial coverage keeps only dirs, that contains source files.
@@ -257,9 +270,9 @@ class LCOV:
 
         # Parsing coverage file
         coverage_info = {}
-        with open(self.coverage_file, encoding='utf-8') as fp:
+        with open(self.coverage_file, encoding='utf-8') as file_obj:
             count_covered_functions = None
-            for line in fp:
+            for line in file_obj:
                 line = line.rstrip('\n')
 
                 if ignore_file and not line.startswith(self.FILENAME_PREFIX):
@@ -278,7 +291,8 @@ class LCOV:
                     real_file_name = os.path.normpath(real_file_name)
                     if self.default_file:
                         # TODO: dirty workaround (required for specific cases).
-                        dw_name = re.sub(r'.+/vcloud-\S+/worker/working_dir_[^/]+/', '', real_file_name)
+                        dw_name = re.sub(r'.+/vcloud-\S+/worker/working_dir_[^/]+/', '',
+                                         real_file_name)
                         real_file_name = self.default_file
                         for source_dir in self.source_dirs:
                             for tmp_file_name in [self.default_file, dw_name]:
@@ -287,7 +301,7 @@ class LCOV:
                                     real_file_name = tmp_file_name
                                     break
                     file_name = os.path.join(os.path.sep,
-                                             make_relative_path([self.clade_dir], real_file_name))
+                                             _make_relative_path([self.clade_dir], real_file_name))
                     if os.path.isfile(real_file_name) and \
                             all(os.path.commonpath((p, file_name)) != p for p in excluded_dirs):
                         for dest, srcs in dir_map:
@@ -297,7 +311,8 @@ class LCOV:
                                 if dest == 'generated' or dest == 'specifications':
                                     new_file_name = os.path.join(dest, os.path.basename(file_name))
                                 else:
-                                    new_file_name = os.path.join(dest, os.path.relpath(file_name, src))
+                                    new_file_name = os.path.join(dest, os.path.relpath(file_name,
+                                                                                       src))
 
                                 if new_file_name in self.ignore_files:
                                     continue
@@ -309,7 +324,7 @@ class LCOV:
                         # This "else" corresponds "for"
                         else:
                             # Check other prefixes
-                            new_file_name = make_relative_path(self.search_dirs, file_name)
+                            new_file_name = _make_relative_path(self.search_dirs, file_name)
                             if new_file_name == file_name:
                                 ignore_file = True
                                 continue
@@ -340,9 +355,11 @@ class LCOV:
                 elif line.startswith(self.EOR_PREFIX):
                     # End coverage for the specific file
 
-                    # Add not covered functions
-                    covered_functions.update({line: 0 for line in set(function_to_line.values())
-                                             .difference(set(covered_functions.keys()))})
+                    # Add functions, which were not covered
+
+                    covered_functions.update({
+                        line: 0 for line in set(function_to_line.values()).difference(
+                            set(covered_functions.keys()))})
 
                     coverage_info.setdefault(file_name, [])
 
@@ -354,8 +371,9 @@ class LCOV:
                         'covered functions': covered_functions
                     }
                     if self.collect_functions:
-                        new_cov['covered function names'] = list((name for name, line in function_to_line.items()
-                                                                  if covered_functions[line] != 0))
+                        new_cov['covered function names'] = \
+                            list((name for name, line in function_to_line.items()
+                                  if covered_functions[line] != 0))
                     coverage_info[file_name].append(new_cov)
 
         return coverage_info
