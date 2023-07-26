@@ -81,7 +81,7 @@ def _basic_simplification(error_trace):
 
                 # Replace "& " with "&".
                 edge[source_kind] = re.sub(r'& ', '&', edge[source_kind])
-        if source_line == "1" or source_line == "\"\"":
+        if source_line in ("1", "\"\""):
             edge['sink'] = True
         edge['source'] = source_line
 
@@ -132,7 +132,7 @@ def _remove_switch_cases(logger, error_trace):
                 var = res.group(1)
                 continue
             # Start from scratch if first expression condition differs.
-            elif var != res.group(1):
+            if var != res.group(1):
                 var = None
                 continue
 

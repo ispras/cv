@@ -22,7 +22,7 @@
 This library presents core functions for MEA, such as conversion and comparison of error traces.
 """
 
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name, consider-iterating-dictionary
 
 import operator
 import re
@@ -147,7 +147,7 @@ def compare_error_traces(edited_error_trace: list, compared_error_trace: list,
 # noinspection PyUnusedLocal
 def __convert_call_tree_filter(error_trace: dict, args: dict = None) -> list:
     # pylint: disable=unused-argument
-    converted_error_trace = list()
+    converted_error_trace = []
     counter = 0
     # TODO: check this in core (one node for call and return edges).
     double_funcs = {}
@@ -234,7 +234,7 @@ def __convert_model_functions(error_trace: dict, args: dict = None) -> list:
             if not is_save:
                 for index in range(counter, counter + remove_items):
                     removed_indexes.add(index)
-    resulting_error_trace = list()
+    resulting_error_trace = []
     for counter, item in enumerate(converted_error_trace):
         if counter not in removed_indexes or counter in thread_start_indexes:
             resulting_error_trace.append(item)
@@ -242,8 +242,8 @@ def __convert_model_functions(error_trace: dict, args: dict = None) -> list:
 
 
 def __filter_functions(converted_error_trace: list, filtered_functions: set) -> list:
-    result = list()
-    filtered_stack = list()
+    result = []
+    filtered_stack = []
     cur_thread = None
     for item in converted_error_trace:
         op = item[CET_OP]
@@ -266,7 +266,7 @@ def __filter_functions(converted_error_trace: list, filtered_functions: set) -> 
 # noinspection PyUnusedLocal
 def __convert_conditions(error_trace: dict, args: dict = None) -> list:
     # pylint: disable=unused-argument
-    converted_error_trace = list()
+    converted_error_trace = []
     counter = 0
     for edge in error_trace['edges']:
         if 'condition' in edge:
@@ -286,7 +286,7 @@ def __convert_conditions(error_trace: dict, args: dict = None) -> list:
 # noinspection PyUnusedLocal
 def __convert_assignments(error_trace: dict, args: dict = None) -> list:
     # pylint: disable=unused-argument
-    converted_error_trace = list()
+    converted_error_trace = []
     counter = 0
     for edge in error_trace['edges']:
         if 'source' in edge:
@@ -307,7 +307,7 @@ def __convert_assignments(error_trace: dict, args: dict = None) -> list:
 def __convert_notes(error_trace: dict, args=None) -> list:
     if args is None:
         args = {}
-    converted_error_trace = list()
+    converted_error_trace = []
     counter = 0
     use_notes = args.get(TAG_USE_NOTES, False)
     use_warns = args.get(TAG_USE_WARNS, False)
@@ -362,7 +362,7 @@ def __get_model_functions(error_trace: dict, additional_model_functions: set) ->
     """
     Extract model functions from error trace.
     """
-    stack = list()
+    stack = []
     model_functions = additional_model_functions
     patterns = set()
     for func in model_functions:
@@ -391,30 +391,30 @@ def __prep_elem_for_cmp(elem: dict, error_trace: dict) -> None:
     op = elem[CET_OP]
     thread = elem[CET_THREAD]
     if thread not in error_trace:
-        error_trace[thread] = list()
+        error_trace[thread] = []
     if op in [CET_OP_RETURN, CET_OP_CALL]:
         error_trace[thread].append((op, elem[CET_DISPLAY_NAME]))
     elif op == CET_OP_ASSUME:
         thread_aux = f"{thread}_aux"
         if thread_aux not in error_trace:
-            error_trace[thread_aux] = list()
+            error_trace[thread_aux] = []
         error_trace[thread_aux].append((op, elem[CET_DISPLAY_NAME], elem[CET_SOURCE]))
     elif op in [CET_OP_WARN, CET_OP_NOTE, CET_OP_ASSIGN]:
         thread_aux = f"{thread}_aux"
         if thread_aux not in error_trace:
-            error_trace[thread_aux] = list()
+            error_trace[thread_aux] = []
         error_trace[thread_aux].append((op, elem[CET_DISPLAY_NAME]))
 
 
 def __transform_to_threads(edited_error_trace: list, compared_error_trace: list) -> (dict, dict):
-    et1 = dict()
-    et2 = dict()
+    et1 = {}
+    et2 = {}
     for et_elem in edited_error_trace:
         __prep_elem_for_cmp(et_elem, et1)
     for et_elem in compared_error_trace:
         __prep_elem_for_cmp(et_elem, et2)
-    et1_threaded = dict()
-    et2_threaded = dict()
+    et1_threaded = {}
+    et2_threaded = {}
     for thread, trace in et1.items():
         if trace:
             et1_threaded[thread] = tuple(trace)
@@ -443,7 +443,7 @@ def __compare_equal(edited_error_trace: dict, compared_error_trace: dict) -> int
         for id_2, thread_2 in compared_error_trace.items():
             if thread_1 == thread_2:
                 if id_1 not in result:
-                    result[id_1] = list()
+                    result[id_1] = []
                 result[id_1].append(id_2)
     return __convert_to_number_of_compared_threads(result)
 
@@ -454,7 +454,7 @@ def __compare_include(edited_error_trace: dict, compared_error_trace: dict) -> i
         for id_2, thread_2 in compared_error_trace.items():
             if __sublist(thread_1, thread_2):
                 if id_1 not in result:
-                    result[id_1] = list()
+                    result[id_1] = []
                 result[id_1].append(id_2)
     return __convert_to_number_of_compared_threads(result)
 
@@ -494,7 +494,7 @@ def __compare_include_partial(edited_error_trace: dict, compared_error_trace: di
         for id_2, thread_2 in compared_error_trace.items():
             if all(elem in thread_2 for elem in thread_1):
                 if id_1 not in result:
-                    result[id_1] = list()
+                    result[id_1] = []
                 result[id_1].append(id_2)
     return __convert_to_number_of_compared_threads(result)
 
@@ -513,7 +513,7 @@ def __compare_include_partial_ordered(edited_error_trace: dict, compared_error_t
                     break
             if is_eq:
                 if id_1 not in result:
-                    result[id_1] = list()
+                    result[id_1] = []
                 result[id_1].append(id_2)
     return __convert_to_number_of_compared_threads(result)
 

@@ -106,7 +106,7 @@ class WitnessParser:
         graph = root.find('graphml:graph', self.WITNESS_NS)
         for data in root.findall('graphml:key', self.WITNESS_NS):
             name = data.attrib.get('attr.name')
-            if name == "originFileName" or name == "originfile":
+            if name in ("originFileName", "originfile"):
                 for def_data in data.findall('graphml:default', self.WITNESS_NS):
                     new_name = self.__check_file_name(def_data.text)
                     if new_name:
@@ -159,12 +159,12 @@ class WitnessParser:
             if 'klever-attrs' in data.attrib and data.attrib['klever-attrs'] == 'true':
                 self.internal_witness.add_attr(
                     data.attrib.get('key'), data.text,
-                    True if data.attrib.get('associate', "false") == 'true' else False,
-                    True if data.attrib.get('compare', "false") == 'true' else False)
+                    data.attrib.get('associate', "false") == 'true',
+                    data.attrib.get('compare', "false") == 'true')
 
     def __parse_witness_nodes(self, graph):
-        sink_nodes_map = dict()
-        unsupported_node_data_keys = dict()
+        sink_nodes_map = {}
+        unsupported_node_data_keys = {}
         nodes_number = 0
 
         for node in graph.findall('graphml:node', self.WITNESS_NS):
@@ -199,7 +199,7 @@ class WitnessParser:
         return sink_nodes_map
 
     def __parse_witness_edges(self, graph, sink_nodes_map):
-        unsupported_edge_data_keys = dict()
+        unsupported_edge_data_keys = {}
         # Use maps for source files and functions as for nodes. Add artificial map to 0 for
         # default file without explicitly specifying its path.
         # The number of edges leading to sink nodes. Such edges will be completely removed.
@@ -240,8 +240,7 @@ class WitnessParser:
                 elif data_key == 'sourcecode':
                     is_source_file = True
                     _edge['source'] = data.text
-                elif data_key == 'enterFunction' or data_key == 'returnFrom' or \
-                        data_key == 'assumption.scope':
+                elif data_key in ('enterFunction', 'returnFrom', 'assumption.scope'):
                     function_name = data.text
                     func_index = self.internal_witness.add_function(function_name)
                     if data_key == 'enterFunction':

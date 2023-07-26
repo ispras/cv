@@ -31,9 +31,9 @@ def _add_to_coverage(merged_coverage_info, coverage_info):
     for file_name in coverage_info:
         merged_coverage_info.setdefault(file_name, {
             'total functions': coverage_info[file_name][0]['total functions'],
-            'covered lines': dict(),
-            'covered functions': dict(),
-            'covered function names': list()
+            'covered lines': {},
+            'covered functions': {},
+            'covered function names': []
         })
 
         for coverage in coverage_info[file_name]:
@@ -49,10 +49,10 @@ def _add_to_coverage(merged_coverage_info, coverage_info):
 
 def _get_coverage(merged_coverage_info):
     # Map combined coverage to the required format
-    line_coverage = dict()
-    function_coverage = dict()
-    function_statistics = dict()
-    function_name_staticitcs = dict()
+    line_coverage = {}
+    function_coverage = {}
+    function_statistics = {}
+    function_name_staticitcs = {}
 
     for file_name in list(merged_coverage_info.keys()):
         for line, value in merged_coverage_info[file_name]['covered lines'].items():
@@ -76,7 +76,7 @@ def _get_coverage(merged_coverage_info):
     # Merge covered lines into the range
     for key, value in line_coverage.items():
         for file_name, lines in value.items():
-            line_coverage[key][file_name] = __build_ranges(lines)
+            value[file_name] = __build_ranges(lines)
 
     return {
         'line coverage': [[key, value] for key, value in line_coverage.items()],
@@ -233,7 +233,7 @@ class LCOV:
         ignore_file = False
 
         if not os.path.isfile(self.coverage_file):
-            raise Exception(f'There is no coverage file {self.coverage_file}')
+            raise FileNotFoundError(f'There is no coverage file {self.coverage_file}')
 
         # Gettings dirs, that should be excluded.
         excluded_dirs = set()
@@ -308,7 +308,7 @@ class LCOV:
                             for src in srcs:
                                 if os.path.commonpath([real_file_name, src]) != src:
                                     continue
-                                if dest == 'generated' or dest == 'specifications':
+                                if dest in ('generated', 'specifications'):
                                     new_file_name = os.path.join(dest, os.path.basename(file_name))
                                 else:
                                     new_file_name = os.path.join(dest, os.path.relpath(file_name,
@@ -328,8 +328,7 @@ class LCOV:
                             if new_file_name == file_name:
                                 ignore_file = True
                                 continue
-                            else:
-                                ignore_file = False
+                            ignore_file = False
                             new_file_name = os.path.join('specifications', new_file_name)
 
                         self.arcnames[real_file_name] = new_file_name

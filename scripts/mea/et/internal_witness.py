@@ -47,25 +47,25 @@ class InternalWitness:
     MAX_COMMENT_LENGTH = 128
 
     def __init__(self, logger):
-        self._attrs = list()
-        self._edges = list()
-        self._files = list()
-        self._funcs = list()
+        self._attrs = []
+        self._edges = []
+        self._files = []
+        self._funcs = []
         self._logger = logger
         self._entry_node_id = None
-        self._model_funcs = dict()
-        self._spec_funcs = dict()
-        self._env_models = dict()
-        self._notes = dict()
-        self._asserts = dict()
-        self._actions = list()
-        self._callback_actions = list()
-        self.aux_funcs = dict()
-        self.emg_comments = dict()
-        self._threads = list()
+        self._model_funcs = {}
+        self._spec_funcs = {}
+        self._env_models = {}
+        self._notes = {}
+        self._asserts = {}
+        self._actions = []
+        self._callback_actions = []
+        self.aux_funcs = {}
+        self.emg_comments = {}
+        self._threads = []
         self.witness_type = None
-        self.invariants = dict()
-        self._warnings = list()
+        self.invariants = {}
+        self._warnings = []
         self.is_call_stack = False
         self.is_main_function = False
         self.is_conditions = False
@@ -95,6 +95,7 @@ class InternalWitness:
         return self._edges[start_index:end_index]
 
     def prune(self):
+        # pylint: disable=consider-using-set-comprehension
         sink_edges = set([self._edges.index(e) for e in self._edges if e.get('sink')])
         self._edges = [e for index, e in enumerate(self._edges) if index not in sink_edges]
 
@@ -160,7 +161,7 @@ class InternalWitness:
 
     def _add_emg_comment(self, file, line, data):
         if file not in self.emg_comments:
-            self.emg_comments[file] = dict()
+            self.emg_comments[file] = {}
         self.emg_comments[file][line] = data
 
     def _resolve_file_id(self, file):
@@ -197,7 +198,7 @@ class InternalWitness:
         if self._model_funcs or self._notes:
             self.is_notes = True
 
-        warn_edges = list()
+        warn_edges = []
         for edge in self._edges:
             if 'warn' in edge:
                 warn_edges.append(edge['warn'])
@@ -281,14 +282,14 @@ class InternalWitness:
                             comment = f"{func_name} {comment}"
 
                             if file_id not in self._notes:
-                                self._notes[file_id] = dict()
+                                self._notes[file_id] = {}
                             self._notes[file_id][line + 1] = comment
                             self._logger.debug(
                                 f"Get note '{comment}' for statement from '{file}:{line + 1}'")
                             # Some assertions will become warnings.
                             if kind == 'ASSERT':
                                 if file_id not in self._asserts:
-                                    self._asserts[file_id] = dict()
+                                    self._asserts[file_id] = {}
                                 self._asserts[file_id][line + 1] = comment
                                 self._logger.debug(f"Get assertion '{comment}' for statement "
                                                    f"from '{file}:{line + 1}'")
