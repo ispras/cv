@@ -29,6 +29,7 @@ cif="cif"
 
 # Scripts
 bv_script="process_benchmark.py"
+bridge_script="bridge.py"
 wv_script="visualize_witnesses.py"
 launch_script="launch.py"
 auto_script="auto_check.py"
@@ -223,6 +224,11 @@ install-mea: install-witness-visualizer
 install-benchmark-visualizer: install-witness-visualizer
 	@cp -r ${cvv_dir}/utils/ ${DEPLOY_DIR}/${cvv_dir}/
 	@cp -f ${root_dir}/scripts/${bv_script} ${DEPLOY_DIR}/scripts/
+
+install-klever-bridge: install-witness-visualizer
+	@cp -r ${cvv_dir}/utils/ ${DEPLOY_DIR}/${cvv_dir}/
+	@cp -f ${root_dir}/scripts/${bridge_script} ${DEPLOY_DIR}/scripts/
+	@echo "*** Klever bridge has been successfully installed into the directory ${DEPLOY_DIR} ***"
 
 install: check-deploy-dir install-cvv install-benchexec install-cil install-cpa install-scripts install-cpa
 	@$(call verify_installation,${DEPLOY_DIR})
