@@ -14,8 +14,8 @@ sudo apt install git openjdk-11-jdk python3 python3-dev ant lcov cmake libmpc-de
 sudo pip3 install requests ujson graphviz ply pytest atomicwrites pathlib2 more-itertools pluggy py attrs setuptools six django==2.1 clade psycopg2 pyyaml pycparser sympy
 ```
 
-1. Инструмент klever — web-интерфейс, отвечающий за визуализацию результатов.
-Репозиторий: https://github.com/mutilin/klever.git
+1. Инструмент CVV — web-интерфейс, отвечающий за визуализацию результатов.
+Репозиторий: https://github.com/vmordan/cvv
 Развёртывание web-интерфейса описано в инструкции docs/web_interface.txt.
 
 2. Инструмент CIL отвечает за объединение исходных файлов и их упрощение.

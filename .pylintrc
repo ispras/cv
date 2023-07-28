@@ -16,5 +16,8 @@ disable=
     too-many-nested-blocks,
     import-outside-toplevel,
     no-member,
-    duplicate-code
+    duplicate-code,
+    too-few-public-methods,
+    unnecessary-lambda,
+    no-name-in-module
 

@@ -5,7 +5,7 @@
   },
   "tools": {
     "cil": "abs path to cilly.asm.exe",
-    "klever": "abs path to Klever core",
+    "cvv": "abs path to CVV",
     "benchexec": "abs path to benchexec",
     "cpachecker": {
       "unreachability": "abs path to CPAchecker branch ldv-bam",
@@ -105,10 +105,10 @@
     "master": "host, on which cloud master is running"
   },
   "uploader": {
-    "upload results": "if true, then results will be automatically uploaded into the server (Klever web-interface)",
+    "upload results": "if true, then results will be automatically uploaded into the server (CVV web-interface)",
     "identifier": "job identifier on the server",
     "parent id": "if true, then the given identifier will be treated as parent job identifier",
-    "server": "<host>:<port> of Klever web-interface",
+    "server": "<host>:<port> of CVV web-interface",
     "user": "valid user name on the server (this user should have access for this job identifier)",
     "password": "password for the user",
     "name": "name of the report to be uploaded"

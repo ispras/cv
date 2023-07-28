@@ -21,7 +21,7 @@ cpu_cores=$(shell nproc)
 
 
 # Additional tools.
-klever="klever"
+cvv="cvv"
 cil="cil"
 frama_c_cil="frama_c_cil"
 benchexec="benchexec"
@@ -36,8 +36,8 @@ auto_script="auto_check.py"
 # Directories
 root_dir=$(shell pwd)
 install_dir=tools
-klever_dir=${install_dir}/${klever}
-mea_lib=${install_dir}/${klever}/bridge/reports/mea/core.py
+cvv_dir=${install_dir}/${cvv}
+mea_lib=web/reports/mea/core.py
 cil_dir=${install_dir}/${cil}
 frama_c_cil_dir=${install_dir}/${frama_c_cil}
 benchexec_dir=${install_dir}/${benchexec}
@@ -50,23 +50,23 @@ cil_arch="cil.xz"
 compiled_cil_arch="frama_c_cil.xz"
 
 # Repositories
-klever_repo="https://github.com/mutilin/klever.git"
+cvv_repo="https://gitlab.ispras.ru/verification/cvv.git"
 benchexec_repo="https://github.com/sosy-lab/benchexec.git"
 cif_repo="https://github.com/ldv-klever/cif.git"
 cif_compiled_link="https://github.com/ldv-klever/cif/releases/download/v1.2/linux-x86_64-cif-1.2.tar.xz"
 cil_compiled_link="https://forge.ispras.ru/attachments/download/9905/frama-c-cil-c012809.tar.xz"
 
 # Aux constants.
-cvwi_branch=cv-v2.0
+cvv_branch=master
 benchexec_branch=3.16
 cif_revision=master
 
 tools_config_file=${install_dir}/config.json
 
 
-download-klever:
-	@$(call download_tool,${klever},${klever_dir},${klever_repo})
-	@cd ${klever_dir}; git checkout ${cvwi_branch}; git pull
+download-cvv:
+	@$(call download_tool,${cvv},${cvv_dir},${cvv_repo})
+	@cd ${cvv_dir}; git checkout ${cvv_branch}; git pull
 
 download-benchexec:
 	@$(call download_tool,${benchexec},${benchexec_dir},${benchexec_repo})
@@ -84,14 +84,13 @@ download-frama-c-cil:
 	@rm -f ${compiled_cil_arch}
 	@cd ${install_dir}; wget ${cil_compiled_link} -O ${compiled_cil_arch}
 
-download: download-klever download-benchexec download-cpa
+download: download-cvv download-benchexec download-cpa
 	@echo "*** Downloading has been completed ***"
 
-build-klever: download-klever
-	@echo "*** Building ${klever} ***"
-	@echo "from bridge.development import *" > ${klever_dir}/bridge/bridge/settings.py
-	@echo "{}" > ${klever_dir}/bridge/bridge/db.json
-	@cp -r ${mea_lib} ${root_dir}/scripts/aux/mea.py
+build-cvv: download-cvv
+	@echo "*** Building ${cvv} ***"
+	@echo "from web.development import *" > ${cvv_dir}/web/web/settings.py
+	@echo "{}" > ${cvv_dir}/web/web/db.json
 
 build-benchexec: download-benchexec
 	@echo "*** Building ${benchexec} ***"
@@ -117,7 +116,7 @@ build-frama-c-cil: download-frama-c-cil
 	@mkdir -p ${frama_c_cil_dir}
 	@cd ${frama_c_cil_dir}; tar -xf ../${compiled_cil_arch}
 
-build: build-klever build-benchexec build-cil build-cpa
+build: build-cvv build-benchexec build-cil build-cpa
 	@echo "*** Building has been completed ***"
 
 clean-cpa:
@@ -139,20 +138,19 @@ check-deploy-dir:
 	@$(call check_dir,${DEPLOY_DIR},DEPLOY_DIR)
 
 
-install-klever: build-klever check-deploy-dir
-	@echo "*** Installing ${klever} ***"
+install-cvv: build-cvv check-deploy-dir
+	@echo "*** Installing ${cvv} ***"
 	@mkdir -p ${DEPLOY_DIR}/${install_dir}
-	@rm -rf ${DEPLOY_DIR}/${klever_dir}
-	@cp -r ${klever_dir} ${DEPLOY_DIR}/${klever_dir}
+	@rm -rf ${DEPLOY_DIR}/${cvv_dir}
+	@cp -r ${cvv_dir} ${DEPLOY_DIR}/${cvv_dir}
 	@mkdir -p ${DEPLOY_DIR}/scripts/aux
-	@cp -r ${mea_lib} ${DEPLOY_DIR}/scripts/aux/mea.py
-	@$(call shrink_installation,${DEPLOY_DIR}/${klever_dir})
+	@$(call shrink_installation,${DEPLOY_DIR}/${cvv_dir})
 
-deploy-klever-cv: build-klever check-deploy-dir
-	@echo "*** Deploying ${klever}-CV web-interface ***"
+deploy-cvv: build-cvv check-deploy-dir
+	@echo "*** Deploying ${cvv} web-interface ***"
 	@mkdir -p ${DEPLOY_DIR}
 	@rm -rf ${DEPLOY_DIR}
-	@cp -r ${klever_dir} ${DEPLOY_DIR}
+	@cp -r ${cvv_dir} ${DEPLOY_DIR}
 	@$(call shrink_installation,${DEPLOY_DIR})
 
 install-benchexec: build-benchexec check-deploy-dir
@@ -200,53 +198,37 @@ install-scripts: check-deploy-dir
 	cp -r ${root_dir}/${plugin_dir} . ; \
 	mkdir -p buildbot
 
-install-witness-visualizer: check-deploy-dir build-klever
+install-witness-visualizer: check-deploy-dir build-cvv
 	@mkdir -p ${DEPLOY_DIR}/${install_dir}
 	@cp ${tools_config_file} ${DEPLOY_DIR}/${install_dir}
-	@rm -rf ${DEPLOY_DIR}/${klever_dir}
-	@mkdir -p ${DEPLOY_DIR}/${klever_dir}
-	@mkdir -p ${DEPLOY_DIR}/${klever_dir}/core/core/vrp/et/
-	@cp ${klever_dir}/core/core/vrp/et/*.py ${DEPLOY_DIR}/${klever_dir}/core/core/vrp/et/
-	@mkdir -p ${DEPLOY_DIR}/${klever_dir}/bridge/
-	@mkdir -p ${DEPLOY_DIR}/${klever_dir}/bridge/templates/reports/
-	@mkdir -p ${DEPLOY_DIR}/${klever_dir}/bridge/reports/
-	@mkdir -p ${DEPLOY_DIR}/${klever_dir}/bridge/bridge/
-	@mkdir -p ${DEPLOY_DIR}/${klever_dir}/bridge/media/
-	@cp -r ${klever_dir}/bridge/static ${DEPLOY_DIR}/${klever_dir}/bridge/
-	@cp ${klever_dir}/bridge/templates/base.html ${DEPLOY_DIR}/${klever_dir}/bridge/templates/
-	@cp ${klever_dir}/bridge/reports/templates/reports/*.html ${DEPLOY_DIR}/${klever_dir}/bridge/templates/reports/
-	@cp -r ${klever_dir}/bridge/reports/mea ${DEPLOY_DIR}/${klever_dir}/bridge/reports/
-	@cp -r ${klever_dir}/bridge/reports/static ${DEPLOY_DIR}/${klever_dir}/bridge/reports/
-	@cp ${klever_dir}/bridge/reports/etv.py ${DEPLOY_DIR}/${klever_dir}/bridge/reports/
-	@cp ${klever_dir}/bridge/bridge/* ${DEPLOY_DIR}/${klever_dir}/bridge/bridge/
-	@rm -rf ${DEPLOY_DIR}/${klever_dir}/bridge/static/codemirror
-	@rm -rf ${DEPLOY_DIR}/${klever_dir}/bridge/static/calendar
-	@rm -rf ${DEPLOY_DIR}/${klever_dir}/bridge/static/jstree
-	@rm -rf ${DEPLOY_DIR}/${klever_dir}/bridge/static/js/population.js
+	@rm -rf ${DEPLOY_DIR}/${cvv_dir}
+	@cp -r ${cvv_dir}/web ${DEPLOY_DIR}/${cvv_dir}
+	@rm -rf ${DEPLOY_DIR}/${cvv_dir}/web/static/codemirror
+	@rm -rf ${DEPLOY_DIR}/${cvv_dir}/web/static/calendar
+	@rm -rf ${DEPLOY_DIR}/${cvv_dir}/web/static/jstree
+	@rm -rf ${DEPLOY_DIR}/${cvv_dir}/web/static/js/population.js
 	@cd ${DEPLOY_DIR} ; \
 	cp -r ${root_dir}/scripts/ . ; \
 	rm -f scripts/${launch_script} ; \
 	rm -f scripts/${auto_script} ; \
-	rm -f scripts/${bv_script} ; \
-	cp ${klever_dir}/bridge/reports/mea/core.py scripts/aux/mea.py
+	rm -f scripts/${bv_script}
 	@echo "*** Witness Visualizer has been successfully installed into the directory ${DEPLOY_DIR} ***"
 
 install-mea: install-witness-visualizer
 	@cd ${DEPLOY_DIR} ; \
 	rm -f scripts/${wv_script} ; \
-	rm -rf ${klever_dir}/bridge/
+	rm -rf ${cvv_dir}/web/
 	@echo "*** MEA has been successfully installed into the directory ${DEPLOY_DIR} ***"
 
 install-benchmark-visualizer: install-witness-visualizer
-	@cp -r ${klever_dir}/utils/ ${DEPLOY_DIR}/${klever_dir}/
+	@cp -r ${cvv_dir}/utils/ ${DEPLOY_DIR}/${cvv_dir}/
 	@cp -f ${root_dir}/scripts/${bv_script} ${DEPLOY_DIR}/scripts/
-	@cp ${klever_dir}/core/core/*.py ${DEPLOY_DIR}/${klever_dir}/core/core/
 
-install: check-deploy-dir install-klever install-benchexec install-cil install-cpa install-scripts install-cpa
+install: check-deploy-dir install-cvv install-benchexec install-cil install-cpa install-scripts install-cpa
 	@$(call verify_installation,${DEPLOY_DIR})
 	@echo "*** Successfully installed into the directory ${DEPLOY_DIR}' ***"
 
-install-with-cloud: check-deploy-dir install-klever install-benchexec install-cil install-cpa-with-cloud-links install-scripts
+install-with-cloud: check-deploy-dir install-cvv install-benchexec install-cil install-cpa-with-cloud-links install-scripts
 	@$(call verify_installation,${DEPLOY_DIR})
 	@echo "*** Successfully installed into the directory ${DEPLOY_DIR}' with access to verification cloud ***"
 
@@ -324,7 +306,7 @@ endef
 # $1 - deploy directory
 define verify_installation
 	echo "Verifying installation in directory '$1'"
-	for tool in ${benchexec} ${klever}; do \
+	for tool in ${benchexec} ${cvv}; do \
 		if [ -d "${1}/${install_dir}/$${tool}" ]; then \
 			echo "Tool '$${tool}' is installed" ; \
 		else \
@@ -337,5 +319,5 @@ endef
 # $1 - deploy directory
 define shrink_installation
 	echo "Removing aux files in directory '$1'"
-	@cd ${1} && rm -rf presets/ .git bridge/reports/test_files/
+	@cd ${1} && rm -rf .git .idea
 endef

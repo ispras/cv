@@ -26,22 +26,15 @@ import glob
 import json
 import logging
 import multiprocessing
-import operator
-import re
 import resource
 import time
 import zipfile
 
-# noinspection PyUnresolvedReferences
-from aux.mea import DEFAULT_CONVERSION_FUNCTION, CONVERSION_FUNCTION_MODEL_FUNCTIONS, \
-    CONVERSION_FUNCTION_CALL_TREE, CONVERSION_FUNCTION_NOTES, convert_error_trace, \
-    compare_error_traces, is_equivalent, DEFAULT_COMPARISON_FUNCTION, \
-    DEFAULT_SIMILARITY_THRESHOLD, TAG_COMPARISON_FUNCTION, TAG_CONVERSION_FUNCTION, \
-    TAG_ADDITIONAL_MODEL_FUNCTIONS, CONVERSION_FUNCTION_FULL
-
 from aux.common import *
 from components import *
 from components.component import Component
+from mea.core import *
+from mea.et import import_error_trace
 
 ERROR_TRACE_FILE = "error trace.json"
 CONVERTED_ERROR_TRACES = "converted error traces.json"
@@ -86,7 +79,6 @@ class MEA(Component):
                 os.makedirs(self.result_dir, exist_ok=True)
         else:
             self.result_dir = None
-        self.__export_et_parser_lib()
         self.rule = rule
 
         # List of files with error traces.
@@ -309,7 +301,8 @@ class MEA(Component):
             zfp.write(source_files, arcname=ERROR_TRACE_SOURCES)
             zfp.write(converted_traces_files, arcname=CONVERTED_ERROR_TRACES)
         if self.result_dir:
-            os.environ.setdefault("DJANGO_SETTINGS_MODULE", "bridge.settings")
+            self.__export_et_parser_lib()
+            os.environ.setdefault("DJANGO_SETTINGS_MODULE", "web.settings")
             import django
             from django.conf import settings
             settings.INSTALLED_APPS = (
@@ -320,7 +313,7 @@ class MEA(Component):
                 'django.contrib.sessions',
                 'django.contrib.messages',
                 'django.contrib.staticfiles',
-                'reports',
+                'reports', 'jobs'
             )
             django.setup()
             # noinspection PyUnresolvedReferences
@@ -348,11 +341,8 @@ class MEA(Component):
         parsed_error_trace['files'] = src_files
 
     def __parse_trace(self, error_trace_file: str, supported_types: set) -> dict:
-        # noinspection PyUnresolvedReferences
-        from core.vrp.et import import_error_trace
-
         # Those messages are waste of space.
-        logger = self._create_logger(
+        logger = Component._create_logger(
             "Witness processor", logging.WARNING if self.debug else logging.ERROR
         )
         try:
@@ -429,9 +419,6 @@ class MEA(Component):
         return self.component_config.get(self.rule, {}).get(tag, default)
 
     def __export_et_parser_lib(self):
-        et_parser_lib = self.get_tool_path(self._get_tool_default_path(ET_LIB),
-                                           self.config.get(TAG_TOOLS, {}).get(ET_LIB))
-        sys.path.append(et_parser_lib)
         et_html_lib = self.get_tool_path(self._get_tool_default_path(ET_HTML_LIB),
                                          self.config.get(TAG_TOOLS, {}).get(ET_HTML_LIB))
         sys.path.append(et_html_lib)

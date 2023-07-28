@@ -14,7 +14,7 @@ Witness Visualizer converts generic witnesses from [SV-COMP](https://sv-comp.sos
 
 Python (version>=3.4), python modules:
 ```shell
-sudo pip3 install requests ujson graphviz ply pytest atomicwrites more-itertools pluggy py attrs setuptools six django==2.1 psycopg2 pycparser sympy
+sudo pip3 install requests ujson graphviz ply pytest atomicwrites more-itertools pluggy py attrs setuptools six django psycopg2 pycparser sympy
 ```
 
 #### Deployment
