@@ -18,5 +18,6 @@ disable=
     no-member,
     duplicate-code,
     too-few-public-methods,
-    unnecessary-lambda
+    unnecessary-lambda,
+    no-name-in-module
 
