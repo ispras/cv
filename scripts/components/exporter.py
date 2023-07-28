@@ -240,7 +240,7 @@ class Exporter(Component):
                         wall = int(float(res.group(3)) * 1000)
                         mem = int(float(res.group(4)))
                         new_report = self.__create_component_report(name, cpu, wall, mem)
-                        if name in unknown_desc:
+                        if unknown_desc and name in unknown_desc:
                             counter = 0
                             for u_desc in unknown_desc[name]:
                                 log = u_desc[TAG_LOG_FILE]
@@ -261,7 +261,7 @@ class Exporter(Component):
                                     "wall time": u_desc[TAG_WALL_TIME]
                                 }
                                 reports.append(unknown_report)
-                        if name in component_attrs:
+                        if component_attrs and name in component_attrs:
                             new_report['attrs'] = component_attrs[name]
                         reports.append(new_report)
                         if name == COMPONENT_LAUNCHER:
