@@ -50,7 +50,7 @@ cil_arch="cil.xz"
 compiled_cil_arch="frama_c_cil.xz"
 
 # Repositories
-cvv_repo="https://github.com/vmordan/cvv.git"
+cvv_repo="https://gitlab.ispras.ru/verification/cvv.git"
 benchexec_repo="https://github.com/sosy-lab/benchexec.git"
 cif_repo="https://github.com/ldv-klever/cif.git"
 cif_compiled_link="https://github.com/ldv-klever/cif/releases/download/v1.2/linux-x86_64-cif-1.2.tar.xz"
