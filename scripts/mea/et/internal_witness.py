@@ -193,14 +193,12 @@ class InternalWitness:
         # Check for format with note levels
         # Example: level="1" hide="false" value="var = 0"
         if "level=" in note_str and "value=" in note_str:
-            match = re.search(rf'{TAG_LEVEL}="(\d)" {TAG_HIDE}="(false|true)" {TAG_VALUE}="(.+)"', note_str)
+            match = re.search(rf'{TAG_LEVEL}="(\d)" {TAG_HIDE}="(false|true)" {TAG_VALUE}="(.+)"',
+                              note_str)
             if match:
                 level, is_hide, value = match.groups()
                 level = int(level)
-                if is_hide is "true":
-                    is_hide = True
-                else:
-                    is_hide = False
+                is_hide = bool(is_hide)
                 value = self.process_comment(value)
                 if not level:
                     return "warn", value
