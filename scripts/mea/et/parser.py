@@ -279,8 +279,8 @@ class WitnessParser:
                 elif data_key == 'endoffset':
                     end_offset = int(data.text)
                 elif data_key in ('note', 'warning'):
-                    _edge[data_key if data_key == 'note' else 'warn'] = \
-                        self.internal_witness.process_comment(data.text)
+                    tag, note_desc = self.internal_witness.process_note(data_key, data.text)
+                    _edge[tag] = note_desc
                     self.internal_witness.is_notes = True
                 elif data_key == 'env':
                     _edge['env'] = self.internal_witness.process_comment(data.text)
