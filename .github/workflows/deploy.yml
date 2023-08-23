@@ -67,7 +67,7 @@ jobs:
       run: |
         DEPLOY_DIR=build make install-mea -j$(nproc)
         cd build
-        python3 ./scripts/mea.py -d ../docs/examples/witnesses/violation/
+        python3 ./scripts/filter.py -d ../docs/examples/witnesses/violation/
   build-frama-c-cil:
     runs-on: ubuntu-latest
     strategy:

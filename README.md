@@ -88,6 +88,6 @@ make install-mea DEPLOY_DIR=<deployment directory>
 
 #### Usage
 ```shell
-<deployment directory>/scripts/mea.py -d <directory with violation witnesses>
+<deployment directory>/scripts/filter.py -d <directory with violation witnesses>
 ```
 All unique violation witnesses will be printed as a result.
