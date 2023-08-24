@@ -198,7 +198,10 @@ class InternalWitness:
             if match:
                 level, is_hide, value = match.groups()
                 level = int(level)
-                is_hide = bool(is_hide)
+                if is_hide == "true":
+                    is_hide = True
+                else:
+                    is_hide = False
                 value = self.process_comment(value)
                 if not level:
                     return "warn", value
