@@ -33,6 +33,7 @@ bridge_script="bridge.py"
 wv_script="visualize_witnesses.py"
 launch_script="launch.py"
 auto_script="auto_check.py"
+bridge_script="bridge.py"
 
 # Directories
 root_dir=$(shell pwd)
@@ -215,10 +216,22 @@ install-witness-visualizer: check-deploy-dir build-cvv
 	rm -f scripts/${bv_script}
 	@echo "*** Witness Visualizer has been successfully installed into the directory ${DEPLOY_DIR} ***"
 
-install-mea: install-witness-visualizer
+install-mea: check-deploy-dir
+	@mkdir -p ${DEPLOY_DIR}/${install_dir}
+	@cp ${tools_config_file} ${DEPLOY_DIR}/${install_dir}
 	@cd ${DEPLOY_DIR} ; \
+	cp -r ${root_dir}/scripts/ . ; \
+	rm -f scripts/${launch_script} ; \
+	rm -f scripts/${auto_script} ; \
+	rm -f scripts/${bv_script} ; \
+	rm -f scripts/${bridge_script} ; \
+	rm -rf scripts/coverage ; \
+	rm -rf scripts/models/ ; \
+	rm -rf scripts/klever_bridge ; \
 	rm -f scripts/${wv_script} ; \
-	rm -rf ${cvv_dir}/web/
+	rm -f scripts/aux/opts.py
+	@cd ${DEPLOY_DIR}/scripts/components; \
+	rm main_generator.py exporter.py builder.py benchmark_launcher.py qualifier.py launcher.py preparator.py coverage_processor.py full_launcher.py
 	@echo "*** MEA has been successfully installed into the directory ${DEPLOY_DIR} ***"
 
 install-benchmark-visualizer: install-witness-visualizer
