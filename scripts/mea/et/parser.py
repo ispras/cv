@@ -206,6 +206,7 @@ class WitnessParser:
         sink_edges_num = 0
         edges_num = 0
         is_source_file = False
+        is_entry_point = False
 
         for edge in graph.findall('graphml:edge', self.WITNESS_NS):
 
@@ -244,18 +245,24 @@ class WitnessParser:
                     function_name = data.text
                     func_index = self.internal_witness.add_function(function_name)
                     if data_key == 'enterFunction':
+                        # Automaton format
                         if func_index - len(self._violation_hints) == 0:
                             if self.entry_point:
                                 if self.entry_point == function_name:
                                     self.internal_witness.is_main_function = True
                                     if self.internal_witness.witness_type == 'violation':
                                         _edge['env'] = "entry point"
+                                        is_entry_point = True
                             else:
                                 self.internal_witness.is_main_function = True
                         else:
                             self.internal_witness.is_call_stack = True
                         func_id = self.internal_witness.resolve_function_id(function_name)
                         _edge['enter'] = func_id
+                        if not is_entry_point and \
+                                self.internal_witness.witness_type == 'violation':
+                            _edge['env'] = "entry point"
+                            is_entry_point = True
                     elif data_key == 'returnFrom':
                         _edge['return'] = self.internal_witness.resolve_function_id(function_name)
                     else:
