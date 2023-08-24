@@ -27,6 +27,11 @@ import os
 import re
 
 
+TAG_HIDE = "hide"
+TAG_LEVEL = "level"
+TAG_VALUE = "value"
+
+
 # Capitalize first letters of attribute names.
 def capitalize_attr_names(attrs):
     # Each attribute is dictionary with one element which value is either string or array of
@@ -183,6 +188,27 @@ class InternalWitness:
         if len(comment) > self.MAX_COMMENT_LENGTH:
             comment = comment[:self.MAX_COMMENT_LENGTH] + "..."
         return comment
+
+    def process_note(self, tag: str, note_str: str) -> tuple:
+        # Check for format with note levels
+        # Example: level="1" hide="false" value="var = 0"
+        if "level=" in note_str and "value=" in note_str:
+            match = re.search(rf'{TAG_LEVEL}="(\d)" {TAG_HIDE}="(false|true)" {TAG_VALUE}="(.+)"',
+                              note_str)
+            if match:
+                level, is_hide, value = match.groups()
+                level = int(level)
+                is_hide = bool(is_hide)
+                value = self.process_comment(value)
+                if not level:
+                    return "warn", value
+                return tag, {
+                    TAG_LEVEL: level,
+                    TAG_HIDE: is_hide,
+                    TAG_VALUE: value
+                }
+        # Simple format
+        return tag if tag == 'note' else 'warn', self.process_comment(note_str)
 
     def add_model_function(self, func_name: str, comment: str = None):
         if not comment:

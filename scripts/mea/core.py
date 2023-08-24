@@ -57,6 +57,7 @@ TAG_EDITED_ERROR_TRACE = "edited_error_trace"
 
 # Conversion fucntions arguments.
 TAG_ADDITIONAL_MODEL_FUNCTIONS = "additional_model_functions"
+TAG_NOTES_LEVEL = "notes_level"
 TAG_FILTERED_MODEL_FUNCTIONS = "filtered_model_functions"
 TAG_USE_NOTES = "use_notes"
 TAG_USE_WARNS = "use_warns"
@@ -77,6 +78,7 @@ CET_ID = "id"
 CET_LINE = "line"
 ASSIGN_MARK = " = "
 
+DEFAULT_NOTES_LEVEL = 1
 DEFAULT_SIMILARITY_THRESHOLD = 100  # in % (all threads are equal)
 DEFAULT_PROPERTY_CHECKS_TEXT = "property check description"
 
@@ -199,8 +201,7 @@ def __convert_call_tree_filter(error_trace: dict, args: dict = None) -> list:
 def __convert_model_functions(error_trace: dict, args: dict = None) -> list:
     if args is None:
         args = {}
-    additional_model_functions = set(args.get(TAG_ADDITIONAL_MODEL_FUNCTIONS, []))
-    model_functions = __get_model_functions(error_trace, additional_model_functions)
+    model_functions = __get_model_functions(error_trace, args)
     converted_error_trace = __convert_call_tree_filter(error_trace, args)
     removed_indexes = set()
     thread_start_indexes = set()
@@ -322,6 +323,9 @@ def __convert_notes(error_trace: dict, args=None) -> list:
         if 'note' in edge:
             if not ignore_text:
                 text = edge['note']
+                note_desc = edge['note']
+                if isinstance(note_desc, dict):
+                    text = note_desc.get('value', note_desc)
             if use_notes:
                 converted_error_trace.append({
                     CET_OP: CET_OP_NOTE,
@@ -358,11 +362,13 @@ def __convert_full(error_trace: dict, args: dict = None) -> list:
     return converted_error_trace
 
 
-def __get_model_functions(error_trace: dict, additional_model_functions: set) -> set:
+def __get_model_functions(error_trace: dict, args: dict) -> set:
     """
     Extract model functions from error trace.
     """
     stack = []
+    additional_model_functions = set(args.get(TAG_ADDITIONAL_MODEL_FUNCTIONS, []))
+    notes_level = int(args.get(TAG_NOTES_LEVEL, DEFAULT_NOTES_LEVEL))
     model_functions = additional_model_functions
     patterns = set()
     for func in model_functions:
@@ -380,9 +386,19 @@ def __get_model_functions(error_trace: dict, additional_model_functions: set) ->
             # func = error_trace['funcs'][edge['return']]
             if stack:
                 stack.pop()
-        if 'warn' in edge or 'note' in edge:
-            if stack:
+        if stack:
+            if 'warn' in edge:
                 model_functions.add(stack[len(stack) - 1])
+            if 'note' in edge:
+                note_desc = edge['note']
+                is_add = True
+                if isinstance(note_desc, dict):
+                    level = int(note_desc.get('level', 1))
+                    if level > notes_level:
+                        is_add = False
+                if is_add:
+                    model_functions.add(stack[len(stack) - 1])
+
     model_functions = model_functions - patterns
     return model_functions
 
