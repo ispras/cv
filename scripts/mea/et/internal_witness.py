@@ -198,7 +198,7 @@ class InternalWitness:
             if match:
                 level, is_hide, value = match.groups()
                 level = int(level)
-                if is_hide == "true":
+                if is_hide == "true":  # pylint: disable=simplifiable-if-statement
                     is_hide = True
                 else:
                     is_hide = False
