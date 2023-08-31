@@ -24,7 +24,7 @@ make install-klever-bridge DEPLOY_DIR=<path to deploy directory>
 Usage
 -----
 
-Create a configuration file in `<deploy directory>` with the following content:
+Create a configuration file `klever.json` in `<deploy directory>` with the following content:
 
 ```json
 {
@@ -49,5 +49,21 @@ Create a configuration file in `<deploy directory>` with the following content:
 Then launch the following command:
 
 ```shell
-./scripts/bridge.py -c bv.json
+./scripts/bridge.py -c klever.json
+```
+
+Klever config
+-------------
+
+In order to visualize error traces CPAchecker config must include the following:
+```json
+{"-setprop": "parser.readLineDirectives=true"}
+```
+Note, Klever will not visualise traces with such option.
+
+If you need to visualise correctness witnesses in CV, the following options are required:
+```json
+{"-setprop": "cpa.arg.proofWitness=witness.correctness.graphml"},
+{"-setprop": "cpa.arg.export=true"},
+{"-setprop": "cpa.arg.compressWitness=false"}
 ```
