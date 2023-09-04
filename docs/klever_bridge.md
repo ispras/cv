@@ -1,10 +1,11 @@
-Klever bridge
-=============
+# Klever bridge
 
-This component allows to export results of Klever verification system into CV format for their visualization.
+This component allows to export results of [Klever verification system](https://github.com/ldv-klever/klever) into `CV` format for their visualization.
 
 Here we use the following Klever terminology:
-- `Verification task` is a C file with a given entry point a set of error locations and configuration. Klever creates verification tasks based on a given Linux kernel module and checked properties (for example, memory safety). Verification backend (for example, CPAchecker) solves a given task and provides verification result.
+- `Verification task` is a C file with a given entry point a set of error locations and configuration.
+Klever creates verification tasks based on a given Linux kernel module and checked properties (for example, memory safety).
+- Verification backend (for example, CPAchecker) solves a given task and provides verification result.
 - `Verification result` is:
   - a correctness witness (proof that error location cannot be reached from a given entry point) or
   - a set of violation witnesses (paths in source code from an entry point to an error location) or
@@ -14,15 +15,15 @@ Here we use the following Klever terminology:
 
 Klever bridge finds all solved verification tasks for a given job and export them for visualization.
 
-Installation of Klever bridge
------------------------------
+## Installation of Klever bridge
+
+[CVV web-interface](https://github.com/vmordan/cvv) should be deployed according to its instructions.
 
 ```shell
 make install-klever-bridge DEPLOY_DIR=<path to deploy directory>
 ```
 
-Usage
------
+## Usage
 
 Create a configuration file `klever.json` in `<deploy directory>` with the following content:
 
@@ -52,8 +53,7 @@ Then launch the following command:
 ./scripts/bridge.py -c klever.json
 ```
 
-Klever config
--------------
+## Klever config
 
 In order to visualize error traces CPAchecker config must include the following:
 ```json

@@ -1,19 +1,23 @@
 # Benchmark Visualizer
 
-Benchmark Visualizer is a tool for visualizing benchmark verification results.
+Benchmark Visualizer is a tool for visualizing benchmark verification results in [SV-COMP](https://sv-comp.sosy-lab.org) format.
 
-## Configuration
+## Deployment
 
-It is supposed, that database and web-interface server already has been configured
-(if not, then refer to the instruction [docs/web_interface.txt](web_interface.txt)).
+1. [CVV web-interface](https://github.com/vmordan/cvv) should be deployed according to its instructions.
 
-In this case the following parameters should be known:
+2. `Benchmark Visualizer` is installed with the following command:
 
-* `<host>` and `<port>` for web-interface server;
-* `<user name>` and `<user password>` to access web-interface;
-* `<deployment directory>`: a directory, in which Benchmark Visualizer control scripts were installed.
+```shell
+make install-benchmark-visualizer DEPLOY_DIR=<deployment directory>
+```
 
 ## Usage
+
+It is supposed that the following parameters are known:
+* `<host>` and `<port>` for web-interface server;
+* `<user name>` and `<user password>` to access web-interface;
+* `<deployment directory>` is a directory, in which `Benchmark Visualizer` was installed.
 
 1. Create the following configuration file:
 ```json
@@ -34,9 +38,11 @@ In this case the following parameters should be known:
   }
 }
 ```
-where `<parent report identifier>` is name or id from reports tree (if the database is new and there is no 
-reports tree, then you can use value `1` to make new report as a child of the root report), `<new report name>` is an arbitrary name,
-which will be used in the web-interface to distinguish the upload benchmark verification results from other results.
+where 
+- `<parent report identifier>` is name or id from reports tree (if the database is new and there is no 
+reports tree, then you can use value `1` to make new report as a child of the root report),
+- `<new report name>` is an arbitrary name, which will be used in the web-interface to distinguish the upload benchmark verification results from other results.
+
 Here is an example of such configuration file:
 
 ```json
@@ -58,10 +64,16 @@ Here is an example of such configuration file:
 }
 ```
 
-2. Process benchmark verification results from `<deployment directory>` with the command:
+2. Process already solved benchmark verification results from `<deployment directory>` with the command:
 
 ```bash
 ./scripts/process_benchmark.py --config <path to the configuration file>
+```
+
+If benchmark should be launched first, then use:
+
+```bash
+./scripts/process_benchmark.py --config <path to the configuration file> --launch
 ```
 
 In case of successful uploading the following line should apper in the log:
@@ -73,3 +85,6 @@ ZIP archive with reports "..." was successfully uploaded on "<host>:<port>/jobs/
 After that you can access uploaded results on the page `<host>:<port>/jobs/<new report id>`.
 
 Some simple examples of benchmark verification results can be found in the `docs/examples/benchmarks` directory.
+
+Example of benchmark visualization:
+![benchmark](images/benchmark.png)

@@ -2,92 +2,44 @@
 
 [![Apache 2.0 License](https://img.shields.io/badge/license-Apache--2-brightgreen.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
-This framework aims at results analysis of continuous verification, which can be applied to software systems.
+This framework aims at applying continuous verification to generic software systems.
+The framework consist of the following tools:
+- `Continuous Verifier` (CV) verifies a given software systems. In order to support generic 
+software system, a specific plugin is required, which shows
+  - how to decompose a system (currently, only C language is supported);
+  - how to create an environment for the system;
+  - what properties should be verified in the system.
 
-## Visualization of verification results
+  [CV documentation](docs/cv.md).
+- `Klever Bridge` allows to verify Linux kernel modules with help of [Klever framework](https://github.com/ldv-klever/klever).
+[Klever Bridge documentation](docs/klever_bridge.md).
+- `Benchmark Visualizer` allows to process and visualise verification benchmarks from [SV-COMP](https://sv-comp.sosy-lab.org).
+[Benchmark Visualizer documentation](docs/benchmark_visualizer.md).
+- `Witness Visualizer` converts generic witnesses (potential bug or proof) from [SV-COMP](https://sv-comp.sosy-lab.org) tools into user-friendly format.
+[Witness Visualizer documentation](docs/witness_visualizer.md).
+- `Multiple Error Analyser` (MEA) filters several witnesses in order to present only those, which corresponds to unique potential bugs.
+[Witness Visualizer documentation](docs/mea.md).
 
-### Witness Visualizer
+All produced verification results can be visualised with help of [Continuous Verification Visualizer](https://github.com/vmordan/cvv).
 
-Witness Visualizer converts generic witnesses from [SV-COMP](https://sv-comp.sosy-lab.org) tools into user-friendly format.
+## Requirements
 
-#### Requirements
-
-Python (version>=3.4), python modules:
-```shell
-sudo pip3 install requests ujson graphviz ply pytest atomicwrites more-itertools pluggy py attrs setuptools six django psycopg2 pycparser sympy
-```
-
-#### Deployment
-
-In order to install Witness Visualizer in the `<deployment directory>` execute the following command:
-
-```bash
-make install-witness-visualizer DEPLOY_DIR=<deployment directory>
-```
-
-#### Usage
-
-After deployment Witness Visualizer can be used to convert witnesses from the `<deployment directory>` with command:
-
-```
-<deployment directory>/scripts/visualize_witnesses.py OPTIONS
-```
-
-Primary options:
-* `-w` WITNESS, `--witness` WITNESS: path to the witness to be visualized;
-* `-d` DIRECTORY, `--directory` DIRECTORY: directory with witnesses to be visualized (either `-w` or `-d` option must be specified);
-* `-r` RESULT_DIR, `--result-dir` RESULT_DIR: directory, in which visualized witnesses will be placed in html format;
-* `-s` SOURCE_DIR, `--source-dir` SOURCE_DIR: source files directory;
-* `--dry-run`: do not visualize witnesses, only check their quality;
-* `-u`, `--unzip`: unzip archives with visualized witnesses.
-
-For example:
-
-```bash
-<deployment directory>/scripts/visualize_witnesses.py --witness output/witness.graphml --result-dir results/ --source-dir ~/sv-benchmarks
-```
-
-There are some examples of [SV-COMP](https://sv-comp.sosy-lab.org) witnesses in the `docs/examples/witnesses` directory,
-which can be used to validate Witness Visualizer installation.
-
-### Benchmark Visualizer
-
-Benchmark Visualizer is a tool for visualizing benchmark verification results.
-
-#### Deployment
-
-1. Web-interface 
-
-See instruction [docs/web_interface.txt](docs/web_interface.txt).
-
-2. Control scripts
-
-In order to install Benchmark Visualizer in the `<deployment directory>` execute the following command:
+The framework works with Ubuntu 18 and above.
+All requirements can be installed with command:
 
 ```shell
-make install-benchmark-visualizer DEPLOY_DIR=<deployment directory>
+sudo apt install git openjdk-11-jdk python3 python3-dev ant lcov cmake libmpc-dev lib32z1 libxslt-dev libpq-dev python3-pip
 ```
 
-#### Usage
+Additional python modules:
 
-See instruction [docs/benchmark_visualizer.md](docs/benchmark_visualizer.md).
-
-## Filtering of witnesses
-
-Multiple Error Analysis (MEA) stands for semi-automatic violation witnesses filtering.
-This framework provides part of MEA, which performs automatic filtering.
-In order to do it, some core elements are extracted from a violation witness by means of
-a specified `conversion` function and then compared with core elements of other witnesses
-by means of a specified `comparison` function.
-
-#### Deployment
-MEA library can be installed in the `<deployment directory>` with the following command:
 ```shell
-make install-mea DEPLOY_DIR=<deployment directory>
+sudo pip3 install requests ujson graphviz ply pytest atomicwrites pathlib2 more-itertools pluggy py attrs setuptools six django clade==3.6 psycopg2 pyyaml pycparser sympy
 ```
 
-#### Usage
-```shell
-<deployment directory>/scripts/filter.py -d <directory with violation witnesses>
+## Installation
+
+The framework is installed with the following command:
 ```
-All unique violation witnesses will be printed as a result.
+make install -j DEPLOY_DIR=<working dir>
+```
