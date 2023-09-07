@@ -262,6 +262,7 @@ class WitnessParser:
                         if not is_entry_point and \
                                 self.internal_witness.witness_type == 'violation':
                             _edge['env'] = "entry point"
+                            self.internal_witness.add_thread("decl")
                             is_entry_point = True
                     elif data_key == 'returnFrom':
                         _edge['return'] = self.internal_witness.resolve_function_id(function_name)
@@ -279,7 +280,10 @@ class WitnessParser:
                 elif data_key == 'assumption':
                     _edge['assumption'] = data.text
                 elif data_key == 'threadId':
-                    _edge['thread'] = data.text
+                    if not is_entry_point:
+                        _edge['thread'] = "decl"
+                    else:
+                        _edge['thread'] = data.text
                     self.internal_witness.add_thread(data.text)
                 elif data_key == 'startoffset':
                     start_offset = int(data.text)
