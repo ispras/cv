@@ -61,9 +61,14 @@ In order to visualize error traces CPAchecker config must include the following:
 ```
 Note, Klever will not visualise traces with such option.
 
+Also Klever job configuration should specify `Keep intermediate files inside the working directory of Klever Core` inside
+`Other settings` section in order to visualize generated files in the error trace.
+
 If you need to visualise correctness witnesses in CV, the following options are required:
 ```json
 {"-setprop": "cpa.arg.proofWitness=witness.correctness.graphml"},
 {"-setprop": "cpa.arg.export=true"},
 {"-setprop": "cpa.arg.compressWitness=false"}
 ```
+
+If you need to add coverage, set flag `Collect total code coverage` in the Klever job config.
