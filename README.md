@@ -1,6 +1,8 @@
 # Continuous Verification Framework
 
 [![Apache 2.0 License](https://img.shields.io/badge/license-Apache--2-brightgreen.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+![example workflow](https://github.com/ispras/cv/actions/workflows/deploy.yml/badge.svg)
+![example workflow](https://github.com/ispras/cv/actions/workflows/pylint.yml/badge.svg)
 
 This framework aims at applying continuous verification to generic software systems.
 The framework consist of the following tools:
