@@ -69,7 +69,7 @@ class KleverLauncher(BenchmarkLauncher):
         queue.put(result)
         sys.exit(0)
 
-    def __parse_tasks_dir(self, processed_tasks: dict):
+    def __parse_tasks_dir(self, processed_tasks: dict, job_id: str):
         queue = multiprocessing.Queue()
         process_pool = []
         results = []
@@ -79,7 +79,7 @@ class KleverLauncher(BenchmarkLauncher):
 
         for output_dir, tasks_args in processed_tasks.items():
             xml_file = tasks_args[TAG_TASK_XML]
-            module, prop = tasks_args[TAG_TASK_ARGS]
+            module, prop, _ = tasks_args[TAG_TASK_ARGS]
             tree = ElementTree.ElementTree()
             tree.parse(xml_file)
             root = tree.getroot()
@@ -129,13 +129,13 @@ class KleverLauncher(BenchmarkLauncher):
                     kill_launches(process_pool)
         wait_for_launches(process_pool)
         self._get_from_queue_into_list(queue, results)
-        return self._export_results(results, job_config, self.__parse_job_resource_log())
+        return self._export_results(results, job_config, self.__parse_job_resource_log(job_id))
 
-    def __parse_job_resource_log(self) -> dict:
+    def __parse_job_resource_log(self, job_id: str) -> dict:
         job_resources = {TAG_CPU_TIME: 0.0, TAG_WALL_TIME: 0.0, TAG_MEMORY_USAGE: 0}
-        if not self.job_id:
+        if not job_id:
             return {}
-        res_file = os.path.join(self.output_dir, os.path.pardir, JOBS_DIR, self.job_id,
+        res_file = os.path.join(self.output_dir, os.path.pardir, JOBS_DIR, job_id,
                                 JOB_RES_FILE)
         if not os.path.exists:
             self.logger.warning(f"File with job resources {res_file} does not exist")
@@ -156,31 +156,32 @@ class KleverLauncher(BenchmarkLauncher):
         """
         # TODO: support launching klever tasks.
         self.logger.info("Indexing klever tasks files")
-        jobs_to_tasks, tasks_to_attrs = index_klever_tasks(self.output_dir, self.job_id)
-        self.logger.info(f"Process job {self.job_id}")
-        processed_tasks = {}
-        self.job_name_suffix = self.job_id
-        for task_id in jobs_to_tasks[self.job_id]:
-            path_to_dir = os.path.join(self.output_dir, str(task_id), "output")
-            xml_files = glob.glob(os.path.join(path_to_dir, '*results.*xml'))
-            if len(xml_files) != 1:
-                self.logger.error(f"Abnormal number of xml reports {len(xml_files)} for task "
-                                  f"{task_id} in a directory {path_to_dir}")
-                continue
-            processed_tasks[path_to_dir] = {
-                TAG_TASK_XML: xml_files[0],
-                TAG_TASK_ARGS: tasks_to_attrs[task_id]
-            }
-        self.logger.info(f"Got {len(processed_tasks)} tasks")
-        uploader_config = self.config.get(UPLOADER, {})
-        is_upload = uploader_config and uploader_config.get(TAG_UPLOADER_UPLOAD_RESULTS, False)
-        self.process_dir = os.path.abspath(tempfile.mkdtemp(dir=self.work_dir))
-        result_archive = self.__parse_tasks_dir(processed_tasks)
-        if is_upload and result_archive:
-            self._upload_results(uploader_config, result_archive)
-        if not self.debug:
-            shutil.rmtree(self.process_dir, ignore_errors=True)
-        if not self.debug:
-            clear_symlink(self.tasks_dir)
-            for task_dir_in in glob.glob(os.path.join(self.tasks_dir, "*")):
-                clear_symlink(task_dir_in)
+        jobs_to_tasks, tasks_to_attrs = index_klever_tasks(self.output_dir)
+        for job_id in self.job_id.split(","):
+            self.logger.info(f"Process job {job_id}")
+            processed_tasks = {}
+            self.job_name_suffix = job_id
+            for task_id in jobs_to_tasks[job_id]:
+                path_to_dir = os.path.join(self.output_dir, str(task_id), "output")
+                xml_files = glob.glob(os.path.join(path_to_dir, '*results.*xml'))
+                if len(xml_files) != 1:
+                    self.logger.error(f"Abnormal number of xml reports {len(xml_files)} for task "
+                                      f"{task_id} in a directory {path_to_dir}")
+                    continue
+                processed_tasks[path_to_dir] = {
+                    TAG_TASK_XML: xml_files[0],
+                    TAG_TASK_ARGS: tasks_to_attrs[task_id]
+                }
+            self.logger.info(f"Got {len(processed_tasks)} tasks")
+            uploader_config = self.config.get(UPLOADER, {})
+            is_upload = uploader_config and uploader_config.get(TAG_UPLOADER_UPLOAD_RESULTS, False)
+            self.process_dir = os.path.abspath(tempfile.mkdtemp(dir=self.work_dir))
+            result_archive = self.__parse_tasks_dir(processed_tasks, job_id)
+            if is_upload and result_archive:
+                self._upload_results(uploader_config, result_archive)
+            if not self.debug:
+                shutil.rmtree(self.process_dir, ignore_errors=True)
+            if not self.debug:
+                clear_symlink(self.tasks_dir)
+                for task_dir_in in glob.glob(os.path.join(self.tasks_dir, "*")):
+                    clear_symlink(task_dir_in)
