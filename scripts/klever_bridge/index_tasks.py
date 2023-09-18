@@ -46,55 +46,64 @@ def __parse_args():
     return sys.argv[1]
 
 
-def _iterate_over_tasks(tasks_dir: str, jobs: dict, tasks: dict, job_id=None):
+def _iterate_over_tasks(tasks_dir: str, jobs: dict, tasks: dict):
     job_dir = os.path.realpath(os.path.join(tasks_dir, os.pardir, "jobs"))
     tasks_dir_list = glob.glob(os.path.join(tasks_dir, "*"))
     tasks_num = len(tasks_dir_list)
     counter = 0
     prev_percent = 0
+    attrs_to_tasks = {}
+
+    def _save_attrs(cur_task_id):
+        attrs = "&&&".join(tasks[cur_task_id])
+        if attrs not in attrs_to_tasks:
+            attrs_to_tasks[attrs] = []
+        attrs_to_tasks[attrs].append(cur_task_id)
+
+    def _get_job_from_attrs(str_attrs: str) -> str:
+        attrs = str_attrs.split("&&&")
+        return attrs[2]
+
     for task_dir in tasks_dir_list:
         cil_file = os.path.join(task_dir, CIL_FILE)
         task_id = os.path.basename(task_dir)
-        if task_id in tasks:
-            continue
         counter += 1
         percent = int(100 * counter / tasks_num)
         if prev_percent != percent:
             prev_percent = percent
             print(f"Tasks processed {counter} ({percent}%)")
+        if task_id in tasks:
+            _save_attrs(task_id)
+            continue
         if os.path.exists(cil_file):
             with open(cil_file, encoding="utf8", errors='ignore') as cil_fp:
                 for line in cil_fp.readlines():
-                    if job_id and job_id not in line:
-                        continue
                     if "vtg" not in line or "emg" not in line:
                         continue
-                    if job_id:
-                        res = re.search(
-                            rf"{job_dir}/{job_id}/klever-core-work-dir/job/vtg/(.+)\.ko/(.+)/emg",
-                            line
-                        )
-                        if res:
-                            module = res.group(1) + ".ko"
-                            prop = PROP_NAMING.get(res.group(2), res.group(2))
-                            if job_id not in jobs:
-                                jobs[job_id] = []
-                            jobs[job_id].append(task_id)
-                            tasks[task_id] = [module, prop]
-                            break
-                    else:
-                        res = re.search(
-                            rf"{job_dir}/(.+)/klever-core-work-dir/job/vtg/(.+)\.ko/(.+)/emg", line
-                        )
-                        if res:
-                            new_job_id = res.group(1)
-                            module = res.group(2) + ".ko"
-                            prop = PROP_NAMING.get(res.group(3), res.group(3))
-                            if new_job_id not in jobs:
-                                jobs[new_job_id] = []
-                            jobs[new_job_id].append(task_id)
-                            tasks[task_id] = [module, prop]
-                            break
+                    res = re.search(
+                        rf"{job_dir}/(.+)/klever-core-work-dir/job/vtg/(.+)\.ko/(.+)/emg", line
+                    )
+                    if res:
+                        new_job_id = res.group(1)
+                        module = res.group(2) + ".ko"
+                        prop = res.group(3)
+                        prop = PROP_NAMING.get(prop, prop)
+                        task_attrs = [module, prop, new_job_id]
+                        # if not _check_attrs(task_attrs):
+                        if new_job_id not in jobs:
+                            jobs[new_job_id] = []
+                        jobs[new_job_id].append(task_id)
+                        tasks[task_id] = task_attrs
+                        _save_attrs(task_id)
+                        break
+    for target_attrs, task_ids in attrs_to_tasks.items():
+        if len(task_ids) > 1:
+            target_job_id = _get_job_from_attrs(target_attrs)
+            transformed_list = sorted([int(t_id) for t_id in task_ids])
+            for elem in transformed_list[:-1]:
+                elem = str(elem)
+                if elem in jobs[target_job_id]:
+                    jobs[target_job_id].remove(elem)
 
 
 def _save_index(jobs: dict, tasks: dict):
@@ -109,19 +118,19 @@ def _upload_index() -> tuple:
     def _proc_single_file(file_name: str) -> dict:
         if os.path.exists(file_name):
             with open(file_name, "r", encoding="ascii") as index_fp:
-                return json.load(index_fp)
+                return json.load(index_fp, parse_int=int)
         return {}
     jobs = _proc_single_file(JOBS_FILE)
     tasks = _proc_single_file(TASKS_FILE)
     return jobs, tasks
 
 
-def index_klever_tasks(tasks_dir: str, job_id=None) -> tuple:
+def index_klever_tasks(tasks_dir: str) -> tuple:
     """
     Upload index cache and update it.
     """
     jobs, tasks = _upload_index()
-    _iterate_over_tasks(tasks_dir, jobs, tasks, job_id=job_id)
+    _iterate_over_tasks(tasks_dir, jobs, tasks)
     _save_index(jobs, tasks)
     return jobs, tasks
 
