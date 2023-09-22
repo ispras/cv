@@ -1,0 +1,203 @@
+{
+  "templates": {
+    "CPAchecker common": {
+      "description": "Common options for the CPAchecker tool",
+      "add options": [
+        {"-setprop": "cpa.callstack.unsupportedFunctions=__VERIFIER_nonexisting_dummy_function"},
+        {"-setprop": "cpa.predicate.allowedUnsupportedFunctions=memset,memcpy,__builtin_add_overflow,__builtin_mul_overflow,__builtin_va_arg"},
+        {"-setprop": "cpa.value.allowedUnsupportedFunctions=memset,memcpy,__builtin_add_overflow,__builtin_mul_overflow,__builtin_va_arg"},
+        {"-setprop": "counterexample.export.extendedWitnessFile=witness.%d.graphml"},
+        {"-setprop": "counterexample.export.exportExtendedWitness=true"},
+        {"-setprop": "counterexample.export.compressWitness=false"},
+        {"-setprop": "cpa.arg.witness.removeInsufficientEdges=false"},
+        {"-setprop": "counterexample.export.exportCounterexampleCoverage=true"},
+        {"-setprop": "counterexample.export.prefixAdditionalCoverageFile=Counterexample.%d.additionalCoverage.info"},
+        {"-setprop": "additionalCoverage.file=additionalCoverage.info"},
+        {"-setprop": "parser.readLineDirectives=true"},
+        {"-setprop": "cpa.arg.proofWitness=witness.correctness.graphml"},
+        {"-setprop": "cpa.arg.export=true"},
+        {"-setprop": "cpa.arg.compressWitness=false"},
+        {"-noout": ""},
+        {"-setprop": "shutdown.timeout=100"},
+        {"-heap": "%ldv:memory size:0.87:MB%m"}
+      ],
+      "architecture dependant options": {
+        "x86-64": {"add options": [{"-64": ""}]},
+        "ARM": {"add options": [{"-setprop": "analysis.machineModel=ARM"}]},
+        "ARM64": {"add options": [{"-setprop": "analysis.machineModel=ARM64"}]}
+      }
+    },
+    "Ultimate common": {
+      "description": "Common options for the UltimateAutimizer tool",
+      "add options": [
+        {"--witness-name": "witness.1.graphml"},
+        {"--witness-dir": "./output/"},
+        {"--architecture": "64bit"}
+      ]
+    },
+    "CPALockator races": {
+      "description": "Common part of CPAchecker configuration for checking races",
+      "inherit": "CPAchecker common",
+      "safety properties": ["CHECK( init({entry_point}()), LTL(G ! data-race) )"],
+      "add options": [{"-setprop": "counterexample.export.graphml=witness.%d.graphml"}]
+    },
+    "CPAchecker reachability": {
+      "description": "CPAchecker for reachability checking",
+      "inherit": "CPAchecker common",
+      "safety properties": ["CHECK( init({entry_point}()), LTL(G ! call(__VERIFIER_error())) )"],
+      "add options": [{"-ldv": ""}]
+    },
+    "CPAchecker BAM reachability": {
+      "description": "CPAchecker with BAM for reachability checking",
+      "inherit": "CPAchecker common",
+      "safety properties": ["CHECK( init({entry_point}()), LTL(G ! call(__VERIFIER_error())) )"],
+      "add options": [
+        {"-setprop": "counterexample.export.allowImpreciseCounterexamples=false"},
+        {"-ldv-bam": ""}
+      ]
+    },
+    "CPAchecker BAM reachability FP": {
+      "description": "CPAchecker with BAM and FPA for reachability checking",
+      "inherit": "CPAchecker BAM reachability",
+      "add options": [
+        {"-setprop": "CompositeCPA.cpas=cpa.location.LocationCPA,cpa.callstack.CallstackCPA,cpa.value.ValueAnalysisCPA,cpa.predicate.BAMPredicateCPA"},
+        {"-setprop": "cpa.value.ignoreFunctionValue=false"}
+      ]
+    },
+    "CPAchecker BAM reachability bit-precise": {
+      "description": "CPAchecker with bit-precise BAM for reachability checking",
+      "inherit": "CPAchecker BAM reachability",
+      "add options": [
+        {"-setprop": "cpa.predicate.encodeBitvectorAs=BITVECTOR"},
+        {"-setprop": "solver.solver=MathSAT5"}
+      ]
+    },
+    "CPAchecker BAM reachability heap arrays": {
+      "description": "CPAchecker with BAM and heap arrays for reachability checking",
+      "inherit": "CPAchecker BAM reachability",
+      "add options": [
+        {"-setprop": "cpa.predicate.useArraysForHeap=true"},
+        {"-setprop": "cpa.predicate.defaultArrayLength=20"},
+        {"-setprop": "cpa.predicate.maxArrayLength=-1"}
+      ]
+    },
+    "CPAchecker BAM BusyBox": {
+      "description": "CPAchecker with BAM for reachability checking and FPA",
+      "inherit": "CPAchecker BAM reachability FP",
+      "add options": [
+        {"-setprop": "cpa.predicate.defaultArrayLength=5"},
+        {"-setprop": "cpa.predicate.maxArrayLength=5"}
+      ]
+    },
+    "CPAchecker SMG memory checking": {
+      "description": "CPAchecker with SMG for memory errors checking",
+      "inherit": "CPAchecker common",
+      "safety properties": [
+          "CHECK( init({entry_point}()), LTL(G valid-free) )",
+          "CHECK( init({entry_point}()), LTL(G valid-deref) )",
+          "CHECK( init({entry_point}()), LTL(G valid-memtrack) )"
+      ],
+      "add options": [
+        {"-smg-ldv": ""},
+        {"-setprop": "CompositeCPA.cpas=cpa.location.LocationCPA,cpa.callstack.CallstackCPA,cpa.smg.SMGCPA"},
+        {"-setprop": "cpa.smg.memcpyFunctions=__VERIFIER_memcpy"},
+        {"-setprop": "cpa.smg.memsetFunctions=__VERIFIER_memset"}
+      ]
+    },
+    "CPAchecker SMG memory checking with mea": {
+      "description": "CPAchecker with SMG for memory errors checking",
+      "inherit": "CPAchecker SMG memory checking",
+      "add options": [
+        {"-setprop": "cpa.arg.witness.handleTMPVariableAsEpsilonForWitness=false"},
+        {"-setprop": "counterexample.export.graphml="},
+        {"-setprop": "counterexample.export.extendedWitnessFile=witness.%d.graphml"},
+        {"-setprop": "counterexample.export.exportExtendedWitness=true"},
+        {"-setprop": "analysis.stopAfterError=false"},
+        {"-setprop": "counterexample.export.exportImmediately=true"},
+        {"-setprop": "counterexample.export.filters=PathEqualityCounterexampleFilter"},
+        {"-setprop": "analysis.algorithm.CEGAR=true"},
+        {"-setprop": "cegar.refiner=cpa.arg.AbstractARGBasedRefiner"}
+      ]
+    },
+    "CPAchecker SMG without support of uncertain environment behavior": {
+      "description": "CPAchecker with SMG for memory errors checking that almost does not support any uncertainty in behavior of environment",
+      "inherit": "CPAchecker SMG memory checking",
+      "add options": [
+        {"-setprop": "cpa.smg.handleIncompleteExternalVariableAsExternalAllocation=false"},
+        {"-setprop": "cpa.smg.handleUnknownDereferenceAsSafe=false"},
+        {"-setprop": "cpa.smg.handleUnknownFunctions=STRICT"},
+        {"-setprop": "cpa.smg.produceErrorTraceInsteadOfException=true"},
+        {"-setprop": "cpa.smg.safeUnknownFunctionsPatterns=ldv_.*,printk,schedule"}
+      ]
+    },
+    "CPAchecker SMG without deducing abstraction for lists": {
+      "description": "CPAchecker with SMG for memory errors checking that does not spend time for deducing abstraction for lists (this should unlikely be used for target programs with lists)",
+      "inherit": "CPAchecker SMG memory checking",
+      "add options": [{"-setprop": "cpa.smg.enableHeapAbstraction=false"}]
+    },
+    "CPALockator base": {
+      "description": "CPAchecker for checking races",
+      "inherit": "CPALockator races",
+      "add options": [{"-lockator-linux-pre-shared-ref": ""}]
+    },
+    "CPALockator lightweight": {
+      "description": "Lightweight CPAchecker for checking races",
+      "inherit": "CPALockator races",
+      "add options": [{"-lockator-linux-lightweight": ""}]
+    },
+    "CPALockator thread-modular": {
+      "description": "CPAchecker for checking races with powerful theory",
+      "inherit": "CPALockator races",
+      "add options": [{"-lockator-threadmodular-linux": ""}]
+    },
+    "CPALockator rcu": {
+      "description": "CPAchecker for checking races over rcu pointers",
+      "inherit": "CPALockator races",
+      "add options": [{"-rcucpa": ""}]
+    }
+  },
+  "profiles": {
+    "reachability": {
+      "CPAchecker": {
+        "smg-master:c6f6a66": {"inherit": "CPAchecker BAM reachability"}
+      },
+      "UltimateAutomizer": {"v0.1.20": {"inherit": "Ultimate common"}}
+    },
+    "reachability with function pointers": {
+      "CPAchecker": {"smg-master:c6f6a66": {"inherit": "CPAchecker BAM reachability FP"}}
+    },
+    "reachability with bit precision": {
+      "CPAchecker": {"smg-master:c6f6a66": {"inherit": "CPAchecker BAM reachability bit-precise"}}
+    },
+    "reachability with heap arrays": {
+      "CPAchecker": {"smg-master:c6f6a66": {"inherit": "CPAchecker BAM reachability heap arrays"}}
+    },
+    "CPAchecker BAM BusyBox": {
+      "CPAchecker": {"smg-master:c6f6a66": {"inherit": "CPAchecker BAM BusyBox"}}
+    },
+    "race checking base": {
+      "CPAchecker": {"CPALockator-update:39383": {"inherit": "CPALockator base"}}
+    },
+    "race checking lightweight": {
+      "CPAchecker": {"CPALockator-update:39383": {"inherit": "CPALockator lightweight"}}
+    },
+    "race checking": {
+      "CPAchecker": {"CPALockator-update:39383": {"inherit": "CPALockator thread-modular"}}
+    },
+    "race checking rcu": {
+      "CPAchecker": {"CPALockator-update:39383": {"inherit": "CPALockator rcu"}}
+    },
+    "memory checking": {
+      "CPAchecker": {"smg-master:c6f6a66": {"inherit": "CPAchecker SMG memory checking"}}
+    },
+    "memory checking with mea": {
+      "CPAchecker": {"smg-master:c6f6a66": {"inherit": "CPAchecker SMG memory checking with mea"}}
+    },
+    "memory checking without uncertainty": {
+      "CPAchecker": {"smg-master:c6f6a66": {"inherit": "CPAchecker SMG without support of uncertain environment behavior"}}
+    },
+    "memory checking without abstraction for lists": {
+      "CPAchecker": {"smg-master:c6f6a66": {"inherit": "CPAchecker SMG without deducing abstraction for lists"}}
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+	"Benchmark Launcher": {
+		"tool": "CPAchecker"
+	},
+	"uploader": {
+		"identifier": "<parent job id>",
+		"upload results": true,
+		"parent id": true,
+		"server": "<CVV host:port>",
+		"user": "<name>",
+		"password": "<pass>",
+		"name": "runner <rundefinition> <timestamp>"
+	}
+}
