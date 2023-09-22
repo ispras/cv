@@ -18,6 +18,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=line-too-long
 
 """
 Klever runner - creates a build base, launches Klever and converts results to CVV format.
@@ -78,6 +79,12 @@ SMALL_WAIT_INTERVAL = 10
 
 
 class Runner(Component):
+    """
+    Component for performing full Klever run, which consist of:
+    1. Creating of a build base;
+    2. Launching klever;
+    3. Converting results to CVV.
+    """
     def __init__(self, general_config: dict):
 
         super().__init__(COMPONENT_RUNNER, general_config)
@@ -157,9 +164,9 @@ class Runner(Component):
             os.path.join(self.klever_deploy_dir, KLEVER_TASKS_DIR)
         bridge_config[COMPONENT_BENCHMARK_LAUNCHER][TAG_TASKS_DIR] = \
             os.path.join(dst_build_base_dir, BUILD_BASE_STORAGE_DIR)
-        with open(self.job_config, 'w') as f_jconfig:
+        with open(self.job_config, 'w', encoding='ascii') as f_jconfig:
             json.dump(job_config, f_jconfig, sort_keys=True, indent=4)
-        with open(self.bridge_config, 'w') as f_bconfig:
+        with open(self.bridge_config, 'w', encoding='ascii') as f_bconfig:
             json.dump(bridge_config, f_bconfig, sort_keys=True, indent=4)
 
     def klever(self, build_base_dir: str) -> str:
@@ -183,13 +190,13 @@ class Runner(Component):
                 sys.exit("Cannot use python venv")
             sys.path.insert(1, os.path.abspath(DEFAULT_VENV_PATH))
             os.environ["PATH"] += os.pathsep + os.path.abspath(DEFAULT_VENV_PATH)
-        result = self.command_caller_with_output(cmd)
-        if not result:
+        launcher_output = self.command_caller_with_output(cmd)
+        if not launcher_output:
             sys.exit("Cannot launch Klever")
-        m = re.search(r': (.+)', result)
-        if not m:
-            sys.exit(f"Cannot obtain new job id from output '{result}'")
-        new_job_id = m.group(1)
+        res = re.search(r': (.+)', launcher_output)
+        if not res:
+            sys.exit(f"Cannot obtain new job id from output '{launcher_output}'")
+        new_job_id = res.group(1)
 
         # Wait until job is finished
         time.sleep(BIG_WAIT_INTERVAL)
@@ -223,6 +230,9 @@ class Runner(Component):
             shutil.rmtree(os.path.join(self.jobs_dir, new_job_id))
 
     def run(self):
+        """
+        Performs full run.
+        """
         build_base_dir = self.builder()
         new_job_id = self.klever(build_base_dir)
         self.bridge(new_job_id)
