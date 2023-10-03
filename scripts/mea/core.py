@@ -153,13 +153,21 @@ def __convert_call_tree_filter(error_trace: dict, args: dict = None) -> list:
     counter = 0
     # TODO: check this in core (one node for call and return edges).
     double_funcs = {}
+
+    def process_names(function_name: str) -> str:
+        # Remove id for generated names
+        function_name = re.sub(r"_(\d+)$", "", function_name)
+        return function_name
+
     for edge in error_trace['edges']:
         if 'env' in edge:
             continue
         if 'enter' in edge and 'return' in edge:
             double_funcs[edge['enter']] = edge['return']
         if 'enter' in edge:
-            function_call = error_trace['funcs'][edge['enter']]
+            function_call = process_names(error_trace['funcs'][edge['enter']])
+            if not function_call:
+                continue
             converted_error_trace.append({
                 CET_OP: CET_OP_CALL,
                 CET_THREAD: edge['thread'],
@@ -169,7 +177,9 @@ def __convert_call_tree_filter(error_trace: dict, args: dict = None) -> list:
                 CET_ID: counter
             })
         elif 'return' in edge:
-            function_return = error_trace['funcs'][edge['return']]
+            function_return = process_names(error_trace['funcs'][edge['return']])
+            if not function_return:
+                continue
             converted_error_trace.append({
                 CET_OP: CET_OP_RETURN,
                 CET_THREAD: edge['thread'],
