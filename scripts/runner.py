@@ -40,7 +40,7 @@ TAG_BRIDGE = "Bridge"
 TAG_KLEVER = "Klever"
 TAG_BUILDER = "Builder"
 TAG_INSTALL_DIR = "install dir"
-TAG_VERSION = "version"
+TAG_KERNEL_DIR = "kernel dir"
 TAG_CIF = "cif"
 TAG_WORK_DIR = "work dir"
 TAG_CACHE = "cache"
@@ -93,7 +93,7 @@ class Runner(Component):
         builder_config = self.config[TAG_BUILDER]
 
         # Builder config
-        self.linux_version = builder_config.get(TAG_VERSION, None)
+        self.kernel_dir = builder_config.get(TAG_KERNEL_DIR, None)
         self.cif_path = self.__normalize_dir(builder_config.get(TAG_CIF, ""))
         self.builder_work_dir = self.__normalize_dir(builder_config.get(TAG_WORK_DIR, ""))
         self.build_base_cached = self.__normalize_dir(builder_config.get(TAG_CACHE, ""))
@@ -140,12 +140,12 @@ class Runner(Component):
             return self.build_base_cached
         self.logger.info("Preparing build base")
         builder_script = os.path.join(self.klever_home_dir, BUILDER_SCRIPT)
-        cmd = f"{builder_script} --cif {self.cif_path} --version {self.linux_version} " \
+        cmd = f"{builder_script} --cif {self.cif_path} --kernel-dir {self.kernel_dir} " \
               f"--workdir {self.builder_work_dir} --arch {self.arch} --make {self.make_cmd}"
         if self.command_caller(cmd):
             sys.exit("Cannot build Linux kernel")
         build_base_dir = os.path.join(self.builder_work_dir,
-                                      f"build-base-linux-{self.linux_version}-{self.arch}-{self.make_cmd}")
+                                      f"build-base-{self.kernel_dir}-{self.arch}-{self.make_cmd}")
         self.logger.info(f"Build base has been prepared in {build_base_dir}")
         return build_base_dir
 

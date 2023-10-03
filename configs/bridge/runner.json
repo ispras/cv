@@ -1,9 +1,8 @@
 {
   "Builder": {
     "cif": "<path to CIF>",
-    "version": "5.10.193",
+    "kernel dir": "<path to kernel dir>",
     "work dir": "/ssd/build_base",
-    "cache ": "/ssd/build_base/build-base-linux-5.10.193-allmodconfig"
   },
   "Klever": {
     "user": "admin",
