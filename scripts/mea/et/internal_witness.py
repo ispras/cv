@@ -428,6 +428,9 @@ class InternalWitness:
         return self._funcs[identifier]
 
     def get_file_name(self, identifier: int):
-        if self._files:
-            return self._files[identifier]
+        try:
+            if self._files:
+                return self._files[identifier]
+        except TypeError:
+            pass
         return None
