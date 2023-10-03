@@ -208,6 +208,7 @@ class WitnessParser:
         is_source_file = False
         is_entry_point = False
 
+        src_files_offset = dict()
         for edge in graph.findall('graphml:edge', self.WITNESS_NS):
 
             source_node_id = edge.attrib.get('source')
@@ -302,6 +303,19 @@ class WitnessParser:
             if invariant and invariant_scope:
                 self.internal_witness.add_invariant(invariant, invariant_scope)
 
+            def _get_src_file():
+                if start_offset and self.global_program_file:
+                    res_src_file = self.global_program_file
+                elif 'file' in _edge:
+                    res_src_file = self.internal_witness.get_file_name(_edge['file'])
+                    if not res_src_file and self.global_program_file:
+                        res_src_file = self.global_program_file
+                elif self.global_program_file:
+                    res_src_file = self.global_program_file
+                else:
+                    res_src_file = None
+                return res_src_file
+
             if "source" not in _edge:
                 _edge['source'] = ""
                 if 'enter' in _edge:
@@ -312,16 +326,7 @@ class WitnessParser:
                     if 'assumption' in _edge:
                         _edge['source'] = _edge['assumption']
                     elif 'start line' in _edge:
-                        if start_offset and self.global_program_file:
-                            src_file = self.global_program_file
-                        elif 'file' in _edge:
-                            src_file = self.internal_witness.get_file_name(_edge['file'])
-                            if not src_file and self.global_program_file:
-                                src_file = self.global_program_file
-                        elif self.global_program_file:
-                            src_file = self.global_program_file
-                        else:
-                            src_file = None
+                        src_file = _get_src_file()
                         if src_file:
                             with open(src_file, encoding='utf8') as src_obj:
                                 if start_offset:
@@ -344,6 +349,29 @@ class WitnessParser:
                                         counter += 1
                                 if condition == 'condition-false':
                                     _edge['source'] = f"!({_edge['source']})"
+            elif 'start line' in _edge:
+                src_file = _get_src_file()
+                if src_file and src_file not in src_files_offset:
+                    with open(src_file, encoding='utf8') as src_obj:
+                        counter = 1
+                        offset = 0
+                        for line in src_obj.readlines():
+                            if counter == _edge['start line']:
+                                line = line.rstrip().lstrip()
+                                if 'condition' in _edge:
+                                    res = re.match(r'[^(]*\((.+)\)[^)]*', line)
+                                    if res:
+                                        line = res.group(1)
+                                if _edge['source'] == line:
+                                    src_files_offset[src_file] = 0
+                                elif offset:
+                                    src_files_offset[src_file] = offset
+                                break
+                            elif _edge['start line'] - counter < 10:
+                                line = line.rstrip().lstrip()
+                                if _edge['source'] == line:
+                                    offset = counter - _edge['start line']
+                            counter += 1
 
             if 'thread' not in _edge:
                 _edge['thread'] = "0"
@@ -351,5 +379,15 @@ class WitnessParser:
                 _edge['start line'] = 0
 
             edges_num += 1
+
+        for edge in self.internal_witness.get_edges():
+            if 'file' not in edge or 'start line' not in edge:
+                continue
+            res_src_file = self.internal_witness.get_file_name(edge['file'])
+            if res_src_file not in src_files_offset:
+                continue
+            offset = src_files_offset[res_src_file]
+            if offset:
+                edge['start line'] += offset
 
         self._logger.debug(f'Parse {edges_num} edges and {sink_edges_num} sink edges')
