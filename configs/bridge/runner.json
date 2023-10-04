@@ -2,7 +2,7 @@
   "Builder": {
     "cif": "<path to CIF>",
     "kernel dir": "<path to kernel dir>",
-    "work dir": "/ssd/build_base",
+    "work dir": "<path to work dir on ssd>"
   },
   "Klever": {
     "user": "admin",

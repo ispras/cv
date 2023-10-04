@@ -60,8 +60,9 @@ TAG_DEPLOY_DIR = "deploy dir"
 TAG_BUILD_BASE = "build base"
 TAG_OUTPUT_DIR = "output dir"
 TAG_TASKS_DIR = "tasks dir"
+TAG_CONFIG_COMMAND = "config command"
 
-DEFAULT_MAKE_COMMAND = "allmodconfig"
+DEFAULT_CONFIG_COMMAND = "allmodconfig"
 DEFAULT_ARCH = "x86_64"
 BUILDER_SCRIPT = os.path.join("klever", "deploys", "builder.sh")
 KLEVER_LAUNCH_SCRIPT = "klever-start-solution"
@@ -98,7 +99,7 @@ class Runner(Component):
         self.builder_work_dir = self.__normalize_dir(builder_config.get(TAG_WORK_DIR, ""))
         self.build_base_cached = self.__normalize_dir(builder_config.get(TAG_CACHE, ""))
         self.arch = builder_config.get(TAG_ARCH, DEFAULT_ARCH)
-        self.make_cmd = builder_config.get(TAG_MAKE_COMMAND, DEFAULT_MAKE_COMMAND)
+        self.make_cmd = builder_config.get(TAG_CONFIG_COMMAND, DEFAULT_CONFIG_COMMAND)
 
         # Klever config
         self.klever_home_dir = self.__normalize_dir(klever_config.get(TAG_HOME_DIR), TAG_HOME_DIR)
