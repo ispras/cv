@@ -53,6 +53,15 @@ Then launch the following command:
 ./scripts/bridge.py -c klever.json
 ```
 
+### Klever runner
+
+Klever runner allows to create a build base for a Linux kernel, then to launch Klever and at last export results with Klever Bridge.
+You can find example of configuration files in `configs/bridge` directory.
+In order to launch a Klever runner from `<deploy directory>` run the following content:
+```shell
+sudo ./scripts/runner.py -c runner.json -d <path to Linux kernel>
+```
+
 ## Klever config
 
 In order to visualize error traces CPAchecker config must include the following:
