@@ -59,6 +59,9 @@ class KleverLauncher(BenchmarkLauncher):
         for file in glob.glob(os.path.join(output_dir, "*files")):
             if file.endswith(".log"):
                 files.append(file)
+        if COMPONENT_MEA not in self.config:
+            self.config[COMPONENT_MEA] = {}
+        self.config[COMPONENT_MEA][TAG_SOURCE_DIR] = os.path.join(output_dir, os.path.pardir)
         launch_directory = self._copy_result_files(files, self.process_dir)
 
         result.work_dir = launch_directory
@@ -98,10 +101,6 @@ class KleverLauncher(BenchmarkLauncher):
                     job_config[TAG_CONFIG_OPTIONS] = options
 
             for run in root.findall('./run'):
-                # Actually we expect only one run here
-                # file_name = os.path.realpath(os.path.normpath(os.path.abspath(os.path.join(
-                #     output_dir, os.path.pardir, CIL_FILE
-                # ))))
                 result = VerificationResults(None, self.config)
                 result.entrypoint = module
                 result.rule = prop
