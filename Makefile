@@ -34,6 +34,7 @@ wv_script="visualize_witnesses.py"
 launch_script="launch.py"
 auto_script="auto_check.py"
 bridge_script="bridge.py"
+runner_script="runner.py"
 
 # Directories
 root_dir=$(shell pwd)
@@ -197,6 +198,7 @@ install-scripts: check-deploy-dir
 	cp -r ${root_dir}/scripts/ . ; \
 	rm -f scripts/${bv_script} ; \
 	rm -f scripts/${wv_script} ; \
+	rm -f scripts/${runner_script} ; \
 	cp -r ${root_dir}/${plugin_dir} . ; \
 	mkdir -p buildbot
 
@@ -204,7 +206,7 @@ install-witness-visualizer: check-deploy-dir build-cvv
 	@mkdir -p ${DEPLOY_DIR}/${install_dir}
 	@cp ${tools_config_file} ${DEPLOY_DIR}/${install_dir}
 	@rm -rf ${DEPLOY_DIR}/${cvv_dir}
-	@cp -r ${cvv_dir}/web ${DEPLOY_DIR}/${cvv_dir}
+	@cp -r ${cvv_dir} ${DEPLOY_DIR}/${cvv_dir}
 	@rm -rf ${DEPLOY_DIR}/${cvv_dir}/web/static/codemirror
 	@rm -rf ${DEPLOY_DIR}/${cvv_dir}/web/static/calendar
 	@rm -rf ${DEPLOY_DIR}/${cvv_dir}/web/static/jstree
@@ -213,7 +215,8 @@ install-witness-visualizer: check-deploy-dir build-cvv
 	cp -r ${root_dir}/scripts/ . ; \
 	rm -f scripts/${launch_script} ; \
 	rm -f scripts/${auto_script} ; \
-	rm -f scripts/${bv_script}
+	rm -f scripts/${bv_script} ; \
+	rm -f scripts/${runner_script}
 	@echo "*** Witness Visualizer has been successfully installed into the directory ${DEPLOY_DIR} ***"
 
 install-mea: check-deploy-dir
@@ -229,6 +232,7 @@ install-mea: check-deploy-dir
 	rm -rf scripts/models/ ; \
 	rm -rf scripts/klever_bridge ; \
 	rm -f scripts/${wv_script} ; \
+	rm -f scripts/${runner_script} ; \
 	rm -f scripts/aux/opts.py
 	@cd ${DEPLOY_DIR}/scripts/components; \
 	rm main_generator.py exporter.py builder.py benchmark_launcher.py qualifier.py launcher.py preparator.py coverage_processor.py full_launcher.py
@@ -241,6 +245,7 @@ install-benchmark-visualizer: install-witness-visualizer
 install-klever-bridge: install-witness-visualizer
 	@cp -r ${cvv_dir}/utils/ ${DEPLOY_DIR}/${cvv_dir}/
 	@cp -f ${root_dir}/scripts/${bridge_script} ${DEPLOY_DIR}/scripts/
+	@cp -f ${root_dir}/scripts/${runner_script} ${DEPLOY_DIR}/scripts/
 	@echo "*** Klever bridge has been successfully installed into the directory ${DEPLOY_DIR} ***"
 
 install: check-deploy-dir install-cvv install-benchexec install-cil install-cpa install-scripts install-cpa
