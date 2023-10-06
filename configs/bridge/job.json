@@ -1,0 +1,12 @@
+{
+  "project": "Linux",
+  "targets": [
+    "drivers/net/**",
+    "drivers/usb/**"
+  ],
+  "specifications set": "5.5",
+  "requirement specifications": [
+    "memory safety with mea",
+    "concurrency safety"
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "Builder": {
+    "cif": "<path to CIF>",
+    "kernel dir": "<path to kernel dir>",
+    "work dir": "<path to work dir on ssd>"
+  },
+  "Klever": {
+    "user": "admin",
+    "pass": "admin",
+    "host": "<Klever host:port>",
+    "home dir": "<klever home dir>",
+    "launch config": "launch.json",
+    "job config": "job.json",
+    "resource config": "resource.json",
+    "verifier options": "verifier_options.json",
+    "job id": "<parent job id>",
+    "python-venv": "/usr/local/python3.10-klever/bin/python3",
+    "deploy dir": "<klever deploy dir>"
+  },
+  "Bridge": {
+    "home dir": "<Bridge deploy dir>",
+    "bridge config": "bridge.json",
+    "work dir": "<path to jobs dir>"
+  }
+}
