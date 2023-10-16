@@ -61,6 +61,8 @@ TAG_BUILD_BASE = "build base"
 TAG_OUTPUT_DIR = "output dir"
 TAG_TASKS_DIR = "tasks dir"
 TAG_CONFIG_COMMAND = "config command"
+TAG_EXPORTER = "Exporter"
+TAG_VERSION = "version"
 
 DEFAULT_CONFIG_COMMAND = "allmodconfig"
 DEFAULT_ARCH = "x86_64"
@@ -167,6 +169,10 @@ class Runner(Component):
             os.unlink(dst_build_base_dir)
         os.symlink(build_base_dir, dst_build_base_dir)
         job_config[TAG_BUILD_BASE] = build_base_dir_name
+        if TAG_EXPORTER not in job_config:
+            job_config[TAG_EXPORTER] = {}
+        if self.version:
+            job_config[TAG_EXPORTER][TAG_VERSION] = self.version
         bridge_config[COMPONENT_BENCHMARK_LAUNCHER][TAG_OUTPUT_DIR] = \
             os.path.join(self.klever_deploy_dir, KLEVER_TASKS_DIR)
         bridge_config[COMPONENT_BENCHMARK_LAUNCHER][TAG_TASKS_DIR] = \
