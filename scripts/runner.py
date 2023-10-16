@@ -235,6 +235,7 @@ class Runner(Component):
         if self.jobs_dir:
             self.logger.info("Clear job files")
             shutil.rmtree(os.path.join(self.jobs_dir, new_job_id), ignore_errors=True)
+        self.command_caller("service klever-native-scheduler restart")
 
     def run(self):
         """
