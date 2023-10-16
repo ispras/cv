@@ -61,6 +61,8 @@ TAG_BUILD_BASE = "build base"
 TAG_OUTPUT_DIR = "output dir"
 TAG_TASKS_DIR = "tasks dir"
 TAG_CONFIG_COMMAND = "config command"
+TAG_EXPORTER = "Exporter"
+TAG_VERSION = "version"
 
 DEFAULT_CONFIG_COMMAND = "allmodconfig"
 DEFAULT_ARCH = "x86_64"
@@ -86,7 +88,7 @@ class Runner(Component):
     2. Launching klever;
     3. Converting results to CVV.
     """
-    def __init__(self, general_config: dict, kernel_dir_override: str):
+    def __init__(self, general_config: dict, kernel_dir_override: str, version_override: str):
 
         super().__init__(COMPONENT_RUNNER, general_config)
         bridge_config = self.config[TAG_BRIDGE]
@@ -97,6 +99,8 @@ class Runner(Component):
         self.kernel_dir = builder_config.get(TAG_KERNEL_DIR, None)
         if kernel_dir_override:
             self.kernel_dir = kernel_dir_override
+        if version_override:
+            self.version = version_override
         self.cif_path = self.__normalize_dir(builder_config.get(TAG_CIF, ""))
         self.builder_work_dir = self.__normalize_dir(builder_config.get(TAG_WORK_DIR, ""))
         self.build_base_cached = self.__normalize_dir(builder_config.get(TAG_CACHE, ""))
@@ -144,11 +148,13 @@ class Runner(Component):
         self.logger.info("Preparing build base")
         builder_script = os.path.join(self.klever_home_dir, BUILDER_SCRIPT)
         cmd = f"{builder_script} --cif {self.cif_path} --kernel-dir {self.kernel_dir} " \
-              f"--workdir {self.builder_work_dir} --arch {self.arch} --make {self.make_cmd}"
+              f"--workdir {self.builder_work_dir} --arch {self.arch} --kernel-config {self.make_cmd}"
+        self.logger.debug(cmd)
         if self.command_caller(cmd):
             sys.exit("Cannot build Linux kernel")
+        kernel_dir_rel = os.path.basename(self.kernel_dir)
         build_base_dir = os.path.join(self.builder_work_dir,
-                                      f"build-base-{self.kernel_dir}-{self.arch}-{self.make_cmd}")
+                                      f"build-base-{kernel_dir_rel}-{self.arch}-{self.make_cmd}")
         self.logger.info(f"Build base has been prepared in {build_base_dir}")
         return build_base_dir
 
@@ -163,6 +169,10 @@ class Runner(Component):
             os.unlink(dst_build_base_dir)
         os.symlink(build_base_dir, dst_build_base_dir)
         job_config[TAG_BUILD_BASE] = build_base_dir_name
+        if TAG_EXPORTER not in job_config:
+            job_config[TAG_EXPORTER] = {}
+        if self.version:
+            job_config[TAG_EXPORTER][TAG_VERSION] = self.version
         bridge_config[COMPONENT_BENCHMARK_LAUNCHER][TAG_OUTPUT_DIR] = \
             os.path.join(self.klever_deploy_dir, KLEVER_TASKS_DIR)
         bridge_config[COMPONENT_BENCHMARK_LAUNCHER][TAG_TASKS_DIR] = \
@@ -190,7 +200,7 @@ class Runner(Component):
         if self.python_venv:
             os.chdir(self.klever_home_dir)
             if self.command_caller(f"{self.python_venv} -m venv venv"):
-                sys.exit("Cannot use python venv")
+                self.logger.warning("Cannot use python venv")
             sys.path.insert(1, os.path.abspath(DEFAULT_VENV_PATH))
             os.environ["PATH"] += os.pathsep + os.path.abspath(DEFAULT_VENV_PATH)
         launcher_output = self.command_caller_with_output(cmd)
@@ -230,7 +240,8 @@ class Runner(Component):
             sys.exit(f"Cannot export results via Klever Bridge. Reproduce with {cmd}")
         if self.jobs_dir:
             self.logger.info("Clear job files")
-            shutil.rmtree(os.path.join(self.jobs_dir, new_job_id))
+            shutil.rmtree(os.path.join(self.jobs_dir, new_job_id), ignore_errors=True)
+        self.command_caller("service klever-native-scheduler restart")
 
     def run(self):
         """
@@ -245,11 +256,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--config", help="config file", required=True)
     parser.add_argument("-d", "--kernel-dir", dest="kernel_dir", help="path to kernel directory")
+    parser.add_argument("-v", "--version", dest="version", help="Linux kernel version")
 
     options = parser.parse_args()
     with open(options.config, errors='ignore', encoding='ascii') as data_file:
         config = json.load(data_file)
     kernel_dir = options.kernel_dir
+    version = options.version
 
-    runner = Runner(config, kernel_dir)
+    runner = Runner(config, kernel_dir, version)
     runner.run()
