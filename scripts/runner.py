@@ -86,7 +86,7 @@ class Runner(Component):
     2. Launching klever;
     3. Converting results to CVV.
     """
-    def __init__(self, general_config: dict, kernel_dir_override: str):
+    def __init__(self, general_config: dict, kernel_dir_override: str, version_override: str):
 
         super().__init__(COMPONENT_RUNNER, general_config)
         bridge_config = self.config[TAG_BRIDGE]
@@ -97,6 +97,8 @@ class Runner(Component):
         self.kernel_dir = builder_config.get(TAG_KERNEL_DIR, None)
         if kernel_dir_override:
             self.kernel_dir = kernel_dir_override
+        if version_override:
+            self.version = version_override
         self.cif_path = self.__normalize_dir(builder_config.get(TAG_CIF, ""))
         self.builder_work_dir = self.__normalize_dir(builder_config.get(TAG_WORK_DIR, ""))
         self.build_base_cached = self.__normalize_dir(builder_config.get(TAG_CACHE, ""))
@@ -245,11 +247,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--config", help="config file", required=True)
     parser.add_argument("-d", "--kernel-dir", dest="kernel_dir", help="path to kernel directory")
+    parser.add_argument("-v", "--version", dest="version", help="Linux kernel version")
 
     options = parser.parse_args()
     with open(options.config, errors='ignore', encoding='ascii') as data_file:
         config = json.load(data_file)
     kernel_dir = options.kernel_dir
+    version = options.version
 
-    runner = Runner(config, kernel_dir)
+    runner = Runner(config, kernel_dir, version)
     runner.run()
