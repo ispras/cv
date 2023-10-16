@@ -146,7 +146,8 @@ class Runner(Component):
         self.logger.info("Preparing build base")
         builder_script = os.path.join(self.klever_home_dir, BUILDER_SCRIPT)
         cmd = f"{builder_script} --cif {self.cif_path} --kernel-dir {self.kernel_dir} " \
-              f"--workdir {self.builder_work_dir} --arch {self.arch} --make {self.make_cmd}"
+              f"--workdir {self.builder_work_dir} --arch {self.arch} --kernel-config {self.make_cmd}"
+        self.logger.debug(cmd)
         if self.command_caller(cmd):
             sys.exit("Cannot build Linux kernel")
         build_base_dir = os.path.join(self.builder_work_dir,
