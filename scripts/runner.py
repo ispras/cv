@@ -150,8 +150,9 @@ class Runner(Component):
         self.logger.debug(cmd)
         if self.command_caller(cmd):
             sys.exit("Cannot build Linux kernel")
+        kernel_dir_rel = os.path.basename(self.kernel_dir)
         build_base_dir = os.path.join(self.builder_work_dir,
-                                      f"build-base-{self.kernel_dir}-{self.arch}-{self.make_cmd}")
+                                      f"build-base-{kernel_dir_rel}-{self.arch}-{self.make_cmd}")
         self.logger.info(f"Build base has been prepared in {build_base_dir}")
         return build_base_dir
 
