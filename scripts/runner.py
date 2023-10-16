@@ -194,7 +194,7 @@ class Runner(Component):
         if self.python_venv:
             os.chdir(self.klever_home_dir)
             if self.command_caller(f"{self.python_venv} -m venv venv"):
-                sys.exit("Cannot use python venv")
+                self.logger.warning("Cannot use python venv")
             sys.path.insert(1, os.path.abspath(DEFAULT_VENV_PATH))
             os.environ["PATH"] += os.pathsep + os.path.abspath(DEFAULT_VENV_PATH)
         launcher_output = self.command_caller_with_output(cmd)
@@ -234,7 +234,7 @@ class Runner(Component):
             sys.exit(f"Cannot export results via Klever Bridge. Reproduce with {cmd}")
         if self.jobs_dir:
             self.logger.info("Clear job files")
-            shutil.rmtree(os.path.join(self.jobs_dir, new_job_id))
+            shutil.rmtree(os.path.join(self.jobs_dir, new_job_id), ignore_errors=True)
 
     def run(self):
         """
