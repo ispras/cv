@@ -64,6 +64,8 @@ TAG_CONFIG_COMMAND = "config command"
 TAG_EXPORTER = "Exporter"
 TAG_VERSION = "version"
 TAG_PROPERTIES = "requirement specifications"
+TAG_UPLOADER = "uploader"
+TAG_NAME = "name"
 
 DEFAULT_CONFIG_COMMAND = "allmodconfig"
 DEFAULT_ARCH = "x86_64"
@@ -177,6 +179,8 @@ class Runner(Component):
             bridge_config[TAG_EXPORTER][TAG_VERSION] = self.version
         if self.properties:
             job_config[TAG_PROPERTIES] = self.properties
+        uploaded_name = f"{'_'.join(self.properties)} - {self.version} - <timestamp>"
+        bridge_config[TAG_UPLOADER][TAG_NAME] = uploaded_name
         bridge_config[COMPONENT_BENCHMARK_LAUNCHER][TAG_OUTPUT_DIR] = \
             os.path.join(self.klever_deploy_dir, KLEVER_TASKS_DIR)
         bridge_config[COMPONENT_BENCHMARK_LAUNCHER][TAG_TASKS_DIR] = \
