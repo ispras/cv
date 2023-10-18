@@ -63,6 +63,7 @@ TAG_TASKS_DIR = "tasks dir"
 TAG_CONFIG_COMMAND = "config command"
 TAG_EXPORTER = "Exporter"
 TAG_VERSION = "version"
+TAG_PROPERTIES = "requirement specifications"
 
 DEFAULT_CONFIG_COMMAND = "allmodconfig"
 DEFAULT_ARCH = "x86_64"
@@ -88,7 +89,7 @@ class Runner(Component):
     2. Launching klever;
     3. Converting results to CVV.
     """
-    def __init__(self, general_config: dict, kernel_dir_override: str, version_override: str):
+    def __init__(self, general_config: dict, kernel_dir_override: str, version_override: str, properties: list):
 
         super().__init__(COMPONENT_RUNNER, general_config)
         bridge_config = self.config[TAG_BRIDGE]
@@ -101,6 +102,7 @@ class Runner(Component):
             self.kernel_dir = kernel_dir_override
         if version_override:
             self.version = version_override
+        self.properties = properties
         self.cif_path = self.__normalize_dir(builder_config.get(TAG_CIF, ""))
         self.builder_work_dir = self.__normalize_dir(builder_config.get(TAG_WORK_DIR, ""))
         self.build_base_cached = self.__normalize_dir(builder_config.get(TAG_CACHE, ""))
@@ -169,10 +171,12 @@ class Runner(Component):
             os.unlink(dst_build_base_dir)
         os.symlink(build_base_dir, dst_build_base_dir)
         job_config[TAG_BUILD_BASE] = build_base_dir_name
-        if TAG_EXPORTER not in job_config:
-            job_config[TAG_EXPORTER] = {}
+        if TAG_EXPORTER not in bridge_config:
+            bridge_config[TAG_EXPORTER] = {}
         if self.version:
-            job_config[TAG_EXPORTER][TAG_VERSION] = self.version
+            bridge_config[TAG_EXPORTER][TAG_VERSION] = self.version
+        if self.properties:
+            job_config[TAG_PROPERTIES] = self.properties
         bridge_config[COMPONENT_BENCHMARK_LAUNCHER][TAG_OUTPUT_DIR] = \
             os.path.join(self.klever_deploy_dir, KLEVER_TASKS_DIR)
         bridge_config[COMPONENT_BENCHMARK_LAUNCHER][TAG_TASKS_DIR] = \
@@ -257,12 +261,14 @@ if __name__ == '__main__':
     parser.add_argument("-c", "--config", help="config file", required=True)
     parser.add_argument("-d", "--kernel-dir", dest="kernel_dir", help="path to kernel directory")
     parser.add_argument("-v", "--version", dest="version", help="Linux kernel version")
+    parser.add_argument("-p", "--properties", nargs='+', dest="properties", help="property to be checked")
 
     options = parser.parse_args()
     with open(options.config, errors='ignore', encoding='ascii') as data_file:
         config = json.load(data_file)
     kernel_dir = options.kernel_dir
     version = options.version
+    props = options.properties
 
-    runner = Runner(config, kernel_dir, version)
+    runner = Runner(config, kernel_dir, version, props)
     runner.run()
