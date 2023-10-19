@@ -34,6 +34,8 @@ CIL_FILE = "cil.i"
 JOBS_DIR = "jobs"
 JOB_RES_FILE = "runexec stdout.log"
 KLEVER_COMPONENT = "Klever"
+KLEVER_WORK_DIR = "klever-core-work-dir"
+KERNEL_DIR = "kernel dir"
 
 
 class KleverLauncher(BenchmarkLauncher):
@@ -43,6 +45,7 @@ class KleverLauncher(BenchmarkLauncher):
     def __init__(self, config_file, additional_config: dict, is_launch=False):
         super().__init__(config_file, additional_config, is_launch)
         self.job_id = self.component_config.get(TAG_JOB_ID, None)
+        self.kernel_dir = os.path.realpath(self.component_config.get(KERNEL_DIR, ""))
 
     @staticmethod
     def __parse_memory(memory: str) -> str:
@@ -66,7 +69,11 @@ class KleverLauncher(BenchmarkLauncher):
 
         result.work_dir = launch_directory
         result.parse_output_dir(launch_directory, self.install_dir, self.result_dir_et, columns)
-        self._process_coverage(result, launch_directory, [self.tasks_dir])
+        jobs_dir = os.path.join(self.output_dir, os.path.pardir, JOBS_DIR, self.job_id, KLEVER_WORK_DIR)
+        source_dir = os.path.join(self.tasks_dir, self.kernel_dir.lstrip(os.sep))
+        self._process_coverage(result, launch_directory, [source_dir, self.tasks_dir,
+                                                          os.path.join(output_dir, os.path.pardir)],
+                               work_dir=jobs_dir)
         if result.initial_traces > 1:
             result.filter_traces(launch_directory, self.install_dir, self.result_dir_et)
         queue.put(result)

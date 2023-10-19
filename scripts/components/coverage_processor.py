@@ -35,7 +35,7 @@ from coverage.lcov import LCOV
 
 TAG_COVERAGE_MODE = "mode"
 TAG_COVERAGE_PERCENT_MODE = "percent mode"
-TAG_FULL_COVERAGE_MODE = "full mode"
+TAG_FULL_COVERAGE_MODE = "src cov mode"
 
 COVERAGE_MODE_NONE = "none"  # Do not compute coverage.
 COVERAGE_MODE_PERCENT = "percent"  # Present only percentage of coverage by lines/functions.
@@ -210,14 +210,13 @@ class Coverage(Component):
         self.mode = self.component_config.get(TAG_COVERAGE_MODE, DEFAULT_COVERAGE_MODE)
         self.percent_mode = self.component_config.get(TAG_COVERAGE_PERCENT_MODE,
                                                       COVERAGE_PERCENT_LOG)
-        # TODO: check other modes - do we need this argument?
-        self.full_mode = self.component_config.get(TAG_FULL_COVERAGE_MODE, "full")
+        self.src_cov_mode = self.component_config.get(TAG_FULL_COVERAGE_MODE, "src_only")
         self.internal_logger = logging.getLogger(name=COMPONENT_COVERAGE)
         self.internal_logger.setLevel(self.logger.level)
         self.default_source_file = default_source_file
 
     def compute_coverage(self, source_dirs: set, launch_directory: str,
-                         queue: multiprocessing.Queue = None):
+                         queue: multiprocessing.Queue = None, work_dir=None):
         """
         Main method for coverage processing.
         """
@@ -255,7 +254,7 @@ class Coverage(Component):
                 else:
                     self.logger.warning(f"Unknown coverage mode: {self.percent_mode}")
                 if self.mode == COVERAGE_MODE_FULL:
-                    self.__full_coverage(source_dirs, os.path.abspath(file))
+                    self.__full_coverage(source_dirs, os.path.abspath(file), work_dir)
                 break
         os.chdir(self.launcher_dir)
 
@@ -265,15 +264,17 @@ class Coverage(Component):
             data[TAG_COVERAGE_FUNCS] = cov_funcs
             queue.put(data)
 
-    def __full_coverage(self, source_dirs: set, coverage_file: str):
+    def __full_coverage(self, source_dirs: set, coverage_file: str, work_dir: str):
         dummy_dir = ""
         for src_dir in source_dirs:
             if os.path.exists(os.path.join(src_dir, CLADE_WORK_DIR)):
                 dummy_dir = os.path.join(src_dir, CLADE_WORK_DIR)
                 break
 
+        if not work_dir:
+            work_dir = self.launcher_dir
         lcov = LCOV(self.internal_logger, coverage_file, dummy_dir, source_dirs, [],
-                    self.launcher_dir, self.full_mode,
+                    work_dir, self.src_cov_mode,
                     ignore_files={os.path.join(DIRECTORY_WITH_GENERATED_FILES,
                                                COMMON_HEADER_FOR_RULES)},
                     default_file=self.default_source_file)
