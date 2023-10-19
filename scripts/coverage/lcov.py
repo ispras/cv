@@ -179,9 +179,9 @@ class LCOV:
         # Public
         self.logger = logger
         self.coverage_file = coverage_file
-        self.clade_dir = clade_dir
-        self.source_dirs = [os.path.normpath(p) for p in source_dirs]
-        self.search_dirs = [os.path.normpath(p) for p in search_dirs]
+        self.clade_dir = os.path.normpath(clade_dir)
+        self.source_dirs = [os.path.realpath(p) for p in source_dirs]
+        self.search_dirs = [os.path.realpath(p) for p in search_dirs]
         self.main_work_dir = main_work_dir
         self.completeness = completeness
         self.coverage_info_dir = coverage_info_dir
@@ -191,14 +191,16 @@ class LCOV:
             ignore_files = set()
         self.ignore_files = ignore_files
         self.default_file = default_file
+        # TODO: specify this option
+        self._is_read_line_directives = False
 
         # Sanity checks
-        if self.completeness not in ('full', 'partial', 'lightweight', 'none', None):
+        if self.completeness not in ('full', 'src_only', 'none', None):
             raise NotImplementedError(f"Coverage type {self.completeness} is not supported")
 
         # Import coverage
         try:
-            if self.completeness in ('full', 'partial', 'lightweight'):
+            if self.completeness in ('full', 'src_only'):
                 self.coverage_info = self.parse()
 
                 if coverage_id:
@@ -216,6 +218,28 @@ class LCOV:
                 os.remove('coverage.json')
             raise
 
+    def get_src_files_map(self, new_name: str, results: dict):
+        if not results:
+            with open(new_name, encoding='utf8') as fd_cil:
+                line_num = 1
+                orig_file_id = None
+                orig_file_line_num = 0
+                line_preprocessor_directive = re.compile(r'\s*#line\s+(\d+)\s*(.*)')
+                for line in fd_cil:
+                    m = line_preprocessor_directive.match(line)
+                    if m:
+                        orig_file_line_num = int(m.group(1))
+                        if m.group(2):
+                            tmp_file = m.group(2)[1:-1]
+                            # Do not treat artificial file references
+                            if not os.path.basename(tmp_file) == '<built-in>':
+                                orig_file_id = tmp_file
+                    else:
+                        if orig_file_id and orig_file_line_num:
+                            results[line_num] = (orig_file_id, orig_file_line_num)
+                        orig_file_line_num += 1
+                    line_num += 1
+
     def parse(self) -> dict:
         """
         Parses lcov results
@@ -223,10 +247,10 @@ class LCOV:
         dir_map = (
             ('sources', self.source_dirs),
             ('specifications', (
-                os.path.normpath(os.path.join(self.main_work_dir, 'job', 'root', 'specifications')),
+                os.path.realpath(os.path.join(self.main_work_dir, 'job', 'root', 'specifications')),
             )),
             ('generated', (
-                os.path.normpath(self.main_work_dir),
+                os.path.realpath(self.main_work_dir),
             ))
         )
 
@@ -235,43 +259,59 @@ class LCOV:
         if not os.path.isfile(self.coverage_file):
             raise FileNotFoundError(f'There is no coverage file {self.coverage_file}')
 
-        # Gettings dirs, that should be excluded.
-        excluded_dirs = set()
-        if self.completeness in ('partial', 'lightweight'):
-            with open(self.coverage_file, encoding='utf-8') as file_obj:
-                # Build map, that contains dir as key and list of files in the dir as value
-                all_files = {}
-                for line in file_obj:
-                    line = line.rstrip('\n')
-                    if line.startswith(self.FILENAME_PREFIX):
-                        file_name = line[len(self.FILENAME_PREFIX):]
-                        file_name = os.path.normpath(file_name)
-                        if os.path.isfile(file_name):
-                            path, file = os.path.split(file_name)
-                            # All pathes should be absolute, otherwise we cannot match source dirs
-                            path = os.path.join(os.path.sep,
-                                                _make_relative_path([self.clade_dir], path))
-                            all_files.setdefault(path, [])
-                            all_files[path].append(file)
-
-                for path, files in all_files.items():
-                    # Lightweight coverage keeps only source code dirs.
-                    if self.completeness == 'lightweight' and \
-                            all(os.path.commonpath([s, path]) != s for s in self.source_dirs):
-                        self.logger.debug(f'Excluded {path}')
-                        excluded_dirs.add(path)
-                        continue
-                    # Partial coverage keeps only dirs, that contains source files.
-                    for file in files:
-                        if file.endswith('.c') or file.endswith('.c.aux'):
+        def __normalize_path(real_file_name: str) -> (bool, str):
+            res_file_name = None
+            real_file_name = os.path.normpath(real_file_name)
+            if self.default_file:
+                # TODO: dirty workaround (required for specific cases).
+                dw_name = re.sub(r'.+/vcloud-\S+/worker/working_dir_[^/]+/', '',
+                                 real_file_name)
+                real_file_name = self.default_file
+                for source_dir in self.source_dirs:
+                    for tmp_file_name in [self.default_file, dw_name]:
+                        tmp_file_name = os.path.join(source_dir, tmp_file_name)
+                        if os.path.exists(tmp_file_name):
+                            real_file_name = tmp_file_name
                             break
+            tmp_file = os.path.join(os.path.sep, _make_relative_path([self.clade_dir], real_file_name))
+            if os.path.isfile(real_file_name):
+                for dest, srcs in dir_map:
+                    for src in srcs:
+                        if os.path.commonpath([real_file_name, src]) != src:
+                            continue
+                        if dest in ('generated', 'specifications'):
+                            if self.completeness == "src_only":
+                                is_ignore_file = True
+                                break
+                            res_file_name = os.path.join(dest, os.path.basename(tmp_file))
+                        else:
+                            res_file_name = os.path.join(dest, os.path.relpath(tmp_file, src))
+
+                        if res_file_name in self.ignore_files:
+                            continue
+                        is_ignore_file = False
+                        break
                     else:
-                        excluded_dirs.add(path)
+                        continue
+                    break
+                # This "else" corresponds "for"
+                else:
+                    # Check other prefixes
+                    res_file_name = _make_relative_path(self.search_dirs, tmp_file)
+                    if res_file_name == tmp_file:
+                        is_ignore_file = True
+                    else:
+                        is_ignore_file = False
+                        res_file_name = os.path.join('specifications', res_file_name)
+            else:
+                is_ignore_file = True
+            return is_ignore_file, res_file_name
 
         # Parsing coverage file
         coverage_info = {}
+        src_files_map = {}
+
         with open(self.coverage_file, encoding='utf-8') as file_obj:
-            count_covered_functions = None
             for line in file_obj:
                 line = line.rstrip('\n')
 
@@ -280,99 +320,82 @@ class LCOV:
 
                 if line.startswith(self.NEW_FILE_PREFIX):
                     # Clean
-                    file_name = None
                     covered_lines = {}
                     function_to_line = {}
+                    function_by_file = {}
                     covered_functions = {}
-                    count_covered_functions = 0
+                    count_covered_functions = {}
                 elif line.startswith(self.FILENAME_PREFIX):
                     # Get file name, determine his directory and determine, should we ignore this
-                    real_file_name = line[len(self.FILENAME_PREFIX):]
-                    real_file_name = os.path.normpath(real_file_name)
-                    if self.default_file:
-                        # TODO: dirty workaround (required for specific cases).
-                        dw_name = re.sub(r'.+/vcloud-\S+/worker/working_dir_[^/]+/', '',
-                                         real_file_name)
-                        real_file_name = self.default_file
-                        for source_dir in self.source_dirs:
-                            for tmp_file_name in [self.default_file, dw_name]:
-                                tmp_file_name = os.path.join(source_dir, tmp_file_name)
-                                if os.path.exists(tmp_file_name):
-                                    real_file_name = tmp_file_name
-                                    break
-                    file_name = os.path.join(os.path.sep,
-                                             _make_relative_path([self.clade_dir], real_file_name))
-                    if os.path.isfile(real_file_name) and \
-                            all(os.path.commonpath((p, file_name)) != p for p in excluded_dirs):
-                        for dest, srcs in dir_map:
-                            for src in srcs:
-                                if os.path.commonpath([real_file_name, src]) != src:
-                                    continue
-                                if dest in ('generated', 'specifications'):
-                                    new_file_name = os.path.join(dest, os.path.basename(file_name))
-                                else:
-                                    new_file_name = os.path.join(dest, os.path.relpath(file_name,
-                                                                                       src))
+                    extracted_file_name = line[len(self.FILENAME_PREFIX):]
+                    ignore_file, normalized_file_name = __normalize_path(extracted_file_name)
+                    if normalized_file_name:  # ~ CIL file
+                        if not self._is_read_line_directives:
+                            self.get_src_files_map(extracted_file_name, src_files_map)
+                            for old_file_line, info in src_files_map.items():
+                                new_file_name_id, new_file_name_line = info
+                                _, new_file_name_id_norm = __normalize_path(new_file_name_id)
+                                if new_file_name_id_norm:
+                                    self.arcnames[new_file_name_id] = new_file_name_id_norm
 
-                                if new_file_name in self.ignore_files:
-                                    continue
-                                ignore_file = False
-                                break
-                            else:
-                                continue
-                            break
-                        # This "else" corresponds "for"
-                        else:
-                            # Check other prefixes
-                            new_file_name = _make_relative_path(self.search_dirs, file_name)
-                            if new_file_name == file_name:
-                                ignore_file = True
-                                continue
-                            ignore_file = False
-                            new_file_name = os.path.join('specifications', new_file_name)
-
-                        self.arcnames[real_file_name] = new_file_name
-                        old_file_name, file_name = real_file_name, new_file_name
-                    else:
-                        ignore_file = True
                 elif line.startswith(self.LINE_PREFIX):
                     # Coverage of the specified line
                     splts = line[len(self.LINE_PREFIX):].split(',')
-                    covered_lines[int(splts[0])] = int(splts[1])
+                    cil_line = int(splts[0])
+                    if cil_line in src_files_map:
+                        target_file, target_line = src_files_map[cil_line]
+                        if target_file not in covered_lines:
+                            covered_lines[target_file] = {}
+                        covered_lines[target_file][target_line] = int(splts[1])
                 elif line.startswith(self.FUNCTION_NAME_PREFIX):
                     # Mapping of the function name to the line number
                     splts = line[len(self.FUNCTION_NAME_PREFIX):].split(',')
+                    cil_line = int(splts[0])
                     function_to_line.setdefault(splts[1], 0)
-                    function_to_line[splts[1]] = int(splts[0])
+                    function_to_line[splts[1]] = cil_line
+                    if cil_line in src_files_map:
+                        target_file, target_line = src_files_map[cil_line]
+                        if target_file not in function_by_file:
+                            function_by_file[target_file] = {}
+                        function_by_file[target_file][splts[1]] = target_line
                 elif line.startswith(self.FUNCTION_PREFIX):
                     # Coverage of the specified function
                     splts = line[len(self.FUNCTION_PREFIX):].split(',')
                     if splts[0] == "0":
                         continue
-                    covered_functions[function_to_line[splts[1]]] = int(splts[0])
-                    count_covered_functions += 1
+                    func_name = splts[1]
+                    cil_line = function_to_line.get(func_name, None)
+
+                    if cil_line and cil_line in src_files_map:
+                        target_file, target_line = src_files_map[cil_line]
+                        if target_file not in covered_functions:
+                            covered_functions[target_file] = {}
+                            count_covered_functions[target_file] = 0
+                        covered_functions[target_file][target_line] = int(splts[0])
+                        count_covered_functions[target_file] += 1
                 elif line.startswith(self.EOR_PREFIX):
-                    # End coverage for the specific file
+                    # End coverage for the specific file`
 
                     # Add functions, which were not covered
 
-                    covered_functions.update({
-                        line: 0 for line in set(function_to_line.values()).difference(
-                            set(covered_functions.keys()))})
-
-                    coverage_info.setdefault(file_name, [])
-
-                    new_cov = {
-                        'file name': old_file_name,
-                        'arcname': file_name,
-                        'total functions': len(function_to_line),
-                        'covered lines': covered_lines,
-                        'covered functions': covered_functions
-                    }
-                    if self.collect_functions:
-                        new_cov['covered function names'] = \
-                            list((name for name, line in function_to_line.items()
-                                  if covered_functions[line] != 0))
-                    coverage_info[file_name].append(new_cov)
+                    for orig_file, arc_file in self.arcnames.items():
+                        target_covered_functions = covered_functions.get(orig_file, {})
+                        target_function_to_line = function_by_file.get(orig_file, {})
+                        target_covered_functions.update({
+                            line: 0 for line in set(target_function_to_line.values()).difference(
+                                set(target_covered_functions.keys()))})
+                        coverage_info.setdefault(arc_file, [])
+                        new_cov = {
+                            'file name': orig_file,
+                            'arcname': arc_file,
+                            'total functions': len(target_function_to_line),
+                            'covered lines': covered_lines.get(orig_file, {}),
+                            'covered functions': target_covered_functions,
+                        }
+                        if self.collect_functions:
+                            new_cov['covered function names'] = \
+                                list((name for name, line in target_function_to_line.items()
+                                      if target_covered_functions[line] != 0))
+                        coverage_info[arc_file].append(new_cov)
 
         return coverage_info
