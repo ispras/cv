@@ -332,8 +332,8 @@ class LCOV:
                     if normalized_file_name:  # ~ CIL file
                         if not self._is_read_line_directives:
                             self.get_src_files_map(extracted_file_name, src_files_map)
-                            for old_file_line, info in src_files_map.items():
-                                new_file_name_id, new_file_name_line = info
+                            for _, info in src_files_map.items():
+                                new_file_name_id, _ = info
                                 _, new_file_name_id_norm = __normalize_path(new_file_name_id)
                                 if new_file_name_id_norm:
                                     self.arcnames[new_file_name_id] = new_file_name_id_norm
