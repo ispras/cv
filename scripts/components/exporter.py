@@ -278,7 +278,7 @@ class Exporter(Component):
             proofs = {}
 
             # Process several error traces in parallel.
-            source_files = dict()
+            source_files = {}
             with open(report_launches, encoding='utf8', errors='ignore') as file_obj, \
                     open(report_resources, encoding='utf8', errors='ignore') as res_obj:
                 resources_data = res_obj.readlines()[1:]

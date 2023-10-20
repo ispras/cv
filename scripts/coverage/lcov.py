@@ -218,7 +218,8 @@ class LCOV:
                 os.remove('coverage.json')
             raise
 
-    def get_src_files_map(self, new_name: str, results: dict):
+    @staticmethod
+    def _get_src_files_map(new_name: str, results: dict):
         if not results:
             with open(new_name, encoding='utf8') as fd_cil:
                 line_num = 1
@@ -331,7 +332,7 @@ class LCOV:
                     ignore_file, normalized_file_name = __normalize_path(extracted_file_name)
                     if normalized_file_name:  # ~ CIL file
                         if not self._is_read_line_directives:
-                            self.get_src_files_map(extracted_file_name, src_files_map)
+                            self._get_src_files_map(extracted_file_name, src_files_map)
                             for _, info in src_files_map.items():
                                 new_file_name_id, _ = info
                                 _, new_file_name_id_norm = __normalize_path(new_file_name_id)
