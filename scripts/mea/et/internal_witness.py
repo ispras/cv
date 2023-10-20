@@ -104,14 +104,26 @@ class InternalWitness:
         sink_edges = set([self._edges.index(e) for e in self._edges if e.get('sink')])
         self._edges = [e for index, e in enumerate(self._edges) if index not in sink_edges]
 
-    def serialize(self):
+    def serialize(self, remove_prefixes=None):
         capitalize_attr_names(self._attrs)
+
+        files = []
+        remove_prefixes_res = []
+        if remove_prefixes:
+            for prefix in remove_prefixes:
+                remove_prefixes_res.append(prefix.lstrip(os.sep))
+        for file in self._files:
+            res_file = file
+            for prefix in remove_prefixes_res:
+                res_file = re.sub(prefix, '', res_file)
+            res_file = res_file.lstrip(os.sep)
+            files.append((file, res_file))
 
         data = {
             'attrs': self._attrs,
             'edges': self._edges,
             'entry node': 0,
-            'files': self._files,
+            'files': files,
             'funcs': self._funcs,
             'actions': self._actions,
             'callback actions': self._callback_actions,

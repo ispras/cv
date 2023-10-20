@@ -25,7 +25,7 @@ This script provides connection to Klever jobs.
 import argparse
 
 from components.benchmark_launcher import TAG_TASKS_DIR, TAG_OUTPUT_DIR
-from klever_bridge.launcher import KleverLauncher, TAG_JOB_ID
+from klever_bridge.launcher import KleverLauncher, TAG_JOB_ID, KERNEL_DIR
 
 if __name__ == '__main__':
     # Support the following modes:
@@ -37,12 +37,14 @@ if __name__ == '__main__':
     parser.add_argument("-o", "--output", help="benchmark output directory", default=None)
     parser.add_argument("-t", "--tasks", help="tasks directory", default=None)
     parser.add_argument("-j", "--job", help="job id", default=None)
+    parser.add_argument("-k", "--kernel-dir", dest="kernel_dir", help="directory with kernel dir")
     options = parser.parse_args()
 
     additional_config = {
         TAG_OUTPUT_DIR: options.output,
         TAG_TASKS_DIR: options.tasks,
-        TAG_JOB_ID: options.job
+        TAG_JOB_ID: options.job,
+        KERNEL_DIR: options.kernel_dir
     }
 
     launcher = KleverLauncher(options.config, additional_config, options.launch)

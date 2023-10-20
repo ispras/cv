@@ -238,7 +238,7 @@ class Runner(Component):
         """
         self.logger.info("Exporting results to CVV format via Klever Bridge")
         os.chdir(self.bridge_dir)
-        cmd = f"{BRIDGE_SCRIPT} -c {self.bridge_config} -j {new_job_id}"
+        cmd = f"{BRIDGE_SCRIPT} -c {self.bridge_config} -j {new_job_id} --kernel-dir {self.kernel_dir}"
         self.logger.debug(f"Run Klever Bridge with {cmd}")
         if self.command_caller(cmd):
             sys.exit(f"Cannot export results via Klever Bridge. Reproduce with {cmd}")

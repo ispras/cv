@@ -34,6 +34,8 @@ CIL_FILE = "cil.i"
 JOBS_DIR = "jobs"
 JOB_RES_FILE = "runexec stdout.log"
 KLEVER_COMPONENT = "Klever"
+KLEVER_WORK_DIR = "klever-core-work-dir"
+KERNEL_DIR = "kernel dir"
 
 
 class KleverLauncher(BenchmarkLauncher):
@@ -43,6 +45,7 @@ class KleverLauncher(BenchmarkLauncher):
     def __init__(self, config_file, additional_config: dict, is_launch=False):
         super().__init__(config_file, additional_config, is_launch)
         self.job_id = self.component_config.get(TAG_JOB_ID, None)
+        self.kernel_dir = os.path.realpath(self.component_config.get(KERNEL_DIR, ""))
 
     @staticmethod
     def __parse_memory(memory: str) -> str:
@@ -59,13 +62,25 @@ class KleverLauncher(BenchmarkLauncher):
         for file in glob.glob(os.path.join(output_dir, "*files")):
             if file.endswith(".log"):
                 files.append(file)
+        if COMPONENT_MEA not in self.config:
+            self.config[COMPONENT_MEA] = {}
+        self.config[COMPONENT_MEA][TAG_SOURCE_DIR] = os.path.join(output_dir, os.path.pardir)
         launch_directory = self._copy_result_files(files, self.process_dir)
 
+        jobs_dir = os.path.join(self.output_dir, os.path.pardir, JOBS_DIR, self.job_id, KLEVER_WORK_DIR)
+        source_dir = os.path.join(self.tasks_dir, self.kernel_dir.lstrip(os.sep))
         result.work_dir = launch_directory
-        result.parse_output_dir(launch_directory, self.install_dir, self.result_dir_et, columns)
-        self._process_coverage(result, launch_directory, [self.tasks_dir])
+        remove_src_prefixes = [
+            os.path.realpath(source_dir),
+            os.path.realpath(os.path.join(jobs_dir, "job", "root", "specifications")),
+            os.path.realpath(os.path.join(jobs_dir, "job", "vtg"))
+        ]
+        result.parse_output_dir(launch_directory, self.install_dir, self.result_dir_et, columns, remove_src_prefixes)
+        self._process_coverage(result, launch_directory, [source_dir, self.tasks_dir,
+                                                          os.path.join(output_dir, os.path.pardir)],
+                               work_dir=jobs_dir)
         if result.initial_traces > 1:
-            result.filter_traces(launch_directory, self.install_dir, self.result_dir_et)
+            result.filter_traces(launch_directory, self.install_dir, self.result_dir_et, remove_src_prefixes)
         queue.put(result)
         sys.exit(0)
 
@@ -98,10 +113,6 @@ class KleverLauncher(BenchmarkLauncher):
                     job_config[TAG_CONFIG_OPTIONS] = options
 
             for run in root.findall('./run'):
-                # Actually we expect only one run here
-                # file_name = os.path.realpath(os.path.normpath(os.path.abspath(os.path.join(
-                #     output_dir, os.path.pardir, CIL_FILE
-                # ))))
                 result = VerificationResults(None, self.config)
                 result.entrypoint = module
                 result.rule = prop

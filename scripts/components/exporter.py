@@ -278,7 +278,7 @@ class Exporter(Component):
             proofs = {}
 
             # Process several error traces in parallel.
-            source_files = set()
+            source_files = {}
             with open(report_launches, encoding='utf8', errors='ignore') as file_obj, \
                     open(report_resources, encoding='utf8', errors='ignore') as res_obj:
                 resources_data = res_obj.readlines()[1:]
@@ -408,7 +408,8 @@ class Exporter(Component):
                                 with zipfile.ZipFile(witness, 'r') as arc_arch:
                                     src = json.loads(arc_arch.read(ERROR_TRACE_SOURCES).
                                                      decode('utf8', errors='ignore'))
-                                source_files.update(src)
+                                for src_file, src_file_res in src:
+                                    source_files[src_file] = src_file_res
                             except Exception as exception:
                                 self.logger.warning(f"Cannot process sources: {exception}\n",
                                                     exc_info=True)
@@ -439,7 +440,8 @@ class Exporter(Component):
                                         with zipfile.ZipFile(witness, 'r') as arc_arch:
                                             src = json.loads(arc_arch.read(ERROR_TRACE_SOURCES).
                                                              decode('utf8', errors='ignore'))
-                                        source_files.update(src)
+                                        for src_file, src_file_res in src:
+                                            source_files[src_file] = src_file_res
                                     except Exception as exception:
                                         self.logger.warning(f"Cannot process sources: "
                                                             f"{exception}\n", exc_info=True)
@@ -577,8 +579,8 @@ class Exporter(Component):
                 reports.append(root_element)
                 with zipfile.ZipFile(DEFAULT_SOURCES_ARCH, mode='w',
                                      compression=zipfile.ZIP_DEFLATED) as arch_obj:
-                    for src_file in source_files:
-                        arch_obj.write(src_file)
+                    for src_file, src_file_res in source_files.items():
+                        arch_obj.write(src_file, arcname=src_file_res)
                 final_zip.write(DEFAULT_SOURCES_ARCH)
                 os.remove(DEFAULT_SOURCES_ARCH)
 

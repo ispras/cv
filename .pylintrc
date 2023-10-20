@@ -19,5 +19,6 @@ disable=
     duplicate-code,
     too-few-public-methods,
     unnecessary-lambda,
-    no-name-in-module
+    no-name-in-module,
+    line-too-long
 

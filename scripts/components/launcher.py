@@ -200,12 +200,12 @@ class Launcher(Component):
         return launch_dir
 
     def _process_coverage(self, result, launch_directory, source_dirs: list,
-                          default_source_file=None):
+                          default_source_file=None, work_dir=None):
         cov = Coverage(self, default_source_file=default_source_file)
         cov_queue = multiprocessing.Queue()
         cov_process = multiprocessing.Process(target=cov.compute_coverage,
                                               name=f"coverage_{result.get_name()}",
-                                              args=(source_dirs, launch_directory, cov_queue))
+                                              args=(source_dirs, launch_directory, cov_queue, work_dir))
         cov_process.start()
         cov_process.join()  # Wait since we are already in parallel threads for each launch.
         if not cov_process.exitcode:

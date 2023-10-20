@@ -238,7 +238,7 @@ class VerificationResults:
                 self.resources[title] = int(float(value))
 
     def parse_output_dir(self, launch_dir: str, install_dir: str, result_dir: str,
-                         parsed_columns=None):
+                         parsed_columns=None, ignore_src_prefixes=None):
         """
         Get verification results from launch directory.
         """
@@ -287,7 +287,8 @@ class VerificationResults:
             # Trace should be checked if it is correct or not.
             start_time_cpu = time.process_time()
             start_wall_time = time.time()
-            mea = MEA(self.config, error_traces, install_dir, self.rule, result_dir)
+            mea = MEA(self.config, error_traces, install_dir, self.rule, result_dir,
+                      remove_prefixes=ignore_src_prefixes)
             is_exported, witness_type = mea.process_traces_without_filtering()
             if is_exported:
                 # Trace is fine, just recheck final verdict.
@@ -317,14 +318,14 @@ class VerificationResults:
                 else:
                     os.remove(file)
 
-    def filter_traces(self, launch_dir: str, install_dir: str, result_dir: str):
+    def filter_traces(self, launch_dir: str, install_dir: str, result_dir: str, remove_src_prefixes=None):
         """
         Perform Multiple Error Analysis to filter found error traces (only for several traces).
         """
         start_time_cpu = time.process_time()
         start_wall_time = time.time()
         traces = glob.glob(f"{launch_dir}/witness*")
-        mea = MEA(self.config, traces, install_dir, self.rule, result_dir)
+        mea = MEA(self.config, traces, install_dir, self.rule, result_dir, remove_prefixes=remove_src_prefixes)
         self.filtered_traces = len(mea.filter())
         if self.filtered_traces:
             self.verdict = VERDICT_UNSAFE

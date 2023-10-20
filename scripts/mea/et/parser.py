@@ -17,7 +17,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+# pylint: disable=line-too-long
 """
 Parser for witnesses.
 """
@@ -38,6 +38,9 @@ class WitnessParser:
     def __init__(self, logger, witness, source_dir=None):
         self._logger = logger
         self.entry_point = None
+        # TODO: specify this option
+        self._is_read_line_directives = False
+        self.src_files_map = {}
         self.source_dir = source_dir
         self._violation_hints = set()
         self.default_program_file = None  # default source file
@@ -120,6 +123,27 @@ class WitnessParser:
                 new_name = self.__check_file_name(data.text)
                 if new_name:
                     self.global_program_file = new_name
+                    if not self._is_read_line_directives:
+                        if not self.src_files_map:
+                            with open(new_name, encoding='utf8') as fd_cil:
+                                line_num = 1
+                                orig_file_id = None
+                                orig_file_line_num = 0
+                                line_preprocessor_directive = re.compile(r'\s*#line\s+(\d+)\s*(.*)')
+                                for line in fd_cil:
+                                    m = line_preprocessor_directive.match(line)
+                                    if m:
+                                        orig_file_line_num = int(m.group(1))
+                                        if m.group(2):
+                                            file_name = m.group(2)[1:-1]
+                                            # Do not treat artificial file references
+                                            if not os.path.basename(file_name) == '<built-in>':
+                                                orig_file_id = self.internal_witness.add_file(file_name)
+                                    else:
+                                        if orig_file_id and orig_file_line_num:
+                                            self.src_files_map[line_num] = (orig_file_id, orig_file_line_num)
+                                        orig_file_line_num += 1
+                                    line_num += 1
             elif key == 'witness-type':
                 witness_type = data.text
                 if witness_type == 'correctness_witness':
@@ -351,5 +375,16 @@ class WitnessParser:
                 _edge['start line'] = 0
 
             edges_num += 1
+
+        if not self._is_read_line_directives:
+            for edge in self.internal_witness.get_edges():
+                if 'start line' in edge:
+                    try:
+                        start_line = edge['start line']
+                        src_file_id, src_file_line = self.src_files_map[start_line]
+                        edge['start line'] = src_file_line
+                        edge['file'] = src_file_id
+                    except KeyError:
+                        pass
 
         self._logger.debug(f'Parse {edges_num} edges and {sink_edges_num} sink edges')
