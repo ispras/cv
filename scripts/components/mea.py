@@ -58,11 +58,11 @@ DO_NOT_FILTER = "do not filter"
 
 class MEA(Component):
     """
-    Multiple Error Analysis (MEA) is aimed at processing several error traces, which violates 
+    Multiple Error Analysis (MEA) is aimed at processing several error traces, which violates
     the same property. Error traces are called equivalent, if they correspond to the same error.
     Error trace equivalence for two traces et1 and et2 is determined in the following way:
     et1 = et2 <=> comparison(conversion(parser(et1)), comparison(parser(et2))),
-    where parser function parses the given file with error trace and returns its internal 
+    where parser function parses the given file with error trace and returns its internal
     representation, conversion function transforms its internal representation (for example, 
     by removing some elements) and comparison function compares its internal representation.
     Definitions:
@@ -70,7 +70,7 @@ class MEA(Component):
     - converted error trace - result of conversion(pet), pet - parsed error trace.
     """
     def __init__(self, general_config: dict, error_traces: list, install_dir: str, rule: str = "",
-                 result_dir: str = "", is_standalone=False):
+                 result_dir: str = "", is_standalone=False, remove_prefixes=None):
         super().__init__(COMPONENT_MEA, general_config)
         self.install_dir = install_dir
         if result_dir:
@@ -97,6 +97,7 @@ class MEA(Component):
         self.unzip = self.__get_option_for_rule(TAG_UNZIP, True)
         self.dry_run = self.__get_option_for_rule(TAG_DRY_RUN, False)
         self.source_dir = self.__get_option_for_rule(TAG_SOURCE_DIR, None)
+        self.remove_prefixes = remove_prefixes
 
         # Cache of filtered converted error traces.
         self.__cache = {}
@@ -335,9 +336,9 @@ class MEA(Component):
     def __process_parsed_trace(parsed_error_trace: dict):
         # Normalize source paths.
         src_files = []
-        for src_file in parsed_error_trace['files']:
-            src_file = os.path.normpath(src_file)
-            src_files.append(src_file)
+        for src_file, src_file_res in parsed_error_trace['files']:
+            tmp_res = (os.path.normpath(src_file), src_file_res)
+            src_files.append(tmp_res)
         parsed_error_trace['files'] = src_files
 
     def __parse_trace(self, error_trace_file: str, supported_types: set) -> dict:
@@ -346,7 +347,7 @@ class MEA(Component):
             "Witness processor", logging.WARNING if self.debug else logging.ERROR
         )
         try:
-            json_error_trace = import_error_trace(logger, error_trace_file, self.source_dir)
+            json_error_trace = import_error_trace(logger, error_trace_file, self.source_dir, self.remove_prefixes)
             if self.dry_run:
                 warnings = json_error_trace.get('warnings', [])
                 if warnings:
@@ -373,12 +374,19 @@ class MEA(Component):
         json_trace_name, source_files, converted_traces_files = \
             self.__get_aux_file_names(error_trace_file)
 
-        with open(json_trace_name, 'w', encoding='utf8') as file_obj:
-            json.dump(parsed_error_trace, file_obj, ensure_ascii=False, sort_keys=True, indent="\t")
-
         with open(source_files, 'w', encoding='utf8') as file_obj:
             json.dump(parsed_error_trace['files'], file_obj, ensure_ascii=False, sort_keys=True,
                       indent="\t")
+
+        files = []
+        for file, file_res in parsed_error_trace['files']:
+            if self.is_standalone:
+                files.append(file)
+            else:
+                files.append(file_res)
+        parsed_error_trace['files'] = files
+        with open(json_trace_name, 'w', encoding='utf8') as file_obj:
+            json.dump(parsed_error_trace, file_obj, ensure_ascii=False, sort_keys=True, indent="\t")
 
         converted_traces = {}
         if parsed_error_trace.get('type') == WITNESS_VIOLATION:

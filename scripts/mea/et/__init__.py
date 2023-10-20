@@ -26,7 +26,7 @@ from mea.et.parser import WitnessParser
 from mea.et.tmpvars import generic_simplifications
 
 
-def import_error_trace(logger, witness, source_dir=None):
+def import_error_trace(logger, witness, source_dir=None, remove_prefixes=None):
     """
     Main function for importing a witness into the CV internal format
     """
@@ -44,7 +44,7 @@ def import_error_trace(logger, witness, source_dir=None):
     # Do final checks
     internal_witness.final_checks(witness_parser.entry_point)
 
-    return internal_witness.serialize()
+    return internal_witness.serialize(remove_prefixes)
 
 
 # This is intended for testing purposes, when one has a witness and would like to debug its

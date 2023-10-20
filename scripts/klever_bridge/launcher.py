@@ -67,15 +67,20 @@ class KleverLauncher(BenchmarkLauncher):
         self.config[COMPONENT_MEA][TAG_SOURCE_DIR] = os.path.join(output_dir, os.path.pardir)
         launch_directory = self._copy_result_files(files, self.process_dir)
 
-        result.work_dir = launch_directory
-        result.parse_output_dir(launch_directory, self.install_dir, self.result_dir_et, columns)
         jobs_dir = os.path.join(self.output_dir, os.path.pardir, JOBS_DIR, self.job_id, KLEVER_WORK_DIR)
         source_dir = os.path.join(self.tasks_dir, self.kernel_dir.lstrip(os.sep))
+        result.work_dir = launch_directory
+        remove_src_prefixes = [
+            os.path.realpath(source_dir),
+            os.path.realpath(os.path.join(jobs_dir, "job", "root", "specifications")),
+            os.path.realpath(os.path.join(jobs_dir, "job", "vtg"))
+        ]
+        result.parse_output_dir(launch_directory, self.install_dir, self.result_dir_et, columns, remove_src_prefixes)
         self._process_coverage(result, launch_directory, [source_dir, self.tasks_dir,
                                                           os.path.join(output_dir, os.path.pardir)],
                                work_dir=jobs_dir)
         if result.initial_traces > 1:
-            result.filter_traces(launch_directory, self.install_dir, self.result_dir_et)
+            result.filter_traces(launch_directory, self.install_dir, self.result_dir_et, remove_src_prefixes)
         queue.put(result)
         sys.exit(0)
 
