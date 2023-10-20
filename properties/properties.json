@@ -22,7 +22,7 @@
       "-skipRecursion": [],
       "-stack": ["10m"],
       "-setprop": [
-        "parser.readLineDirectives=true",
+        "parser.readLineDirectives=false",
         "output.disable=true",
         "cpa.predicate.abortOnLargeArrays=false",
         "cpa.arg.proofWitness=witness.correctness.graphml",
