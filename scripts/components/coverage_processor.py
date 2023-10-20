@@ -210,7 +210,7 @@ class Coverage(Component):
         self.mode = self.component_config.get(TAG_COVERAGE_MODE, DEFAULT_COVERAGE_MODE)
         self.percent_mode = self.component_config.get(TAG_COVERAGE_PERCENT_MODE,
                                                       COVERAGE_PERCENT_LOG)
-        self.src_cov_mode = self.component_config.get(TAG_FULL_COVERAGE_MODE, "src_only")
+        self.src_cov_mode = self.component_config.get(TAG_FULL_COVERAGE_MODE, "full")
         self.internal_logger = logging.getLogger(name=COMPONENT_COVERAGE)
         self.internal_logger.setLevel(self.logger.level)
         self.default_source_file = default_source_file
