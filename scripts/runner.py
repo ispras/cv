@@ -66,6 +66,7 @@ TAG_VERSION = "version"
 TAG_PROPERTIES = "requirement specifications"
 TAG_UPLOADER = "uploader"
 TAG_NAME = "name"
+TAG_IDENTIFIER = "identifier"
 
 DEFAULT_CONFIG_COMMAND = "allmodconfig"
 DEFAULT_ARCH = "x86_64"
@@ -91,7 +92,8 @@ class Runner(Component):
     2. Launching klever;
     3. Converting results to CVV.
     """
-    def __init__(self, general_config: dict, kernel_dir_override: str, version_override: str, properties: list):
+    def __init__(self, general_config: dict, kernel_dir_override: str, version_override: str, properties: list,
+                 parent_job_id: str):
 
         super().__init__(COMPONENT_RUNNER, general_config)
         bridge_config = self.config[TAG_BRIDGE]
@@ -125,6 +127,7 @@ class Runner(Component):
         self.job_config = self.__normalize_dir(klever_config.get(TAG_JOB_CONFIG), TAG_JOB_CONFIG)
         self.resource_config = self.__normalize_dir(klever_config.get(TAG_RESOURCE_CONFIG), TAG_RESOURCE_CONFIG)
         self.python_venv = self.__normalize_dir(klever_config.get(TAG_PYTHON_VENV, ""))
+        self.parent_job_id = parent_job_id
 
         # Klever Bridge config
         self.bridge_dir = self.__normalize_dir(bridge_config.get(TAG_HOME_DIR), TAG_HOME_DIR)
@@ -181,6 +184,8 @@ class Runner(Component):
             job_config[TAG_PROPERTIES] = self.properties
         uploaded_name = f"{'_'.join(self.properties)} - {self.version} - <timestamp>"
         bridge_config[TAG_UPLOADER][TAG_NAME] = uploaded_name
+        if self.parent_job_id:
+            bridge_config[TAG_UPLOADER][TAG_IDENTIFIER] = self.parent_job_id
         bridge_config[COMPONENT_BENCHMARK_LAUNCHER][TAG_OUTPUT_DIR] = \
             os.path.join(self.klever_deploy_dir, KLEVER_TASKS_DIR)
         bridge_config[COMPONENT_BENCHMARK_LAUNCHER][TAG_TASKS_DIR] = \
@@ -266,6 +271,7 @@ if __name__ == '__main__':
     parser.add_argument("-d", "--kernel-dir", dest="kernel_dir", help="path to kernel directory")
     parser.add_argument("-v", "--version", dest="version", help="Linux kernel version")
     parser.add_argument("-p", "--properties", nargs='+', dest="properties", help="property to be checked")
+    parser.add_argument("-j", "--parent-job-id", dest="parent_job_id", help="parent job id")
 
     options = parser.parse_args()
     with open(options.config, errors='ignore', encoding='ascii') as data_file:
@@ -274,5 +280,5 @@ if __name__ == '__main__':
     version = options.version
     props = options.properties
 
-    runner = Runner(config, kernel_dir, version, props)
+    runner = Runner(config, kernel_dir, version, props, options.parent_job_id)
     runner.run()
