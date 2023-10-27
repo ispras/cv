@@ -265,6 +265,9 @@ class Runner(Component):
         self.command_caller("service klever-native-scheduler restart")
 
     def print_statistics(self):
+        """
+        Print comparison data with the previous run.
+        """
         if self.parent_job_id:
             with open(self.bridge_config, errors='ignore', encoding='ascii') as f_bconfig:
                 bridge_config = json.load(f_bconfig)
