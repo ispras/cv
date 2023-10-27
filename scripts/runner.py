@@ -67,10 +67,14 @@ TAG_PROPERTIES = "requirement specifications"
 TAG_UPLOADER = "uploader"
 TAG_NAME = "name"
 TAG_IDENTIFIER = "identifier"
+TAG_CVV_USER = "user"
+TAG_CVV_PASS = "password"
+TAG_CVV_HOST = "server"
 
 DEFAULT_CONFIG_COMMAND = "allmodconfig"
 DEFAULT_ARCH = "x86_64"
 BUILDER_SCRIPT = os.path.join("klever", "deploys", "builder.sh")
+COMPARATOR_SCRIPT = os.path.join("tools", "cvv", "utils", "bin", "get-compare-data.py")
 KLEVER_LAUNCH_SCRIPT = "klever-start-solution"
 KLEVER_CHECK_SCRIPT = "klever-download-progress"
 DEFAULT_VENV_PATH = "venv/bin"
@@ -80,7 +84,7 @@ KLEVER_BUILD_BASE_DIR = "build bases"
 COMPONENT_RUNNER = "Runner"
 KLEVER_TASKS_DIR = os.path.join("klever-work", "native-scheduler", "scheduler", "tasks")
 BUILD_BASE_STORAGE_DIR = "Storage"
-
+RESULT_FILE = "runner_result.log"
 BIG_WAIT_INTERVAL = 100
 SMALL_WAIT_INTERVAL = 10
 
@@ -195,6 +199,10 @@ class Runner(Component):
         with open(self.bridge_config, 'w', encoding='ascii') as f_bconfig:
             json.dump(bridge_config, f_bconfig, sort_keys=True, indent=4)
 
+    @staticmethod
+    def __create_credentials(user: str, password: str, host: str) -> str:
+        return f"--host {host} --username {user} --password {password}"
+
     def klever(self, build_base_dir: str) -> str:
         """
         Create a new Klever job and launch it.
@@ -205,7 +213,7 @@ class Runner(Component):
         self.logger.info("Launching Klever tool")
         wall_time_start = time.time()
         self.__update_job_config(build_base_dir)
-        credentials = f"--host {self.klever_host} --username {self.klever_user} --password {self.klever_pass}"
+        credentials = self.__create_credentials(self.klever_user, self.klever_pass, self.klever_host)
         replacement = f"{{\"job.json\": \"{self.job_config}\", \"tasks.json\": \"{self.resource_config}\"," \
                       f"\"verifier profiles.json\": \"{self.verifier_options_config}\"}}"
         cmd = f"{KLEVER_LAUNCH_SCRIPT} {credentials} --rundata {self.launch_config} " \
@@ -256,6 +264,21 @@ class Runner(Component):
             shutil.rmtree(os.path.join(self.jobs_dir, new_job_id), ignore_errors=True)
         self.command_caller("service klever-native-scheduler restart")
 
+    def print_statistics(self):
+        if self.parent_job_id:
+            with open(self.bridge_config, errors='ignore', encoding='ascii') as f_bconfig:
+                bridge_config = json.load(f_bconfig)
+            cvv_pass = bridge_config[TAG_UPLOADER][TAG_CVV_PASS]
+            cvv_user = bridge_config[TAG_UPLOADER][TAG_CVV_USER]
+            cvv_host = bridge_config[TAG_UPLOADER][TAG_CVV_HOST]
+            credentials = self.__create_credentials(cvv_user, cvv_pass, cvv_host)
+            os.chdir(self.bridge_dir)
+            cvv_python_path = os.path.abspath(os.path.join(os.path.dirname(COMPARATOR_SCRIPT), os.path.pardir))
+            command = f"PYTHONPATH={cvv_python_path} {COMPARATOR_SCRIPT} {credentials} {self.parent_job_id} > " \
+                      f"{RESULT_FILE}"
+            self.logger.debug(command)
+            self.command_caller(command)
+
     def run(self):
         """
         Performs full run.
@@ -263,6 +286,7 @@ class Runner(Component):
         build_base_dir = self.builder()
         new_job_id = self.klever(build_base_dir)
         self.bridge(new_job_id)
+        self.print_statistics()
 
 
 if __name__ == '__main__':
