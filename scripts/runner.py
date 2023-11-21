@@ -70,6 +70,7 @@ TAG_IDENTIFIER = "identifier"
 TAG_CVV_USER = "user"
 TAG_CVV_PASS = "password"
 TAG_CVV_HOST = "server"
+TAG_CVV_HOST_REDIRECT = "redirect-server"
 
 DEFAULT_CONFIG_COMMAND = "allmodconfig"
 DEFAULT_ARCH = "x86_64"
@@ -274,11 +275,14 @@ class Runner(Component):
             cvv_pass = bridge_config[TAG_UPLOADER][TAG_CVV_PASS]
             cvv_user = bridge_config[TAG_UPLOADER][TAG_CVV_USER]
             cvv_host = bridge_config[TAG_UPLOADER][TAG_CVV_HOST]
+            additional_args = ""
+            if TAG_CVV_HOST_REDIRECT in bridge_config[TAG_UPLOADER]:
+                additional_args += f"--redirect-host {bridge_config[TAG_UPLOADER][TAG_CVV_HOST_REDIRECT]}"
             credentials = self.__create_credentials(cvv_user, cvv_pass, cvv_host)
             os.chdir(self.bridge_dir)
             cvv_python_path = os.path.abspath(os.path.join(os.path.dirname(COMPARATOR_SCRIPT), os.path.pardir))
-            command = f"PYTHONPATH={cvv_python_path} {COMPARATOR_SCRIPT} {credentials} {self.parent_job_id} > " \
-                      f"{RESULT_FILE}"
+            command = f"PYTHONPATH={cvv_python_path} {COMPARATOR_SCRIPT} {credentials} {additional_args} " \
+                      f"{self.parent_job_id} > {RESULT_FILE}"
             self.logger.debug(command)
             self.command_caller(command)
 
