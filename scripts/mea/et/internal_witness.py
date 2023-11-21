@@ -161,7 +161,7 @@ class InternalWitness:
                 self._logger.warning(no_file_str)
                 if no_file_str not in self._warnings:
                     self._warnings.append(f"There is no file {file_name}")
-                raise FileNotFoundError
+                raise FileNotFoundError(f"There is no file {file_name}")
             self._files.append(file_name)
             return self._resolve_file_id(file_name)
         return self._resolve_file_id(file_name)
