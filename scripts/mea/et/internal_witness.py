@@ -51,7 +51,7 @@ class InternalWitness:
     MODEL_COMMENT_TYPES = 'AUX_FUNC|AUX_FUNC_CALLBACK|MODEL_FUNC|NOTE|ASSERT|ENVIRONMENT_MODEL'
     MAX_COMMENT_LENGTH = 128
 
-    def __init__(self, logger):
+    def __init__(self, logger): 
         self._attrs = []
         self._edges = []
         self._files = []
@@ -161,7 +161,7 @@ class InternalWitness:
                 self._logger.warning(no_file_str)
                 if no_file_str not in self._warnings:
                     self._warnings.append(f"There is no file {file_name}")
-                raise FileNotFoundError(f"There is no file {file_name}")
+                raise FileNotFoundError
             self._files.append(file_name)
             return self._resolve_file_id(file_name)
         return self._resolve_file_id(file_name)
@@ -259,10 +259,13 @@ class InternalWitness:
                                        f"'{self._resolve_function(func_id)}'")
                     edge['note'] = self.process_comment(note)
                 if func_id in self._env_models:
-                    env_note = self._env_models[func_id]
+                    env_note = self._env_models[func_id][0]
                     self._logger.debug(f"Add note {env_note} for environment function '"
                                        f"{self._resolve_function(func_id)}'")
-                    edge['env'] = self.process_comment(env_note)
+                    if isinstance(env_note, dict):
+                        edge['env'] = self.process_comment(env_note["comment"])
+                    else:
+                        edge['env'] = self.process_comment(env_note)
 
             if file_id in self._notes and start_line in self._notes[file_id]:
                 note = self._notes[file_id][start_line]
@@ -293,6 +296,7 @@ class InternalWitness:
     def _parse_model_comments(self):
         self._logger.info('Parse model comments from source files referred by witness')
         emg_comment = re.compile(r'/\*\sLDV\s(.*)\s\*/')
+        new_emg_comment = re.compile(r'\/\*\sEMG_ACTION\s(.*)\s\*\/')
 
         for file_id, file in self.files:
             if not os.path.isfile(file):
@@ -307,15 +311,26 @@ class InternalWitness:
 
                     # Try match EMG comment
                     # Expect comment like /* TYPE Instance Text */
+
+                    match2 = new_emg_comment.search(text)
+                    if match2:
+                        data = json.loads(match2.group(1))
+                        self._add_emg_comment(file_id, line, data)
+                        self._env_models[self.resolve_function_id(data["name"])].append(data)
+                        #self._logger.debug(f"it's data - {data}")
+                    
+
                     match = emg_comment.search(text)
                     if match:
                         data = json.loads(match.group(1))
                         self._add_emg_comment(file_id, line, data)
 
+                    print(self._logger)
+
                     # Match rest comments
                     match = re.search(
                         rf'/\*\s+({self.MODEL_COMMENT_TYPES})\s+(\S+)\s+(.*)\*/', text)
-                    if match:
+                    if match or match2:
                         kind, func_name, comment = match.groups()
 
                         comment = comment.rstrip()
@@ -388,7 +403,9 @@ class InternalWitness:
                                 self._logger.debug(f"Get auxiliary function '{func_name}' for "
                                                    f"callback from '{file}:{line}'")
                             elif kind == 'ENVIRONMENT_MODEL':
-                                self._env_models[func_id] = comment
+                                if self._env_models.get(func_id) is None:
+                                    self._env_models[func_id] = []
+                                self._env_models[func_id].append(comment)
                                 self._logger.debug(f"Get environment model '{comment}' for "
                                                    f"function '{func_name}' from '{file}:{line}'")
                             else:
