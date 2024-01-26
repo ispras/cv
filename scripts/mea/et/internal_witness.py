@@ -316,7 +316,7 @@ class InternalWitness:
                     if match_new_comment:
                         data = json.loads(match_new_comment.group(1))
                         self._add_emg_comment(file_id, line, data)
-                        self._env_models[self.resolve_function_id(data["name"])].append(data)
+                        self._env_models[self.resolve_function_id(data["name"])].append(data["comment"])
                     
 
                     match = emg_comment.search(text)
