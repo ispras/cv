@@ -51,7 +51,7 @@ class InternalWitness:
     MODEL_COMMENT_TYPES = 'AUX_FUNC|AUX_FUNC_CALLBACK|MODEL_FUNC|NOTE|ASSERT|ENVIRONMENT_MODEL'
     MAX_COMMENT_LENGTH = 128
 
-    def __init__(self, logger): 
+    def __init__(self, logger):
         self._attrs = []
         self._edges = []
         self._files = []
@@ -161,7 +161,7 @@ class InternalWitness:
                 self._logger.warning(no_file_str)
                 if no_file_str not in self._warnings:
                     self._warnings.append(f"There is no file {file_name}")
-                raise FileNotFoundError
+                raise FileNotFoundError(f"There is no file {file_name}")
             self._files.append(file_name)
             return self._resolve_file_id(file_name)
         return self._resolve_file_id(file_name)
@@ -259,7 +259,7 @@ class InternalWitness:
                                        f"'{self._resolve_function(func_id)}'")
                     edge['note'] = self.process_comment(note)
                 if func_id in self._env_models:
-                    env_note = self._env_models[func_id][0]
+                    env_note = self._env_models[func_id]
                     self._logger.debug(f"Add note {env_note} for environment function '"
                                        f"{self._resolve_function(func_id)}'")
                     if isinstance(env_note, dict):
@@ -312,12 +312,11 @@ class InternalWitness:
                     # Try match EMG comment
                     # Expect comment like /* TYPE Instance Text */
 
-                    match2 = new_emg_comment.search(text)
-                    if match2:
-                        data = json.loads(match2.group(1))
+                    match_new_comment = new_emg_comment.search(text)
+                    if match_new_comment:
+                        data = json.loads(match_new_comment.group(1))
                         self._add_emg_comment(file_id, line, data)
                         self._env_models[self.resolve_function_id(data["name"])].append(data)
-                        #self._logger.debug(f"it's data - {data}")
                     
 
                     match = emg_comment.search(text)
@@ -325,12 +324,11 @@ class InternalWitness:
                         data = json.loads(match.group(1))
                         self._add_emg_comment(file_id, line, data)
 
-                    print(self._logger)
 
                     # Match rest comments
                     match = re.search(
                         rf'/\*\s+({self.MODEL_COMMENT_TYPES})\s+(\S+)\s+(.*)\*/', text)
-                    if match or match2:
+                    if match or match_new_comment:
                         kind, func_name, comment = match.groups()
 
                         comment = comment.rstrip()
