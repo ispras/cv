@@ -315,8 +315,33 @@ class InternalWitness:
                     match_new_comment = new_emg_comment.search(text)
                     if match_new_comment:
                         data = json.loads(match_new_comment.group(1))
-                        self._add_emg_comment(file_id, line, data)
-                        self._env_models[self.resolve_function_id(data["name"])].append(data["comment"])
+                        self._logger.warning(f"it is data - {data}")
+                        self._add_emg_comment(file_id, line, data)  
+                        if "comment" in data:
+                            self._logger.warning(type(data["comment"]))
+                            if "name" in data:
+                                function_name = str(data["name"])
+                                #self._logger.warning(isinstance(function_name, str))
+                                function_name = function_name.rstrip()
+                                try:
+                                    function_id = self.resolve_function_id(function_name)
+                                except ValueError:
+                                    self.add_function(function_name)
+                                    function_id = self.resolve_function_id(function_name)
+                            elif "function" in data:
+                                function_name = str(data["function"])
+                                #self._logger.warning(isinstance(function_name, str))
+                                function_name = function_name.rstrip()
+                                try:
+                                    function_id = self.resolve_function_id(function_name)
+                                except ValueError:
+                                    self.add_function(function_name)
+                                    function_id = self.resolve_function_id(function_name)
+
+                            self._logger.warning(function_id)
+                            new_comment = str(data["comment"])
+                            new_comment = new_comment.rstrip()
+                            self._env_models[function_id] = new_comment
                     
 
                     match = emg_comment.search(text)
@@ -328,7 +353,7 @@ class InternalWitness:
                     # Match rest comments
                     match = re.search(
                         rf'/\*\s+({self.MODEL_COMMENT_TYPES})\s+(\S+)\s+(.*)\*/', text)
-                    if match or match_new_comment:
+                    if match:
                         kind, func_name, comment = match.groups()
 
                         comment = comment.rstrip()
@@ -401,9 +426,7 @@ class InternalWitness:
                                 self._logger.debug(f"Get auxiliary function '{func_name}' for "
                                                    f"callback from '{file}:{line}'")
                             elif kind == 'ENVIRONMENT_MODEL':
-                                if self._env_models.get(func_id) is None:
-                                    self._env_models[func_id] = []
-                                self._env_models[func_id].append(comment)
+                                self._env_models[func_id] = comment
                                 self._logger.debug(f"Get environment model '{comment}' for "
                                                    f"function '{func_name}' from '{file}:{line}'")
                             else:
