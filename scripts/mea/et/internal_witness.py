@@ -338,6 +338,11 @@ class InternalWitness:
                                     self.add_function(function_name)
                                     function_id = self.resolve_function_id(function_name)
 
+                            if "relevant" in data:
+                                relevancy = data["relevant"]
+                                self._logger.debug(f"Found environment model comment for function {function_name} relevancy : {relevancy}")
+                            else:
+                                self._logger.debug(f"Found environment model comment for function {function_name}")
                             self._logger.warning(function_id)
                             new_comment = str(data["comment"])
                             new_comment = new_comment.rstrip()
