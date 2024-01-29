@@ -317,7 +317,7 @@ class InternalWitness:
                         data = json.loads(match_new_comment.group(1))
                         self._logger.warning(f"it is data - {data}")
                         self._add_emg_comment(file_id, line, data)  
-                        if "comment" in data:
+                        if "comment" in data and len(data["comment"]) > 0:
                             self._logger.warning(type(data["comment"]))
                             if "name" in data:
                                 function_name = str(data["name"])
