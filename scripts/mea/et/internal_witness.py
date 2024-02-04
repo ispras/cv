@@ -259,12 +259,10 @@ class InternalWitness:
                                        f"'{self._resolve_function(func_id)}'")
                     edge['note'] = self.process_comment(note)
                 if func_id in self._env_models:
-                    env_note = self._env_models[func_id]
-                    self._logger.debug(f"Add note {env_note} for environment function '"
-                                       f"{self._resolve_function(func_id)}'")
-                    if isinstance(env_note, dict):
-                        edge['env'] = self.process_comment(env_note["comment"])
-                    else:
+                    for line in self._env_models[func_id]:
+                        env_note = self._env_models[func_id][line]
+                        self._logger.debug(f"Add note {env_note} for environment function '"
+                                        f"{self._resolve_function(func_id)}'")
                         edge['env'] = self.process_comment(env_note)
 
             if file_id in self._notes and start_line in self._notes[file_id]:
@@ -318,17 +316,7 @@ class InternalWitness:
                         self._logger.warning(f"it is data - {data}")
                         self._add_emg_comment(file_id, line, data)  
                         if "comment" in data and len(data["comment"]) > 0:
-                            self._logger.warning(type(data["comment"]))
-                            if "name" in data:
-                                function_name = str(data["name"])
-                                #self._logger.warning(isinstance(function_name, str))
-                                function_name = function_name.rstrip()
-                                try:
-                                    function_id = self.resolve_function_id(function_name)
-                                except ValueError:
-                                    self.add_function(function_name)
-                                    function_id = self.resolve_function_id(function_name)
-                            elif "function" in data:
+                            if "function" in data:
                                 function_name = str(data["function"])
                                 #self._logger.warning(isinstance(function_name, str))
                                 function_name = function_name.rstrip()
@@ -343,12 +331,13 @@ class InternalWitness:
                                 self._logger.debug(f"Found environment model comment for function {function_name} relevancy : {relevancy}")
                             else:
                                 self._logger.debug(f"Found environment model comment for function {function_name}")
-                            self._logger.warning(function_id)
+                            self._logger.warning(str(function_id) + " " + function_name)
                             new_comment = str(data["comment"])
                             new_comment = new_comment.rstrip()
-                            self._env_models[function_id] = new_comment
+                            if function_id not in self._env_models:
+                                self._env_models[function_id] = {}
+                            self._env_models[function_id][line] = new_comment
                     
-
                     match = emg_comment.search(text)
                     if match:
                         data = json.loads(match.group(1))
@@ -431,7 +420,9 @@ class InternalWitness:
                                 self._logger.debug(f"Get auxiliary function '{func_name}' for "
                                                    f"callback from '{file}:{line}'")
                             elif kind == 'ENVIRONMENT_MODEL':
-                                self._env_models[func_id] = comment
+                                if func_id not in self._env_models:
+                                    self._env_models[func_id] = {}
+                                self._env_models[func_id][line] = comment
                                 self._logger.debug(f"Get environment model '{comment}' for "
                                                    f"function '{func_name}' from '{file}:{line}'")
                             else:
