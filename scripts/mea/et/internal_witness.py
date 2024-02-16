@@ -61,6 +61,7 @@ class InternalWitness:
         self._model_funcs = {}
         self._spec_funcs = {}
         self._env_models = {}
+        self._env_models_json = {}
         self._notes = {}
         self._asserts = {}
         self._actions = []
@@ -268,6 +269,10 @@ class InternalWitness:
                 note = self._notes[file_id][start_line]
                 self._logger.debug(f"Add note {note} for statement from '{file}:{start_line}'")
                 edge['note'] = self.process_comment(note)
+            elif file_id in self._env_models_json and start_line in self._env_models_json[file_id]:
+                env = self._env_models_json[file_id][start_line]
+                self._logger.debug(f"Add warning {env} for statement from '{file}:{start_line}'")
+                edge['env'] = self.process_comment(env)
             elif file_id in self._asserts and start_line in self._asserts[file_id]:
                 warn = self._asserts[file_id][start_line]
                 self._logger.debug(f"Add warning {warn} for statement from '{file}:{start_line}'")
@@ -293,6 +298,7 @@ class InternalWitness:
     def _parse_model_comments(self):
         self._logger.info('Parse model comments from source files referred by witness')
         emg_comment = re.compile(r'/\*\sLDV\s(.*)\s\*/')
+        emg_comment_json = re.compile(r'/\*\sEMG_ACTION\s({.*})\s\*/')
 
         for file_id, file in self.files:
             if not os.path.isfile(file):
@@ -311,6 +317,16 @@ class InternalWitness:
                     if match:
                         data = json.loads(match.group(1))
                         self._add_emg_comment(file_id, line, data)
+
+                    # Try match JSON EMG comment
+                    match = emg_comment_json.search(text)
+                    if match:
+                        data = json.loads(match.group(1))
+                        if "comment" in data:
+                            if file_id not in self._env_models_json:
+                                self._env_models_json[file_id] = {}
+                            self._env_models_json[file_id][line + 1] = data["comment"]
+                            # TODO: parse other arguments as well
 
                     # Match rest comments
                     match = re.search(
