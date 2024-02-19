@@ -260,6 +260,7 @@ class InternalWitness:
                                        f"'{self._resolve_function(func_id)}'")
                     edge['note'] = self.process_comment(note)
                 if func_id in self._env_models:
+                    # TODO: not supported anymore
                     env_note = self._env_models[func_id]
                     self._logger.debug(f"Add note {env_note} for environment function '"
                                        f"{self._resolve_function(func_id)}'")
