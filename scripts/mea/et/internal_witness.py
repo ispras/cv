@@ -273,6 +273,7 @@ class InternalWitness:
                 env = self._env_models_json[file_id][start_line]
                 self._logger.debug(f"Add EMG comment '{env}' for operation from '{file}:{start_line}'")
                 edge['env'] = self.process_comment(env)
+                del self._env_models_json[file_id][start_line]
             elif file_id in self._asserts and start_line in self._asserts[file_id]:
                 warn = self._asserts[file_id][start_line]
                 self._logger.debug(f"Add warning {warn} for statement from '{file}:{start_line}'")
