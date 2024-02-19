@@ -275,7 +275,7 @@ class WitnessParser:
                                 if self.entry_point == function_name:
                                     self.internal_witness.is_main_function = True
                                     if self.internal_witness.witness_type == 'violation':
-                                        _edge['env'] = "entry point"
+                                        _edge['entry_point'] = "entry point"
                                         is_entry_point = True
                             else:
                                 self.internal_witness.is_main_function = True
@@ -285,7 +285,7 @@ class WitnessParser:
                         _edge['enter'] = func_id
                         if not is_entry_point and \
                                 self.internal_witness.witness_type == 'violation':
-                            _edge['env'] = "entry point"
+                            _edge['entry_point'] = "entry point"
                             self.internal_witness.add_thread("decl")
                             is_entry_point = True
                     elif data_key == 'returnFrom':

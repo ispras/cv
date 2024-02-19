@@ -430,7 +430,7 @@ class InternalWitness:
                     'enter': self.add_function(entry_point),
                     'start line': 0,
                     'file': 0,
-                    'env': 'entry point',
+                    'entry_point': 'entry point',
                     'source': f"{entry_point}()"
                 }
                 if not self._threads:
