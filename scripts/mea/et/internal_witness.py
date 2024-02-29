@@ -272,8 +272,15 @@ class InternalWitness:
                 edge['note'] = self.process_comment(note)
             elif file_id in self._env_models_json and start_line in self._env_models_json[file_id]:
                 env = self._env_models_json[file_id][start_line]
-                self._logger.debug(f"Add EMG comment '{env}' for operation from '{file}:{start_line}'")
-                edge['env'] = self.process_comment(env)
+                comment = env["comment"]
+                
+                relevant = env.get("relevant", False)
+
+                #TODO add remaining
+                self._logger.warning(f"Add EMG comment '{comment}' for operation from '{file}:{start_line}'")
+                self._logger.warning(f"relevant is '{relevant}'")
+                edge['env'] = self.process_comment(comment)
+                edge['env_relevant'] = relevant
                 del self._env_models_json[file_id][start_line]
             elif file_id in self._asserts and start_line in self._asserts[file_id]:
                 warn = self._asserts[file_id][start_line]
@@ -327,8 +334,7 @@ class InternalWitness:
                         if "comment" in data:
                             if file_id not in self._env_models_json:
                                 self._env_models_json[file_id] = {}
-                            self._env_models_json[file_id][line + 1] = data["comment"]
-                            # TODO: parse other arguments as well
+                            self._env_models_json[file_id][line + 1] = data
 
                     # Match rest comments
                     match = re.search(
