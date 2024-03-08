@@ -278,7 +278,7 @@ class InternalWitness:
 
                 #TODO add remaining
                 self._logger.debug(f"Add EMG comment '{comment}' for operation from '{file}:{start_line}'")
-                self._logger.debug(f"relevant is '{relevant}'")
+                self._logger.debug(f"Comment argument: relevant={relevant}")
                 edge['env'] = self.process_comment(comment)
                 edge['env_relevant'] = relevant
                 del self._env_models_json[file_id][start_line]
