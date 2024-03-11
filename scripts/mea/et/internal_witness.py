@@ -273,7 +273,6 @@ class InternalWitness:
             elif file_id in self._env_models_json and start_line in self._env_models_json[file_id]:
                 env = self._env_models_json[file_id][start_line]
                 comment = env["comment"]
-                
                 relevant = env.get("relevant", False)
 
                 #TODO add remaining
