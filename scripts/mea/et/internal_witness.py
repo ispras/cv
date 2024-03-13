@@ -145,13 +145,17 @@ class InternalWitness:
         self._entry_node_id = node_id
 
     # noinspection PyUnusedLocal
-    def add_edge(self, source, target):
+    def add_edge(self, source, target, template_edge=None):
         # pylint: disable=unused-argument
         # TODO: check coherence of source and target.
         edge = {}
         self._edges.append(edge)
         if target in self.invariants:
             edge['invariants'] = self.invariants[target]
+        if template_edge:
+            for key, val in template_edge.items():
+                if key not in ('warn', 'note', 'env', 'enter', 'return'):
+                    edge[key] = val
         return edge
 
     def add_file(self, file_name):
