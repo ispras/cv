@@ -26,7 +26,7 @@ import os
 import re
 from xml.etree import ElementTree
 
-from mea.et.internal_witness import InternalWitness
+from mea.et.internal_witness import InternalWitness, WITNESS_TYPE_VIOLATION, WITNESS_TYPE_CORRECTNESS
 
 
 class WitnessParser:
@@ -147,9 +147,9 @@ class WitnessParser:
             elif key == 'witness-type':
                 witness_type = data.text
                 if witness_type == 'correctness_witness':
-                    self.internal_witness.witness_type = 'correctness'
+                    self.internal_witness.witness_type = WITNESS_TYPE_CORRECTNESS
                 elif witness_type == 'violation_witness':
-                    self.internal_witness.witness_type = 'violation'
+                    self.internal_witness.witness_type = WITNESS_TYPE_VIOLATION
                 else:
                     self._logger.warning(f"Unsupported witness type: {witness_type}")
             elif key == 'specification':
@@ -274,7 +274,7 @@ class WitnessParser:
                             if self.entry_point:
                                 if self.entry_point == function_name:
                                     self.internal_witness.is_main_function = True
-                                    if self.internal_witness.witness_type == 'violation':
+                                    if self.internal_witness.witness_type == WITNESS_TYPE_VIOLATION:
                                         _edge['entry_point'] = "entry point"
                                         is_entry_point = True
                             else:
@@ -284,7 +284,7 @@ class WitnessParser:
                         func_id = self.internal_witness.resolve_function_id(function_name)
                         _edge['enter'] = func_id
                         if not is_entry_point and \
-                                self.internal_witness.witness_type == 'violation':
+                                self.internal_witness.witness_type == WITNESS_TYPE_VIOLATION:
                             _edge['entry_point'] = "entry point"
                             self.internal_witness.add_thread("decl")
                             is_entry_point = True
