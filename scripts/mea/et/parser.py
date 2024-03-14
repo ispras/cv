@@ -234,7 +234,6 @@ class WitnessParser:
 
         for edge in graph.findall('graphml:edge', self.WITNESS_NS):
 
-            source_node_id = edge.attrib.get('source')
             target_node_id = edge.attrib.get('target')
 
             if target_node_id in sink_nodes_map:
