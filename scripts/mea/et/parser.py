@@ -242,7 +242,7 @@ class WitnessParser:
                 continue
 
             # Update lists of input and output edges for source and target nodes.
-            _edge = self.internal_witness.add_edge(source_node_id, target_node_id)
+            _edge = self.internal_witness.add_edge(target_node_id)
 
             start_offset = 0
             end_offset = 0
@@ -316,7 +316,7 @@ class WitnessParser:
                 elif data_key in ('note', 'warning'):
                     tag, note_desc = self.internal_witness.process_note(data_key, data.text)
                     self._logger.debug(f"Add verifier {tag}: '{note_desc}' for edge {_edge}")
-                    new_edge = self.internal_witness.add_edge(source_node_id, target_node_id, _edge)
+                    new_edge = self.internal_witness.add_edge(target_node_id, _edge)
                     new_edge[tag] = note_desc
                     self.internal_witness.is_notes = True
                 elif data_key == 'env':

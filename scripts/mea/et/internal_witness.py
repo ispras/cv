@@ -144,14 +144,17 @@ class InternalWitness:
     def add_entry_node_id(self, node_id):
         self._entry_node_id = node_id
 
-    # noinspection PyUnusedLocal
-    def add_edge(self, source, target, template_edge=None):
-        # pylint: disable=unused-argument
-        # TODO: check coherence of source and target.
+    def add_edge(self, target, template_edge=None):
         edge = {}
-        self._edges.append(edge)
-        if target in self.invariants:
-            edge['invariants'] = self.invariants[target]
+        if template_edge:
+            # If there is a template edge, then we create a new edge with comment (note, warn, env).
+            self._edges.insert(len(self._edges) - 1, edge)
+        else:
+            # Here we just create a new edge
+            self._edges.append(edge)
+        if self.witness_type == 'correctness':
+            if target in self.invariants:
+                edge['invariants'] = self.invariants[target]
         if template_edge:
             for key, val in template_edge.items():
                 if key not in ('warn', 'note', 'env', 'enter', 'return'):
