@@ -31,6 +31,9 @@ TAG_HIDE = "hide"
 TAG_LEVEL = "level"
 TAG_VALUE = "value"
 
+WITNESS_TYPE_VIOLATION = "violation"
+WITNESS_TYPE_CORRECTNESS = "correctness"
+
 
 # Capitalize first letters of attribute names.
 def capitalize_attr_names(attrs):
@@ -144,14 +147,21 @@ class InternalWitness:
     def add_entry_node_id(self, node_id):
         self._entry_node_id = node_id
 
-    # noinspection PyUnusedLocal
-    def add_edge(self, source, target):
-        # pylint: disable=unused-argument
-        # TODO: check coherence of source and target.
+    def add_edge(self, target, template_edge=None):
         edge = {}
-        self._edges.append(edge)
-        if target in self.invariants:
-            edge['invariants'] = self.invariants[target]
+        if template_edge:
+            # If there is a template edge, then we create a new edge with comment (note, warn, env).
+            self._edges.insert(len(self._edges) - 1, edge)
+        else:
+            # Here we just create a new edge
+            self._edges.append(edge)
+        if self.witness_type == WITNESS_TYPE_CORRECTNESS:
+            if target in self.invariants:
+                edge['invariants'] = self.invariants[target]
+        if template_edge:
+            for key, val in template_edge.items():
+                if key not in ('warn', 'note', 'env', 'enter', 'return'):
+                    edge[key] = val
         return edge
 
     def add_file(self, file_name):
@@ -293,7 +303,7 @@ class InternalWitness:
                             edge['note'] = self.process_comment(note)
                             break
 
-        if not warn_edges and self.witness_type == 'violation':
+        if not warn_edges and self.witness_type == WITNESS_TYPE_VIOLATION:
             if self._edges:
                 last_edge = self._edges[-1]
                 if 'note' in last_edge:
@@ -424,7 +434,7 @@ class InternalWitness:
 
     def final_checks(self, entry_point="main"):
         # Check for warnings
-        if self.witness_type == 'violation':
+        if self.witness_type == WITNESS_TYPE_VIOLATION:
             if not self.is_call_stack:
                 self._warnings.append('No call stack (please add tags "enterFunction" and '
                                       '"returnFrom" to improve visualization)')

@@ -26,7 +26,7 @@ import os
 import re
 from xml.etree import ElementTree
 
-from mea.et.internal_witness import InternalWitness
+from mea.et.internal_witness import InternalWitness, WITNESS_TYPE_VIOLATION, WITNESS_TYPE_CORRECTNESS
 
 
 class WitnessParser:
@@ -147,9 +147,9 @@ class WitnessParser:
             elif key == 'witness-type':
                 witness_type = data.text
                 if witness_type == 'correctness_witness':
-                    self.internal_witness.witness_type = 'correctness'
+                    self.internal_witness.witness_type = WITNESS_TYPE_CORRECTNESS
                 elif witness_type == 'violation_witness':
-                    self.internal_witness.witness_type = 'violation'
+                    self.internal_witness.witness_type = WITNESS_TYPE_VIOLATION
                 else:
                     self._logger.warning(f"Unsupported witness type: {witness_type}")
             elif key == 'specification':
@@ -234,7 +234,6 @@ class WitnessParser:
 
         for edge in graph.findall('graphml:edge', self.WITNESS_NS):
 
-            source_node_id = edge.attrib.get('source')
             target_node_id = edge.attrib.get('target')
 
             if target_node_id in sink_nodes_map:
@@ -242,13 +241,14 @@ class WitnessParser:
                 continue
 
             # Update lists of input and output edges for source and target nodes.
-            _edge = self.internal_witness.add_edge(source_node_id, target_node_id)
+            _edge = self.internal_witness.add_edge(target_node_id)
 
             start_offset = 0
             end_offset = 0
             condition = None
             invariant = None
             invariant_scope = None
+            cur_notes = {}
             for data in edge.findall('graphml:data', self.WITNESS_NS):
                 data_key = data.attrib.get('key')
                 if data_key == 'originfile':
@@ -274,7 +274,7 @@ class WitnessParser:
                             if self.entry_point:
                                 if self.entry_point == function_name:
                                     self.internal_witness.is_main_function = True
-                                    if self.internal_witness.witness_type == 'violation':
+                                    if self.internal_witness.witness_type == WITNESS_TYPE_VIOLATION:
                                         _edge['entry_point'] = "entry point"
                                         is_entry_point = True
                             else:
@@ -284,7 +284,7 @@ class WitnessParser:
                         func_id = self.internal_witness.resolve_function_id(function_name)
                         _edge['enter'] = func_id
                         if not is_entry_point and \
-                                self.internal_witness.witness_type == 'violation':
+                                self.internal_witness.witness_type == WITNESS_TYPE_VIOLATION:
                             _edge['entry_point'] = "entry point"
                             self.internal_witness.add_thread("decl")
                             is_entry_point = True
@@ -315,8 +315,7 @@ class WitnessParser:
                     end_offset = int(data.text)
                 elif data_key in ('note', 'warning'):
                     tag, note_desc = self.internal_witness.process_note(data_key, data.text)
-                    _edge[tag] = note_desc
-                    self.internal_witness.is_notes = True
+                    cur_notes[tag] = note_desc
                 elif data_key == 'env':
                     _edge['env'] = self.internal_witness.process_comment(data.text)
                 elif data_key not in unsupported_edge_data_keys:
@@ -373,6 +372,13 @@ class WitnessParser:
                 _edge['thread'] = "0"
             if 'start line' not in _edge:
                 _edge['start line'] = 0
+
+            for tag, note_desc in cur_notes.items():
+                # Actually there is only one note available.
+                self._logger.debug(f"Add verifier {tag}: '{note_desc}' for edge {_edge}")
+                new_edge = self.internal_witness.add_edge(target_node_id, _edge)
+                new_edge[tag] = note_desc
+                self.internal_witness.is_notes = True
 
             edges_num += 1
 
