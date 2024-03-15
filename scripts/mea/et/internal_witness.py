@@ -287,16 +287,18 @@ class InternalWitness:
                     action_begin_dict['source'] = edge["source"]
                     action_begin_dict['enter'] = self.add_function(name)
                     action_begin_dict['start line'] = start_line
+                    action_begin_dict['thread'] = edge.get("thread", None)
                     action_type_data[name].append(action_begin_dict)
                 if action_type == "ACTION_END":
                     action_end_dict = {}
                     action_end_dict['file'] = file_id
                     action_end_dict['start line'] = start_line
-                    action_end_dict['end line'] = start_line
                     action_end_dict['source'] = edge["source"]
                     action_end_dict['return'] = self.add_function(name)
+                    action_end_dict['thread'] = edge.get("thread", None)
                     action_type_data[name].append(action_end_dict)
-                self._logger.warning(edge)
+                self._edges.append(action_begin_dict)
+                self._edges.append(action_end_dict)
 
                 #TODO add remaining
                 self._logger.debug(f"Add EMG comment '{comment}' for operation from '{file}:{start_line}'")
