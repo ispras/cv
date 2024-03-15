@@ -284,7 +284,7 @@ class InternalWitness:
                     action_begin_dict = {}
                     action_begin_dict['env'] = comment
                     action_begin_dict['file'] = file_id
-                    action_begin_dict['source'] = edge["source"]
+                    action_begin_dict['source'] = edge.get("source", None)
                     action_begin_dict['enter'] = self.add_function(name)
                     action_begin_dict['start line'] = start_line
                     action_begin_dict['thread'] = edge.get("thread", None)
@@ -293,7 +293,7 @@ class InternalWitness:
                     action_end_dict = {}
                     action_end_dict['file'] = file_id
                     action_end_dict['start line'] = start_line
-                    action_end_dict['source'] = edge["source"]
+                    action_end_dict['source'] = edge.get("source", None)
                     action_end_dict['return'] = self.add_function(name)
                     action_end_dict['thread'] = edge.get("thread", None)
                     action_type_data[name].append(action_end_dict)
