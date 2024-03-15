@@ -322,13 +322,6 @@ class WitnessParser:
                     self._logger.warning(f'Edge data key {data_key} is not supported')
                     unsupported_edge_data_keys[data_key] = None
 
-            for tag, note_desc in cur_notes.items():
-                # Actually there is only one note available.
-                self._logger.debug(f"Add verifier {tag}: '{note_desc}' for edge {_edge}")
-                new_edge = self.internal_witness.add_edge(target_node_id, _edge)
-                new_edge[tag] = note_desc
-                self.internal_witness.is_notes = True
-
             if invariant and invariant_scope:
                 self.internal_witness.add_invariant(invariant, invariant_scope)
 
@@ -379,6 +372,13 @@ class WitnessParser:
                 _edge['thread'] = "0"
             if 'start line' not in _edge:
                 _edge['start line'] = 0
+
+            for tag, note_desc in cur_notes.items():
+                # Actually there is only one note available.
+                self._logger.debug(f"Add verifier {tag}: '{note_desc}' for edge {_edge}")
+                new_edge = self.internal_witness.add_edge(target_node_id, _edge)
+                new_edge[tag] = note_desc
+                self.internal_witness.is_notes = True
 
             edges_num += 1
 
