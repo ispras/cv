@@ -131,6 +131,9 @@ def compare_error_traces(edited_error_trace: list, compared_error_trace: list,
         # Return true for empty converted error traces (so they will be applied to all
         # reports with the same attributes)
         return 1.0
+    with open('/work/edited_error_trace.txt', 'w') as file_s1:
+            file_s1.write(str(edited_error_trace))
+    file_s1.close()
     functions = {
         COMPARISON_FUNCTION_EQUAL: __compare_equal,
         COMPARISON_FUNCTION_INCLUDE: __compare_include,
@@ -154,47 +157,50 @@ def __convert_call_tree_filter(error_trace: dict, args: dict = None) -> list:
     # TODO: check this in core (one node for call and return edges).
     double_funcs = {}
     for edge in error_trace['edges']:
-        if 'entry_point' in edge:
-            continue
-        if 'enter' in edge and 'return' in edge:
-            double_funcs[edge['enter']] = edge['return']
-        if 'enter' in edge:
-            function_call = error_trace['funcs'][edge['enter']]
-            converted_error_trace.append({
-                CET_OP: CET_OP_CALL,
-                CET_THREAD: edge['thread'],
-                CET_SOURCE: edge['source'],
-                CET_LINE: edge['start line'],
-                CET_DISPLAY_NAME: function_call,
-                CET_ID: counter
-            })
-        elif 'return' in edge:
-            function_return = error_trace['funcs'][edge['return']]
-            converted_error_trace.append({
-                CET_OP: CET_OP_RETURN,
-                CET_THREAD: edge['thread'],
-                CET_LINE: edge['start line'],
-                CET_SOURCE: edge['source'],
-                CET_DISPLAY_NAME: function_return,
-                CET_ID: counter
-            })
-            double_return = edge['return']
-            while True:
-                if double_return in double_funcs.keys():
-                    converted_error_trace.append({
-                        CET_OP: CET_OP_RETURN,
-                        CET_THREAD: edge['thread'],
-                        CET_LINE: edge['start line'],
-                        CET_SOURCE: edge['source'],
-                        CET_DISPLAY_NAME: error_trace['funcs'][double_funcs[double_return]],
-                        CET_ID: counter
-                    })
-                    tmp = double_return
-                    double_return = double_funcs[double_return]
-                    del double_funcs[tmp]
-                else:
-                    break
-        counter += 1
+        if 'flag_new_edge' in edge:
+            pass
+        else:
+            if 'entry_point' in edge:
+                continue
+            if 'enter' in edge and 'return' in edge:
+                double_funcs[edge['enter']] = edge['return']
+            if 'enter' in edge:
+                function_call = error_trace['funcs'][edge['enter']]
+                converted_error_trace.append({
+                    CET_OP: CET_OP_CALL,
+                    CET_THREAD: edge['thread'],
+                    CET_SOURCE: edge['source'],
+                    CET_LINE: edge['start line'],
+                    CET_DISPLAY_NAME: function_call,
+                    CET_ID: counter
+                })
+            elif 'return' in edge:
+                function_return = error_trace['funcs'][edge['return']]
+                converted_error_trace.append({
+                    CET_OP: CET_OP_RETURN,
+                    CET_THREAD: edge['thread'],
+                    CET_LINE: edge['start line'],
+                    CET_SOURCE: edge['source'],
+                    CET_DISPLAY_NAME: function_return,
+                    CET_ID: counter
+                })
+                double_return = edge['return']
+                while True:
+                    if double_return in double_funcs.keys():
+                        converted_error_trace.append({
+                            CET_OP: CET_OP_RETURN,
+                            CET_THREAD: edge['thread'],
+                            CET_LINE: edge['start line'],
+                            CET_SOURCE: edge['source'],
+                            CET_DISPLAY_NAME: error_trace['funcs'][double_funcs[double_return]],
+                            CET_ID: counter
+                        })
+                        tmp = double_return
+                        double_return = double_funcs[double_return]
+                        del double_funcs[tmp]
+                    else:
+                        break
+            counter += 1
     return converted_error_trace
 
 
@@ -270,17 +276,20 @@ def __convert_conditions(error_trace: dict, args: dict = None) -> list:
     converted_error_trace = []
     counter = 0
     for edge in error_trace['edges']:
-        if 'condition' in edge:
-            assume = edge['condition']
-            converted_error_trace.append({
-                CET_OP: CET_OP_ASSUME,
-                CET_THREAD: edge['thread'],
-                CET_SOURCE: edge['source'],
-                CET_LINE: edge['start line'],
-                CET_DISPLAY_NAME: assume,
-                CET_ID: counter
-            })
-        counter += 1
+        if 'flag_new_edge' in edge:
+            pass
+        else:
+            if 'condition' in edge:
+                assume = edge['condition']
+                converted_error_trace.append({
+                    CET_OP: CET_OP_ASSUME,
+                    CET_THREAD: edge['thread'],
+                    CET_SOURCE: edge['source'],
+                    CET_LINE: edge['start line'],
+                    CET_DISPLAY_NAME: assume,
+                    CET_ID: counter
+                })
+            counter += 1
     return converted_error_trace
 
 
@@ -290,18 +299,21 @@ def __convert_assignments(error_trace: dict, args: dict = None) -> list:
     converted_error_trace = []
     counter = 0
     for edge in error_trace['edges']:
-        if 'source' in edge:
-            source = edge['source']
-            if ASSIGN_MARK in source:
-                converted_error_trace.append({
-                    CET_OP: CET_OP_ASSIGN,
-                    CET_THREAD: edge['thread'],
-                    CET_SOURCE: edge['source'],
-                    CET_LINE: edge['start line'],
-                    CET_DISPLAY_NAME: source,
-                    CET_ID: counter
-                })
-        counter += 1
+        if 'flag_new_edge' in edge:
+            pass
+        else:
+            if 'source' in edge:
+                source = edge['source']
+                if ASSIGN_MARK in source:
+                    converted_error_trace.append({
+                        CET_OP: CET_OP_ASSIGN,
+                        CET_THREAD: edge['thread'],
+                        CET_SOURCE: edge['source'],
+                        CET_LINE: edge['start line'],
+                        CET_DISPLAY_NAME: source,
+                        CET_ID: counter
+                    })
+            counter += 1
     return converted_error_trace
 
 
@@ -319,35 +331,38 @@ def __convert_notes(error_trace: dict, args=None) -> list:
         use_warns = True
 
     for edge in error_trace['edges']:
-        text = DEFAULT_PROPERTY_CHECKS_TEXT
-        if 'note' in edge:
-            if not ignore_text:
-                text = edge['note']
-                note_desc = edge['note']
-                if isinstance(note_desc, dict):
-                    text = note_desc.get('value', note_desc)
-            if use_notes:
-                converted_error_trace.append({
-                    CET_OP: CET_OP_NOTE,
-                    CET_THREAD: edge['thread'],
-                    CET_SOURCE: edge['source'],
-                    CET_LINE: edge['start line'],
-                    CET_DISPLAY_NAME: text,
-                    CET_ID: counter
-                })
-        elif 'warn' in edge:
-            if not ignore_text:
-                text = edge['warn']
-            if use_warns:
-                converted_error_trace.append({
-                    CET_OP: CET_OP_WARN,
-                    CET_THREAD: edge['thread'],
-                    CET_SOURCE: edge['source'],
-                    CET_LINE: edge['start line'],
-                    CET_DISPLAY_NAME: text,
-                    CET_ID: counter
-                })
-        counter += 1
+        if 'flag_new_edge' in edge:
+            pass
+        else:
+            text = DEFAULT_PROPERTY_CHECKS_TEXT
+            if 'note' in edge:
+                if not ignore_text:
+                    text = edge['note']
+                    note_desc = edge['note']
+                    if isinstance(note_desc, dict):
+                        text = note_desc.get('value', note_desc)
+                if use_notes:
+                    converted_error_trace.append({
+                        CET_OP: CET_OP_NOTE,
+                        CET_THREAD: edge['thread'],
+                        CET_SOURCE: edge['source'],
+                        CET_LINE: edge['start line'],
+                        CET_DISPLAY_NAME: text,
+                        CET_ID: counter
+                    })
+            elif 'warn' in edge:
+                if not ignore_text:
+                    text = edge['warn']
+                if use_warns:
+                    converted_error_trace.append({
+                        CET_OP: CET_OP_WARN,
+                        CET_THREAD: edge['thread'],
+                        CET_SOURCE: edge['source'],
+                        CET_LINE: edge['start line'],
+                        CET_DISPLAY_NAME: text,
+                        CET_ID: counter
+                    })
+            counter += 1
     return converted_error_trace
 
 
@@ -375,29 +390,32 @@ def __get_model_functions(error_trace: dict, args: dict) -> set:
         if not str(func).isidentifier():
             patterns.add(func)
     for edge in error_trace['edges']:
-        if 'enter' in edge:
-            func = error_trace['funcs'][edge['enter']]
-            if patterns:
-                for pattern_func in patterns:
-                    if re.match(pattern_func, func):
-                        model_functions.add(func)
-            stack.append(func)
-        if 'return' in edge:
-            # func = error_trace['funcs'][edge['return']]
+        if 'flag_new_edge' in edge:
+            pass
+        else:
+            if 'enter' in edge:
+                func = error_trace['funcs'][edge['enter']]
+                if patterns:
+                    for pattern_func in patterns:
+                        if re.match(pattern_func, func):
+                            model_functions.add(func)
+                stack.append(func)
+            if 'return' in edge:
+                # func = error_trace['funcs'][edge['return']]
+                if stack:
+                    stack.pop()
             if stack:
-                stack.pop()
-        if stack:
-            if 'warn' in edge:
-                model_functions.add(stack[len(stack) - 1])
-            if 'note' in edge:
-                note_desc = edge['note']
-                is_add = True
-                if isinstance(note_desc, dict):
-                    level = int(note_desc.get('level', 1))
-                    if level > notes_level:
-                        is_add = False
-                if is_add:
+                if 'warn' in edge:
                     model_functions.add(stack[len(stack) - 1])
+                if 'note' in edge:
+                    note_desc = edge['note']
+                    is_add = True
+                    if isinstance(note_desc, dict):
+                        level = int(note_desc.get('level', 1))
+                        if level > notes_level:
+                            is_add = False
+                    if is_add:
+                        model_functions.add(stack[len(stack) - 1])
 
     model_functions = model_functions - patterns
     return model_functions
