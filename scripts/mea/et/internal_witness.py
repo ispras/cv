@@ -248,8 +248,11 @@ class InternalWitness:
 
         warn_edges = []
         action_type_data = {}
-        edge_index = []
+        new_edges_list = []
+        num = []
+        l = []
         for edge in self._edges:
+            new_edges_list.append(edge)
             if 'warn' in edge:
                 warn_edges.append(edge['warn'])
             file_id = edge.get('file', None)
@@ -258,6 +261,9 @@ class InternalWitness:
             else:
                 continue
 
+            if file_id == 291:
+                l.append(edge)
+                num.append(edge['start line'])
             start_line = edge.get('start line')
 
             if 'enter' in edge:
@@ -279,32 +285,42 @@ class InternalWitness:
                 self._logger.debug(f"Add note {note} for statement from '{file}:{start_line}'")
                 edge['note'] = self.process_comment(note)
             elif file_id in self._env_models_json and start_line in self._env_models_json[file_id]:
-                current_edge_index = self._edges.index(edge)
-                edge_index.append(current_edge_index)
                 env = self._env_models_json[file_id][start_line]
-                comment = env["comment"]
+                comment = env.get("comment", None)
                 relevant = env.get("relevant", False)
                 name = env.get("name", None)
                 action_type = env.get("type", None)
-                self._logger.debug(f"type: {action_type} for name {name}")
+                self._logger.warning(f"type: {action_type} for name {name}")
                 if name is not None:
-                    action_type_data[name] = []
-                if action_type == "ACTION_BEGIN":
-                    action_begin_dict = self.fill_new_edge(edge)
-                    if 'env' not in action_begin_dict:
-                        action_begin_dict['env'] = comment
-                    action_begin_dict['enter'] = self.add_function(name)
-                    action_type_data[name].append((action_begin_dict, current_edge_index))
-                if action_type == "ACTION_END":
-                    action_end_dict = self.fill_new_edge(edge)
-                    action_end_dict['return'] = self.add_function(name)
-                    action_type_data[name].append((action_end_dict, current_edge_index))
+                    if name not in action_type_data:
+                        action_type_data[name] = {}
+                    if 'begin' not in action_type_data[name]:
+                            action_type_data[name]['begin'] = []
+                    if 'end' not in action_type_data[name]:
+                            action_type_data[name]['end'] = []
+                    if action_type == "ACTION_BEGIN":
+                        action_begin_dict = self.fill_new_edge(edge)
+                        if 'env' not in action_begin_dict:
+                            action_begin_dict['env'] = comment
+                        action_begin_dict['enter'] = self.add_function(name)
+                        action_begin_dict['flag_new_edge'] = True
+                        action_type_data[name]['begin'].append(action_begin_dict)
+                    if action_type == "ACTION_END":
+                        action_end_dict = self.fill_new_edge(edge)
+                        action_end_dict['return'] = self.add_function(name)
+                        action_end_dict['flag_new_edge'] = True
+                        action_type_data[name]['end'].append(action_end_dict)
+
+                    #if 
+                    #new_edges_list.insert(-1, action_type_data[name][0])
+                    #new_edges_list.append(action_type_data[name][1])
 
                 #TODO add remaining
-                self._logger.debug(f"Add EMG comment '{comment}' for operation from '{file}:{start_line}'")
-                self._logger.debug(f"Comment argument: relevant={relevant}")
-                edge['env'] = self.process_comment(comment)
-                edge['env_relevant'] = relevant
+                if comment is not None:
+                    self._logger.debug(f"Add EMG comment '{comment}' for operation from '{file}:{start_line}'")
+                    self._logger.debug(f"Comment argument: relevant={relevant}")
+                    edge['env'] = self.process_comment(comment)
+                    edge['env_relevant'] = relevant
                 del self._env_models_json[file_id][start_line]
             elif file_id in self._asserts and start_line in self._asserts[file_id]:
                 warn = self._asserts[file_id][start_line]
@@ -317,13 +333,6 @@ class InternalWitness:
                         if spec_func in edge['source']:
                             edge['note'] = self.process_comment(note)
                             break
-        start_index = 0
-        for key_name_env in action_type_data:
-            if action_type_data[key_name_env] is not None:
-                self._edges.insert(start_index + action_type_data[key_name_env][0][1], action_type_data[key_name_env][0][0])
-                self._edges.insert(start_index + 2 + action_type_data[key_name_env][1][1], action_type_data[key_name_env][1][0])
-                start_index += 2
-        self._logger.warning(self._edges)
 
         if not warn_edges and self.witness_type == 'violation':
             if self._edges:
@@ -333,6 +342,21 @@ class InternalWitness:
                     del last_edge['note']
                 else:
                     last_edge['warn'] = 'Property violation'
+        self._edges = new_edges_list
+        count = 0
+        for key in action_type_data.keys():
+            with open(f"/work/file_{count}.txt", 'w') as file_id:
+                for item in action_type_data[key]:
+                    file_id.write(str(item) + "\n")
+            file_id.close()
+            count += 1
+            self._logger.warning("name: " + key + "   " + "count of ACTION_BEGIN with this name:" + str(len(action_type_data[key]['begin'])) + "    " + "count of ACTION_END with this name:" + str(len(action_type_data[key]['end'])))
+            #self._logger.warning(action_type_data[key][0])
+        with open('/work/all_edges.txt', 'w') as fl:
+            for item in l:
+                fl.write(str(item) + "\n")
+            fl.write(str(num) + "\n" + str(len(num)))
+        fl.close()
         del self._model_funcs, self._notes, self._asserts, self._env_models
 
     def _parse_model_comments(self):
@@ -362,10 +386,9 @@ class InternalWitness:
                     match = emg_comment_json.search(text)
                     if match:
                         data = json.loads(match.group(1))
-                        if "comment" in data:
-                            if file_id not in self._env_models_json:
-                                self._env_models_json[file_id] = {}
-                            self._env_models_json[file_id][line + 1] = data
+                        if file_id not in self._env_models_json:
+                            self._env_models_json[file_id] = {}
+                        self._env_models_json[file_id][line + 1] = data
 
                     # Match rest comments
                     match = re.search(
