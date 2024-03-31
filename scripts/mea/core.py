@@ -157,9 +157,7 @@ def __convert_call_tree_filter(error_trace: dict, args: dict = None) -> list:
     # TODO: check this in core (one node for call and return edges).
     double_funcs = {}
     for edge in error_trace['edges']:
-        if 'flag_new_edge' in edge:
-            pass
-        else:
+        if 'flag_additional_edge' not in edge:
             if 'entry_point' in edge:
                 continue
             if 'enter' in edge and 'return' in edge:
@@ -276,9 +274,7 @@ def __convert_conditions(error_trace: dict, args: dict = None) -> list:
     converted_error_trace = []
     counter = 0
     for edge in error_trace['edges']:
-        if 'flag_new_edge' in edge:
-            pass
-        else:
+        if 'flag_new_edge' not in edge:
             if 'condition' in edge:
                 assume = edge['condition']
                 converted_error_trace.append({
@@ -299,9 +295,7 @@ def __convert_assignments(error_trace: dict, args: dict = None) -> list:
     converted_error_trace = []
     counter = 0
     for edge in error_trace['edges']:
-        if 'flag_new_edge' in edge:
-            pass
-        else:
+        if 'flag_new_edge' not in edge:
             if 'source' in edge:
                 source = edge['source']
                 if ASSIGN_MARK in source:
@@ -331,9 +325,7 @@ def __convert_notes(error_trace: dict, args=None) -> list:
         use_warns = True
 
     for edge in error_trace['edges']:
-        if 'flag_new_edge' in edge:
-            pass
-        else:
+        if 'flag_new_edge' not in edge:
             text = DEFAULT_PROPERTY_CHECKS_TEXT
             if 'note' in edge:
                 if not ignore_text:
@@ -390,9 +382,7 @@ def __get_model_functions(error_trace: dict, args: dict) -> set:
         if not str(func).isidentifier():
             patterns.add(func)
     for edge in error_trace['edges']:
-        if 'flag_new_edge' in edge:
-            pass
-        else:
+        if 'flag_new_edge' not in edge:
             if 'enter' in edge:
                 func = error_trace['funcs'][edge['enter']]
                 if patterns:
