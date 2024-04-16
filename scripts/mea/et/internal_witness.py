@@ -242,11 +242,19 @@ class InternalWitness:
         self._model_funcs[func_id] = comment
         self._spec_funcs[func_name] = comment
 
-    def find_edge_to_emg(self, start_line, file_id):
+    def find_for_action_begin_matching_action_end(self, start_line_of_begin_action, file_id, action_name=None):
+        if action_name:
+            return min(line for _, line in self._env_action_end_comments[file_id][action_name] if line >= start_line_of_begin_action)
+        return None
+    
+    def find_for_edge_nearest_action_begin(self, file_id, edge_line):
+        return max(line for line in list(list(self._env_action_begin_comments[file_id].keys()) + [0]) if line <= edge_line)
+
+    def find_emg_for_edge(self, start_line, file_id):
         if start_line in self._env_action_begin_comments[file_id]:
             return (self._env_action_begin_comments[file_id][start_line], start_line)
-        elif start_line - 1 in self._env_action_begin_comments[file_id]:
-            return (self._env_action_begin_comments[file_id][start_line - 1], start_line - 1)
+        #elif start_line - 1 in self._env_action_begin_comments[file_id]:
+            #return (self._env_action_begin_comments[file_id][start_line - 1], start_line)
         else:
             return (None, None)
 
@@ -259,13 +267,12 @@ class InternalWitness:
 
         warn_edges = []
         new_edges_list = []
-        num = []
-        l = []
-        with open('/work/all_edges_at_all.txt', 'w') as fl:
-            for item in self._edges:
-                fl.write(str(item) + "\n")
+        is_any_action_begin_in_processing = {}
+                
+        last_line_of_action = {}
+        last_edge_for_end_action = {}
+        #self._edges.sort(key= lambda x: x['start line'])
         for edge in self._edges:
-            new_edges_list.append(edge)
             if 'warn' in edge:
                 warn_edges.append(edge['warn'])
             file_id = edge.get('file', None)
@@ -274,9 +281,6 @@ class InternalWitness:
             else:
                 continue
 
-            if file_id == 291:
-                l.append(edge)
-                num.append(edge['start line'])
             start_line = edge.get('start line')
 
             if 'enter' in edge:
@@ -293,12 +297,18 @@ class InternalWitness:
                                        f"{self._resolve_function(func_id)}'")
                     edge['env'] = self.process_comment(env_note)
 
+            if file_id in last_edge_for_end_action and (start_line > last_line_of_action[file_id][1] or start_line < last_line_of_action[file_id][0]):
+                new_edges_list.append(last_edge_for_end_action[file_id])
+                last_edge_for_end_action.pop(file_id)
+                last_line_of_action.pop(file_id)
+
+            new_edges_list.append(edge)
+
             if file_id in self._env_action_begin_comments:
-                env, line = self.find_edge_to_emg(start_line, file_id)
+                env, line = self.find_emg_for_edge(start_line, file_id)
                 if env:
+                    is_any_action_begin_in_processing[file_id] = line
                     name = env.get("name", None)
-                    action_type = env.get("type", None)
-                    self._logger.warning(f"type: {action_type} for name {name}")
                     if name:
                         action_begin_dict = self.fill_new_edge(edge)
                         if 'env' not in action_begin_dict:
@@ -306,22 +316,21 @@ class InternalWitness:
                         action_begin_dict['enter'] = self.add_function(name)
                         action_begin_dict['flag_additional_edge'] = True
                         action_begin_dict['start line'] = line
-
-                        min_diff = self._env_action_end_comments[file_id][name][0][1] - line
-                        index_matching_action_end = 0
-                        index_in_env_end_action = 0
-                        for action_end in self._env_action_end_comments[file_id][name]:
-                            if action_end[1] - line < min_diff and action_end[1] > line:
-                                index_matching_action_end = index_in_env_end_action
-                                min_diff = action_end[1] - line
-                            index_in_env_end_action += 1
-
+                        #index_matching_action_end = self.find_for_action_begin_matching_action_end(start_line_of_begin_action=line, action_name=name, file_id=file_id)
+                        matching_action_end = self.find_for_action_begin_matching_action_end(start_line_of_begin_action=line, action_name=name, file_id=file_id)
                         action_end_dict = self.fill_new_edge(edge)
                         action_end_dict['return'] = self.add_function(name)
                         action_end_dict['flag_additional_edge'] = True
-                        action_end_dict['start line'] = self._env_action_end_comments[file_id][name][index_matching_action_end][1]
-                        #new_edges_list.insert(-1, action_begin_dict)
-                        #new_edges_list.append(action_end_dict)
+                        #action_end_dict['start line'] = self._env_action_end_comments[file_id][name][index_matching_action_end][1]
+                        action_end_dict['start line'] = matching_action_end
+                        if (action_end_dict['start line'] - action_begin_dict['start line'] > 1):
+                            new_edges_list.insert(-1, action_begin_dict)
+                            last_line_of_action[file_id] = (action_begin_dict['start line'], action_end_dict['start line'])
+                            self._logger.warning(f"{name}   begin: {start_line} and end: {action_end_dict['start line']}")
+                            #is_any_action_begin_in_processing.add(file_id)
+                            last_edge_for_end_action[file_id] = action_end_dict
+                            #new_edges_list.append(action_end_dict)
+                            
             if file_id in self._notes and start_line in self._notes[file_id]:
                 note = self._notes[file_id][start_line]
                 self._logger.debug(f"Add note {note} for statement from '{file}:{start_line}'")
@@ -360,17 +369,6 @@ class InternalWitness:
                     last_edge['warn'] = 'Property violation'
         self._edges = new_edges_list
         #self._logger.warning(action_type_data[key][0])
-        with open('/work/all_edges.txt', 'w') as fl:
-            for item in l:
-                fl.write(str(item) + "\n")
-            fl.write(str(num) + "\n" + str(len(num)))
-        with open('/work/new_all_edges.txt', 'w') as fl:
-            for item in new_edges_list:
-                fl.write(str(item) + "\n")
-        with open('/work/all_edges_source.txt', 'w') as fls:
-            for item in l:
-                fls.write(str(item['source']) + "\n")
-            fls.write(str(num) + "\n" + str(len(num)))
         del self._model_funcs, self._notes, self._asserts, self._env_models
 
     def _parse_model_comments(self):
@@ -401,7 +399,7 @@ class InternalWitness:
                     if match:
                         data = json.loads(match.group(1))
                         if "type" in data:
-                            if data["type"] == "ACTION_BEGIN":
+                            if data["type"] == "ACTION_BEGIN" and "name" in data:
                                 if file_id not in self._env_action_begin_comments:
                                     self._env_action_begin_comments[file_id] = {}
                                 self._env_action_begin_comments[file_id][line + 1] = data
