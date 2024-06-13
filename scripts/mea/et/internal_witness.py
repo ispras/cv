@@ -33,6 +33,7 @@ TAG_VALUE = "value"
 
 WITNESS_TYPE_VIOLATION = "violation"
 WITNESS_TYPE_CORRECTNESS = "correctness"
+MAX_SEARCH_DISTANCE_FOR_EMG_COMMENT = 20
 
 
 # Capitalize first letters of attribute names.
@@ -65,6 +66,7 @@ class InternalWitness:
         self._spec_funcs = {}
         self._env_models = {}
         self._env_models_json = {}
+        self._env_funcs_openers = {}
         self._notes = {}
         self._asserts = {}
         self._actions = []
@@ -251,6 +253,9 @@ class InternalWitness:
             self.is_notes = True
 
         warn_edges = []
+        last_opened_line = 0
+        counter = 0
+        new_edges = {}
         for edge in self._edges:
             if 'warn' in edge:
                 warn_edges.append(edge['warn'])
@@ -276,6 +281,44 @@ class InternalWitness:
                                        f"{self._resolve_function(func_id)}'")
                     edge['env'] = self.process_comment(env_note)
 
+            if file_id in self._env_funcs_openers:
+                if last_opened_line > 0 and start_line - last_opened_line <= MAX_SEARCH_DISTANCE_FOR_EMG_COMMENT:
+                    self._logger.debug(f"ENV comments brackets: search from {last_opened_line} to {start_line}")
+                    for checked_line in range(last_opened_line, start_line):
+                        if checked_line in self._env_funcs_openers[file_id]:
+                            self._logger.debug(f"ENV comments brackets: found termination bracket on {checked_line} "
+                                               f"with last checked {last_opened_line}")
+                            new_func_name = self._env_funcs_openers[file_id][checked_line]['name']
+                            new_edges[counter] = {
+                                'return': self.add_function(new_func_name),
+                                'start line': checked_line,
+                                'file': file_id,
+                                'source': "",
+                                'ignore MEA': True,
+                            }
+                            if 'thread' in edge:
+                                new_edges[counter]['thread'] = edge['thread']
+                            del self._env_funcs_openers[file_id][checked_line]
+                            last_opened_line = 0
+                            break
+                if start_line in self._env_funcs_openers[file_id]:
+                    if self._env_funcs_openers[file_id][start_line]['type'] == "ACTION_BEGIN":
+                        last_opened_line = start_line - 1
+                    self._logger.debug(f"ENV comments brackets: found start bracket on {start_line}")
+                    new_func_name = self._env_funcs_openers[file_id][start_line]['name']
+                    specific_comment = self._env_funcs_openers[file_id][start_line]['comment']
+                    new_edges[counter] = {
+                        'enter': self.add_function(new_func_name),
+                        'start line': start_line,
+                        'file': file_id,
+                        'env': specific_comment or new_func_name,
+                        'source': f"{new_func_name}()",
+                        'ignore MEA': True
+                    }
+                    if 'thread' in edge:
+                        new_edges[counter]['thread'] = edge['thread']
+                    del self._env_funcs_openers[file_id][start_line]
+
             if file_id in self._notes and start_line in self._notes[file_id]:
                 note = self._notes[file_id][start_line]
                 self._logger.debug(f"Add note {note} for statement from '{file}:{start_line}'")
@@ -285,7 +328,7 @@ class InternalWitness:
                 comment = env["comment"]
                 relevant = env.get("relevant", False)
 
-                #TODO add remaining
+                # TODO add remaining
                 self._logger.debug(f"Add EMG comment '{comment}' for operation from '{file}:{start_line}'")
                 self._logger.debug(f"Comment argument: relevant={relevant}")
                 edge['env'] = self.process_comment(comment)
@@ -302,6 +345,27 @@ class InternalWitness:
                         if spec_func in edge['source']:
                             edge['note'] = self.process_comment(note)
                             break
+            counter += 1
+
+        stack = []
+        for index, edge in reversed(sorted(new_edges.items())):
+            if not stack and 'enter' in edge:
+                # Ignore enter on empty stack
+                continue
+            if 'return' in edge:
+                stack.append((edge['return'], index))
+            if 'enter' in edge:
+                last_elem_on_stack, last_index = stack.pop()
+                if not last_elem_on_stack == edge['enter']:
+                    self._logger.warning(f"ENV comments brackets: found different element on env functions stack: "
+                                         f"{edge['enter']} instead of {last_elem_on_stack}")
+                else:
+                    for cur_index in range(index, last_index):
+                        if 'env' in self._edges[cur_index]:
+                            del self._edges[cur_index]
+                            self._logger.debug(
+                                f"ENV comments brackets: remove ENV comment on the line {self._edges[cur_index]}")
+            self._edges.insert(index, edge)
 
         if not warn_edges and self.witness_type == WITNESS_TYPE_VIOLATION:
             if self._edges:
@@ -344,6 +408,15 @@ class InternalWitness:
                             if file_id not in self._env_models_json:
                                 self._env_models_json[file_id] = {}
                             self._env_models_json[file_id][line + 1] = data
+                        if 'name' in data:
+                            func_data = {
+                                'type': data['type'],
+                                'name': data['name'],
+                                'comment': data.get('comment', None)
+                            }
+                            if file_id not in self._env_funcs_openers:
+                                self._env_funcs_openers[file_id] = {}
+                            self._env_funcs_openers[file_id][line + 1] = func_data
 
                     # Match rest comments
                     match = re.search(
