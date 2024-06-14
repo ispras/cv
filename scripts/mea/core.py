@@ -154,7 +154,7 @@ def __convert_call_tree_filter(error_trace: dict, args: dict = None) -> list:
     # TODO: check this in core (one node for call and return edges).
     double_funcs = {}
     for edge in error_trace['edges']:
-        if 'entry_point' in edge:
+        if 'entry_point' in edge or 'ignore MEA' in edge:
             continue
         if 'enter' in edge and 'return' in edge:
             double_funcs[edge['enter']] = edge['return']
