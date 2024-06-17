@@ -67,6 +67,7 @@ class InternalWitness:
         self._env_models = {}
         self._env_models_json = {}
         self._env_funcs_openers = {}
+        self._env_threads = {}
         self._notes = {}
         self._asserts = {}
         self._actions = []
@@ -408,6 +409,10 @@ class InternalWitness:
                             if file_id not in self._env_models_json:
                                 self._env_models_json[file_id] = {}
                             self._env_models_json[file_id][line + 1] = data
+                        if "thread" in data and "function" in data:
+                            if file_id not in self._env_threads:
+                                self._env_threads[file_id] = {}
+                            self._env_threads[file_id][self.add_function(data["function"])] = data["thread"]
                         if 'name' in data:
                             func_data = {
                                 'type': data['type'],
@@ -534,13 +539,21 @@ class InternalWitness:
             #         'improve visualization)')
         if not self._threads:
             is_main_process = False
-            for edge in self._edges:
-                if not is_main_process and 'enter' in edge:
-                    is_main_process = True
-                if is_main_process:
-                    edge['thread'] = '1'
-                else:
-                    edge['thread'] = '0'
+            if self._env_threads:
+                cur_thread = 0
+                for edge in self._edges:
+                    if edge['file'] in self._env_threads:
+                        if 'enter' in edge and edge['enter'] in self._env_threads[edge['file']]:
+                            cur_thread = self._env_threads[edge['file']][edge['enter']]
+                    edge['thread'] = cur_thread
+            else:
+                for edge in self._edges:
+                    if not is_main_process and 'enter' in edge:
+                        is_main_process = True
+                    if is_main_process:
+                        edge['thread'] = '1'
+                    else:
+                        edge['thread'] = '0'
 
     def get_func_name(self, identifier: int):
         return self._funcs[identifier]
