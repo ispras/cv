@@ -68,6 +68,7 @@ class InternalWitness:
         self._env_models_json = {}
         self._env_funcs_openers = {}
         self._env_threads = {}
+        self._env_funcs = {}
         self._notes = {}
         self._asserts = {}
         self._actions = []
@@ -275,6 +276,8 @@ class InternalWitness:
                     self._logger.debug(f"Add note {note} for model function "
                                        f"'{self._resolve_function(func_id)}'")
                     edge['note'] = self.process_comment(note)
+                if file_id in self._env_funcs and func_id in self._env_funcs[file_id]:
+                    edge['env'] = self.process_comment(self._env_funcs[file_id][func_id])
                 if func_id in self._env_models:
                     # TODO: not supported anymore
                     env_note = self._env_models[func_id]
@@ -413,6 +416,10 @@ class InternalWitness:
                             if file_id not in self._env_threads:
                                 self._env_threads[file_id] = {}
                             self._env_threads[file_id][self.add_function(data["function"])] = data["thread"]
+                        if "comment" in data and "function" in data and data.get("type") == "CONTROL_FUNCTION_BEGIN":
+                            if file_id not in self._env_funcs:
+                                self._env_funcs[file_id] = {}
+                            self._env_funcs[file_id][self.add_function(data["function"])] = data["comment"]
                         if 'name' in data:
                             func_data = {
                                 'type': data['type'],
