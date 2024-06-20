@@ -165,7 +165,7 @@ class Runner(Component):
                              f"Previous version is {last_version}, current version is {self.version}")
             return False
         # No cached file - do not reuse.
-        self.logger.info(f"Cannot find last cached version")
+        self.logger.info("Cannot find last cached version")
         return False
 
     def __cache_build_base(self):
