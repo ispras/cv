@@ -374,7 +374,7 @@ class InternalWitness:
             if self._edges:
                 last_edge = self._edges[-1]
                 if 'note' in last_edge:
-                    last_edge['warn'] = f"Violation of '{self.process_comment(last_edge['note'])}'"
+                    last_edge['warn'] = f"{self.process_comment(last_edge['note'])}"
                     del last_edge['note']
                 else:
                     last_edge['warn'] = 'Property violation'
