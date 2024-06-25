@@ -332,7 +332,6 @@ class InternalWitness:
                 comment = env["comment"]
                 relevant = env.get("relevant", False)
 
-                # TODO add remaining
                 self._logger.debug(f"Add EMG comment '{comment}' for operation from '{file}:{start_line}'")
                 self._logger.debug(f"Comment argument: relevant={relevant}")
                 edge['env'] = self.process_comment(comment)
