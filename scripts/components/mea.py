@@ -63,7 +63,7 @@ class MEA(Component):
     Error trace equivalence for two traces et1 and et2 is determined in the following way:
     et1 = et2 <=> comparison(conversion(parser(et1)), comparison(parser(et2))),
     where parser function parses the given file with error trace and returns its internal
-    representation, conversion function transforms its internal representation (for example, 
+    representation, conversion function transforms its internal representation (for example,
     by removing some elements) and comparison function compares its internal representation.
     Definitions:
     - parsed error trace - result of parser(et), et - file name with error trace (xml);
