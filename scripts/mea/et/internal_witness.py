@@ -436,7 +436,7 @@ class InternalWitness:
                         kind, func_name, comment = match.groups()
 
                         comment = comment.rstrip()
-                        if kind in ("NOTE", "WARN"):
+                        if kind in ("NOTE", "WARN", "ASSERT"):
                             comment = f"{func_name} {comment}"
 
                             if file_id not in self._notes:
