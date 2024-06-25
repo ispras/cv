@@ -365,7 +365,7 @@ class InternalWitness:
                 else:
                     for cur_index in range(index, last_index):
                         if 'env' in self._edges[cur_index]:
-                            del self._edges[cur_index]
+                            del self._edges[cur_index]['env']
                             self._logger.debug(
                                 f"ENV comments brackets: remove ENV comment on the line {self._edges[cur_index]}")
             self._edges.insert(index, edge)
