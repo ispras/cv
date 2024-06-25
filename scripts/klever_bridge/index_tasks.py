@@ -78,10 +78,10 @@ def _iterate_over_tasks(tasks_dir: str, jobs: dict, tasks: dict):
         if os.path.exists(cil_file):
             with open(cil_file, encoding="utf8", errors='ignore') as cil_fp:
                 for line in cil_fp.readlines():
-                    if "vtg" not in line or "emg" not in line:
+                    if "vtg" not in line or "weaver" not in line:
                         continue
                     res = re.search(
-                        rf"{job_dir}/(.+)/klever-core-work-dir/job/vtg/(.+)\.ko/(.+)/emg", line
+                        rf"{job_dir}/(.+)/klever-core-work-dir/job/vtg/(.+)\.ko/.+/\d+/(.+)/weaver/", line
                     )
                     if res:
                         new_job_id = res.group(1)
