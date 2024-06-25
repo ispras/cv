@@ -88,6 +88,7 @@ BUILD_BASE_STORAGE_DIR = "Storage"
 RESULT_FILE = "runner_result.log"
 BIG_WAIT_INTERVAL = 100
 SMALL_WAIT_INTERVAL = 10
+CACHED_VERSION_FILE_NAME = ".cached_version"
 
 
 class Runner(Component):
@@ -150,12 +151,33 @@ class Runner(Component):
                 sys.exit(f"Name '{fail_with_text}' was not specified")
             return ""
 
+    def __is_use_cache(self) -> bool:
+        if not (self.build_base_cached and os.path.exists(self.build_base_cached)):
+            return False
+        if os.path.exists(CACHED_VERSION_FILE_NAME):
+            # There is a cached file - then we need to check version.
+            with open(CACHED_VERSION_FILE_NAME, errors='ignore', encoding='ascii') as f_version:
+                last_version = f_version.read()
+            if last_version == self.version:
+                self.logger.info(f"Reusing build base from {self.build_base_cached}, version: {last_version}")
+                return True
+            self.logger.info(f"Cached build base is outdated. "
+                             f"Previous version is {last_version}, current version is {self.version}")
+            return False
+        # No cached file - do not reuse.
+        self.logger.info("Cannot find last cached version")
+        return False
+
+    def __cache_build_base(self):
+        if self.build_base_cached:
+            with open(CACHED_VERSION_FILE_NAME, "w", encoding='ascii') as f_version:
+                f_version.write(self.version)
+
     def builder(self) -> str:
         """
-        Create a build base for specific
+        Create a build base for specific kernel
         """
-        if self.build_base_cached:
-            self.logger.info(f"Reusing build base from {self.build_base_cached}")
+        if self.__is_use_cache():
             return self.build_base_cached
         self.logger.info("Preparing build base")
         builder_script = os.path.join(self.klever_home_dir, BUILDER_SCRIPT)
@@ -168,6 +190,7 @@ class Runner(Component):
         build_base_dir = os.path.join(self.builder_work_dir,
                                       f"build-base-{kernel_dir_rel}-{self.arch}-{self.make_cmd}")
         self.logger.info(f"Build base has been prepared in {build_base_dir}")
+        self.__cache_build_base()
         return build_base_dir
 
     def __update_job_config(self, build_base_dir: str):
