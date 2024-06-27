@@ -547,11 +547,20 @@ class InternalWitness:
             is_main_process = False
             if self._env_threads:
                 cur_thread = 0
+                threads = []
                 for edge in self._edges:
-                    if edge['file'] in self._env_threads:
-                        if 'enter' in edge and edge['enter'] in self._env_threads[edge['file']]:
-                            cur_thread = self._env_threads[edge['file']][edge['enter']]
+                    if edge['file'] in self._env_threads and 'enter' in edge \
+                            and edge['enter'] in self._env_threads[edge['file']]:
+                        threads.append(cur_thread)
+                        cur_thread = self._env_threads[edge['file']][edge['enter']]
                     edge['thread'] = cur_thread
+                    if edge['file'] in self._env_threads and 'return' in edge and \
+                            edge['return'] in self._env_threads[edge['file']]:
+                        if threads:
+                            cur_thread = threads.pop()
+                        else:
+                            self._logger.warning(
+                                f"Threads stack is empty, but we got a return to previous thread at {edge}")
             else:
                 for edge in self._edges:
                     if not is_main_process and 'enter' in edge:
