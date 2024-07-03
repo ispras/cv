@@ -324,7 +324,8 @@ if __name__ == '__main__':
     parser.add_argument("-c", "--config", help="config file", required=True)
     parser.add_argument("-d", "--kernel-dir", dest="kernel_dir", help="path to kernel directory")
     parser.add_argument("-v", "--version", dest="version", help="Linux kernel version")
-    parser.add_argument("-p", "--properties", nargs='+', dest="properties", help="property to be checked")
+    parser.add_argument("-p", "--properties", type=str, dest="properties",
+                        help="list of properties to be checked separated by semicolon")
     parser.add_argument("-j", "--parent-job-id", dest="parent_job_id", help="parent job id")
 
     options = parser.parse_args()
@@ -332,7 +333,7 @@ if __name__ == '__main__':
         config = json.load(data_file)
     kernel_dir = options.kernel_dir
     version = options.version
-    props = options.properties
+    props = str(options.properties).split(";")
 
     runner = Runner(config, kernel_dir, version, props, options.parent_job_id)
     runner.run()
