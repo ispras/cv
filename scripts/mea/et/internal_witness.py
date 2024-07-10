@@ -74,7 +74,7 @@ class InternalWitness:
         self._actions = []
         self._callback_actions = []
         self.aux_funcs = {}
-        self.emg_comments = {}
+        self.cif_comments = {}
         self._threads = []
         self.witness_type = None
         self.invariants = {}
@@ -191,11 +191,6 @@ class InternalWitness:
         self.aux_funcs[identifier] = {'is callback': is_callback,
                                       'formal arg names': formal_arg_names}
 
-    def _add_emg_comment(self, file, line, data):
-        if file not in self.emg_comments:
-            self.emg_comments[file] = {}
-        self.emg_comments[file][line] = data
-
     def _resolve_file_id(self, file):
         return self._files.index(file)
 
@@ -284,6 +279,9 @@ class InternalWitness:
                     self._logger.debug(f"Add note {env_note} for environment function '"
                                        f"{self._resolve_function(func_id)}'")
                     edge['env'] = self.process_comment(env_note)
+                if func_id in self.cif_comments:
+                    edge['env'] = self.process_comment(self.cif_comments[func_id])
+                    edge['env_instrumented'] = True
 
             if file_id in self._env_funcs_openers:
                 if last_opened_line > 0 and start_line - last_opened_line <= MAX_SEARCH_DISTANCE_FOR_EMG_COMMENT:
@@ -382,7 +380,7 @@ class InternalWitness:
 
     def _parse_model_comments(self):
         self._logger.info('Parse model comments from source files referred by witness')
-        emg_comment = re.compile(r'/\*\sLDV\s(.*)\s\*/')
+        cif_comment = re.compile(r'/\* CIF Original function "(\S+)". Instrumenting function "(\S+)". \*/')
         emg_comment_json = re.compile(r'/\*\sEMG_ACTION\s({.*})\s\*/')
 
         for file_id, file in self.files:
@@ -396,12 +394,11 @@ class InternalWitness:
                 for text in file_obj:
                     line += 1
 
-                    # Try match EMG comment
-                    # Expect comment like /* TYPE Instance Text */
-                    match = emg_comment.search(text)
+                    match = cif_comment.search(text)
                     if match:
-                        data = json.loads(match.group(1))
-                        self._add_emg_comment(file_id, line, data)
+                        orig_func = match.group(1)
+                        instrumented_func = self.add_function(match.group(2))
+                        self.cif_comments[instrumented_func] = f"Instrumented function '{orig_func}'"
 
                     # Try match JSON EMG comment
                     match = emg_comment_json.search(text)
