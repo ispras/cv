@@ -248,7 +248,7 @@ class WitnessParser:
             condition = None
             invariant = None
             invariant_scope = None
-            cur_notes = {}
+            cur_notes = []
             for data in edge.findall('graphml:data', self.WITNESS_NS):
                 data_key = data.attrib.get('key')
                 if data_key == 'originfile':
@@ -315,7 +315,7 @@ class WitnessParser:
                     end_offset = int(data.text)
                 elif data_key in ('note', 'warning'):
                     tag, note_desc = self.internal_witness.process_note(data_key, data.text)
-                    cur_notes[tag] = note_desc
+                    cur_notes.append((tag, note_desc))
                 elif data_key == 'env':
                     _edge['env'] = self.internal_witness.process_comment(data.text)
                 elif data_key not in unsupported_edge_data_keys:
@@ -373,7 +373,7 @@ class WitnessParser:
             if 'start line' not in _edge:
                 _edge['start line'] = 0
 
-            for tag, note_desc in cur_notes.items():
+            for tag, note_desc in sorted(cur_notes, key=lambda x: str(x[1])):
                 # Actually there is only one note available.
                 self._logger.debug(f"Add verifier {tag}: '{note_desc}' for edge {_edge}")
                 new_edge = self.internal_witness.add_edge(target_node_id, _edge)
