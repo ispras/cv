@@ -71,6 +71,7 @@ TAG_CVV_USER = "user"
 TAG_CVV_PASS = "password"
 TAG_CVV_HOST = "server"
 TAG_CVV_HOST_REDIRECT = "redirect-server"
+JOB_PROGRESS_SOLVED_STATUS = 3
 
 DEFAULT_CONFIG_COMMAND = "allmodconfig"
 DEFAULT_ARCH = "x86_64"
@@ -265,10 +266,13 @@ class Runner(Component):
                 sys.exit("Cannot obtain Klever job progress")
             with open(KLEVER_PROGRESS_FILE, errors='ignore', encoding='ascii') as f_progress:
                 job_progress = json.load(f_progress)
-            if int(job_progress['status']) > 2:
+                job_cur_status = int(job_progress['status'])
+            if job_cur_status >= JOB_PROGRESS_SOLVED_STATUS:
                 break
             time.sleep(SMALL_WAIT_INTERVAL)
         clear_klever_resources()
+        if not job_cur_status == JOB_PROGRESS_SOLVED_STATUS:
+            sys.exit(f"Klever launch has failed with code {job_cur_status}")
         wall_time_start = round(time.time() - wall_time_start, 3)
         self.logger.info(f"Klever has been successfully completed in {wall_time_start}s")
         return new_job_id
