@@ -271,7 +271,7 @@ class Runner(Component):
                 break
             time.sleep(SMALL_WAIT_INTERVAL)
         clear_klever_resources()
-        if not job_cur_status == JOB_PROGRESS_SOLVED_STATUS:
+        if job_cur_status != JOB_PROGRESS_SOLVED_STATUS:
             sys.exit(f"Klever launch has failed with code {job_cur_status}")
         wall_time_start = round(time.time() - wall_time_start, 3)
         self.logger.info(f"Klever has been successfully completed in {wall_time_start}s")
