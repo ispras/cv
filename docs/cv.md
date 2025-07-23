@@ -1,197 +1,257 @@
-# Continuous Verifier
+# Continuous Verifier (CV)
 
-`Continuous Verifier` or CV verifies a given software systems against specified properties.
+`Continuous Verifier` (CV) is a framework for verifying software systems against specified properties.
+It automates the decomposition of a system, creates verification tasks, and runs verification tools.
 
-`CV` takes the following information
-* a system under analysis `system_id` (C language), which consist of
-* s set of subsystems `subsystem_1`, ..., `subsystem_k`;
-* a set of properties `prop_1`, ..., `prop_n`;
-* and configurations
+## Table of Contents
 
-then decomposes a given system, creates verification tasks and solves them. Each verification task consist of:
-* a set of source files that correspond to a given subsystem;
-* generated entry point (`main` function);
-* checked property (either in form of specification automata or configuration).
+- [Overview](#overview)
+    - [How it works](#how-it-works)
+- [Plugin Definition](#plugin-definition)
+    - [Default Plugin Structure](#default-plugin-structure)
+    - [Key Components](#key-components)
+    - [Default Verification](#default-verification)
+    - [Plugin Installation](#plugin-installation)
+- [Installation](#installation)
+    - [Control Groups (cgroups) Setup](#control-groups-cgroups-setup)
+        - [Ubuntu 22+](#ubuntu-22)
+    - [Swap Accounting](#swap-accounting)
+- [Configuration for a Single Verification Launch](#configuration-for-a-single-verification-launch)
+    - [Source Code Configuration](#source-code-configuration)
+    - [Run a Verification](#run-a-verification)
+- [Continuous Verification](#continuous-verification)
+- [Results Visualization](#results-visualization)
+- [Simple Example](#simple-example)
 
-Created tasks are solved by software verification tool (for more information see [SVCOMP](https://sv-comp.sosy-lab.org)).
+## Overview
 
-## Defining a plugin
+CV requires the following inputs:
 
-In order to adjust `CV` for a given `system_id` a plugin is required, which contains required configuration files.
-Default plugin structure:
-- `entrypoints` - description of subsystems with their entrypoints (example `entrypoints/example.json`);
-- `properties/properties.json` - description of checked properties (example in repository);
-- `properties/automata` - specification automata for checked properties;
-- `properties/models` - additional model C-files;
-- `patches/sources` - patches for source code, which may be required for building;
-- `patches/preparation/conf.json` - contains additional options for building (example in repository);
-- `patches/tools/cpachecker` - patches for software verification tool;
-- `configs` - configurations of CV launches (example `configs/example.json`);
-- `docs` - may include additional documentation.
+- **System under analysis** (`system_id`) – a C-language system consisting of:
+    - a set of subsystems (`subsystem_1`, …, `subsystem_k`)
+- **Properties** to be verified (`prop_1`, …, `prop_n`)
+- **Configurations** for the verification process
 
-By default, s given system can be verified against memory safety property (`smg`).
+### How it works
 
-Plugin should be placed as `plugin/system_id`. Example of a plugin directory:
+1. Decomposes the system into subsystems.
+2. Creates **verification tasks**, each consisting of:
+    - Relevant source files for a subsystem
+    - A generated entry point (`main` function)
+    - The property to check (via specification automata or configuration)
+3. Executes verification tasks using software verification tools ([SV-COMP tools](https://sv-comp.sosy-lab.org)).
+
+## Plugin Definition
+
+To verify a specific system (`system_id`), a **plugin** is required.
+A plugin provides configuration and resources for CV to analyze the system.
+
+### Default Plugin Structure
+
 ```
--plugin/
--system_id/
---entrypoints/
----subsystem_1.json
-...
----subsystem_k.json
---patches/
----sources/
-----build.patch
----preparation/
-----conf.json
---configs/
----config_1.json
----config_2.json
---docs/
----readme.md
---properties/
----properties.json
----models/
-----property_1.c
-...
-----property_n.c
----automata/
-----property_1.spc
-...
-----property_n.spc
+plugin/
+└── system_id/
+    ├── entrypoints/         # Subsystem entrypoint descriptions
+    ├── patches/
+    │   ├── sources/         # Source code patches (if needed)
+    │   └── preparation/     # Additional build configuration
+    ├── configs/             # Launch configurations
+    ├── properties/
+    │   ├── properties.json  # Property descriptions
+    │   ├── models/          # Additional C models for properties
+    │   └── automata/        # Specification automata
+    └── docs/                # Optional documentation
 ```
 
-In this case, we can decompose system `system_id` into `subsystem_1`, ..., `subsystem_k` and then verify each subsystem
-against `property_1`, ..., `property_n`.
+### Key Components
 
-If a plugin is placed into specific directory `plugin_dir`, it can be installed with command:
+- **entrypoints/** – JSON files describing subsystems and entrypoints
+- **properties/**:
+    - `properties.json` – list of properties to check
+    - `automata/` – specification automata for properties
+    - `models/` – additional model files (C source)
+- **patches/**:
+    - `sources/` – patches applied to system sources
+    - `preparation/conf.json` – extra build options
+    - `tools/cpachecker` – patches for verification tools
+- **configs/** – CV run configurations
+- **docs/** – documentation
+
+### Default Verification
+
+By default, CV can check the **memory safety property** (`smg`).
+
+### Plugin Installation
+
+Install a plugin:
+
 ```shell
 make install-plugin PLUGIN_DIR=<plugin_dir> PLUGIN_ID=<system_id>
 ```
-Plugin can be deleted with:
+
+Remove all installed plugins:
+
 ```shell
 make delete-plugins
 ```
 
 ## Installation
 
-### Control groups setting
+### Control Groups (cgroups) Setup
 
-In order to compute and limit resources (CPU time, CPU cores, memory usage) control groups are required.
-Control groups can be enabled on Ubuntu (16.04 - 20.04) or Fedora 22 with:
+CV uses [BenchExec](https://github.com/sosy-lab/benchexec) to limit resources (CPU, memory, cores).
+Enable cgroups on **Ubuntu 16.04–20.04** or **Fedora 22**:
+
 ```shell
 ./install_cgroups.sh
 ```
 
-Warning: Ubuntu 22 does not support v1 control groups, which are required by [BenchExec](https://github.com/sosy-lab/benchexec) tool.
-In order to partially enable control groups (without memory accounting) you need to add
-`cgroup_enable=memory cgroup_memory=1 systemd.unified_cgroup_hierarchy=0`
-to `/etc/default/grub` and then run `sudo update-grub`.
+#### Ubuntu 22+
 
-### Enabling swap accounting
+Ubuntu 22 uses cgroups v2 by default, but BenchExec requires **cgroups v1**.
+To enable partial cgroups support (no memory accounting):
 
-You can check swap accounting with:
+1. Add to `/etc/default/grub`:
+   ```
+   cgroup_enable=memory cgroup_memory=1 systemd.unified_cgroup_hierarchy=0
+   ```
+2. Update GRUB:
+   ```shell
+   sudo update-grub
+   ```
+3. Reboot.
+
+---
+
+### Swap Accounting
+
+Check if swap accounting is enabled:
+
 ```shell
-if ls /sys/fs/cgroup/memory/memory.memsw.limit_in_bytes || ls /sys/fs/cgroup/memory.memsw.limit_in_bytes ; then
+if ls /sys/fs/cgroup/memory/memory.memsw.limit_in_bytes || ls /sys/fs/cgroup/memory.memsw.limit_in_bytes; then
     echo "Swap accounting is installed";
 else
     echo "Swap accounting is not installed";
 fi
 ```
-If swap accounting is already installed, then you can skip this.
-Otherwise, it can be enabled by:
-- Add `swapaccount=1` to `GRUB_CMDLINE_LINUX_DEFAULT` value in `/etc/default/grub` file.
-- Execute `sudo update-grub`.
-- Reboot.
 
-Alternatively you can disable swap:
+Enable swap accounting:
+
+1. Add `swapaccount=1` to `GRUB_CMDLINE_LINUX_DEFAULT` in `/etc/default/grub`
+2. Run:
+   ```shell
+   sudo update-grub
+   sudo reboot
+   ```
+
+Alternatively, disable swap:
+
 ```shell
 sudo swapoff -a
 ```
 
-## Configuration of a single verification launch
+## Configuration for a Single Verification Launch
 
-Example of `CV` configuration can be found in `configs/example.json`.
-Use it as a template to verify `system_id`:
- - `Launcher: resource limits: CPU time` – CPU time limitation for a single software verification tool launch in seconds;
- - `Launcher: resource limits: memory size` – RAM limitation for a single software verification tool launch in GB;
- - `Launcher: resource limits: number of cores` – CPU cores limitation for a single software verification tool launch;
- - `entrypoints desc` – a set of subsystems description (e.g., `subsystem_1`, ..., `subsystem_k`);
- - `properties` – a set of properties (e.g., `property_1`, ..., `property_n`);
- - `system` – system identifier (e.g., `system_id`).
+Example configuration: `configs/example.json`.
+Key parameters:
 
-Note: the number of parallel software verifier launches is calculated in the following way:
+- **Launcher: resource limits**
+    - `CPU time` – in seconds
+    - `Memory size` – in GB
+    - `Number of cores` – CPU cores per verifier
+- **entrypoints desc** – list of subsystems
+- **properties** – list of properties
+- **system** – system identifier
+
+Parallel jobs calculation:
+
 ```
-N = min(<avaiable RAM>/<RAM limitation>, <avaiable cores>/<cores limitation>)
+N = min(available_RAM / RAM_limit, available_cores / core_limit)
 ```
 
-Each source code directory requires additional element in `Builder: sources`:
+### Source Code Configuration
+
+Each source directory requires:
+
 ```json
 {
   "id": "name",
-  "source dir": "absolute path to source directory",
-  "branch": "name of branch (optional)",
-  "build patch": "patch, which is applied before building (optional)",
-  "patches": ["list of patches, which are applied after build (optional)"],
-  "repository": "repository type (git, svn or null - no repository)",
+  "source dir": "absolute path",
+  "branch": "optional branch",
+  "build patch": "optional patch",
+  "patches": [
+    "list of patches"
+  ],
+  "repository": "git | svn | null",
   "build config": {
-    "make command": "make command"
+    "make command": "make"
   }
 }
 ```
 
-Single verification launch:
+### Run a Verification
+
 ```shell
-scripts/launcher.py --config <configuration files>
+scripts/launcher.py --config <config files>
 ```
-Result archive will be placed in `results/results_<configuration name>_<timestamp>.zip.`
 
-## Continuous verification
+Results: `results/results_<config_name>_<timestamp>.zip`
 
-A single verification launch may require a lot of time (several days for big systems).
-Continuous verification checks only those parts of a system, which were changed, which allows to save a lot of resources.
-It consists of 4 steps:
-1. Create a call graph for a system.
-2. Get a list of functions, which were changed in a given range of commits.
-3. Determine, which parts of each subsystem may call any changed function.
-4. Verify only changed subsystems with selected on the previous step entrypoints.
+---
 
-Let us consider, there are configurations `config_1.json`, ..., `config_m.json`, which were fully verified.
-In order to set up continuous verification one need to create common config (see template `configs/auto.json`) and put there
-`config_1.json`, ..., `config_m.json` and repository info.
-After that it can be launched with:
+## Continuous Verification
+
+Large systems may take days to verify.
+**Continuous verification** optimizes by verifying only changed parts.
+
+Steps:
+
+1. Build call graph
+2. Identify changed functions between commits
+3. Determine affected subsystems
+4. Verify only relevant subsystems
+
+Create a common config (template: `configs/auto.json`) referencing previous configs:
+
 ```shell
 ./scripts/auto_check.py -c <common config>
 ```
 
-## Visualization of results
+---
 
-Visualization of results requires a deployed [CVV web-interface](https://github.com/vmordan/cvv) according to its instructions
-(its `<host>` and `<port>` should be known).
+## Results Visualization
 
-In order to upload results to web-interface, add the following in the configuration:
+Requires [CVV web interface](https://github.com/vmordan/cvv).
+
+Add to config:
+
 ```json
-  "uploader": {
+"uploader": {
     "upload results": true,
-    "identifier": "<id of parent report (number from <host>:<port>/jobs/<number>)>",
+    "identifier": "<parent report ID>",
     "parent id": "true",
     "server": "<host>:<port>",
-    "user": "<web-intarface user>",
-    "password": "<web-inrface password>",
-    "name": "<name of new report>"
-  }
+    "user": "<username>",
+    "password": "<password>",
+    "name": "<report name>"
+}
 ```
 
-`CV` will upload each new report during continuous verification in web-interface automatically.
+CV will automatically upload results during continuous verification.
 
-## Simple example
+---
 
-There is a simple test example of `CV` usage:
-* A system can be found in `docs/examples/sources/`. It can be built with `make`.
-* Subsystem description is `entrypoints/it.json` (whole system with 2 entry points).
-* Description of properties is `properties/properties.json` (we use only memory safety property `smg`).
-* Launch configuration is `configs/it.json`.
-`CV` can be launched by:
+## Simple Example
+
+Example files:
+
+- Sources: `docs/examples/sources/` (build with `make`)
+- Subsystem description: `entrypoints/it.json`
+- Properties: `properties/properties.json` (includes `smg`)
+- Config: `configs/it.json`
+
+Run:
+
 ```shell
 ./scripts/launch.py -c configs/it.json
 ```

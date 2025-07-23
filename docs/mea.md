@@ -1,59 +1,86 @@
-# Multiple Error Analysis
+# Multiple Error Analysis (MEA)
+
+Multiple Error Analysis (**MEA**) is a component for **semi-automatic filtering of violation witnesses (error traces)**
+to reduce manual effort during software verification result analysis.
+
+## Overview
+
+MEA helps identify and remove duplicate error traces that correspond to the **same bug**, reducing redundant manual
+examination. It combines automatic filtering with optional manual adjustments.
 
 ## Definitions
 
-An `error trace` (or violation witness) is a sequence of operations from an entry point to the property violation.
+- **Error Trace (Violation Witness)**
+  A sequence of operations from an entry point to the property violation.
 
-`Multiple Error Analysis` (MEA) stands for semi-automatic violation witnesses filtering.
-The main goal of MEA is to exclude error traces, which corresponds to the same bug, from manual examination.
-MEA defines equal error traces in the following way:
-1) Conversion function `conversion(t)` removes none-essential elements from an error trace.
-2) Comparison function `comparison(t1, t2)` defines, how elements of 2 error traces are compared.
-3) Manual error trace editing `manual(t)` is performed by an user. It may remove or add any element.
-Thus error trace `t2` is equal to error trace `t1`, which is analysed by an user, if:
+- **MEA Concept**
+  MEA uses a combination of functions to determine equality of error traces:
+    1. **Conversion**: `conversion(t)` removes non-essential elements from a trace.
+    2. **Comparison**: `comparison(t1, t2)` defines how two converted traces are compared.
+    3. **Manual Adjustment**: `manual(t)` allows a user to edit a trace (remove or add elements).
+
+Two traces `t1` and `t2` are considered equal if:
+
 ```
 comparison(manual(conversion(t1)), conversion(t2)) ≡ true
 ```
-Note, that the traces are equal (e.g., correspond to the same bug) if corresponding functions are correctly specified.
 
-## Automatic filtration
+Correct function specification ensures accurate equality detection.
 
-Automatic filtration takes a set of error traces and outputs only unique traces.
+## Automatic Filtering
 
-Supported conversion functions:
-1) Model functions call tree (`model functions`). Is used by default.
-Model functions are either marked in comments (Klever/LDV format) or contains special error description from software verifier in error trace.
-2) Call tree (`call tree`) leaves only function calls and returns. It is more strict than `model_functions`.
-3) Conditions (`conditions`) leaves only conditions in error trace.
-4) Error description (`error descriptions`) leaves only special error descriptions from software verifier.
-5) No conversion (`full`) returns full error trace.
+Automatic filtering processes a set of violation witnesses and returns only **unique traces**.
 
-Supported comparison functions:
-1) Full equality (`equal`). Each element of converted error traces should be equal. Is used by default.
-2) Comparison (`include`). One error trace should be inside another.
-3) No filtering (`skip`). All traces are considered as different.
+### Supported Conversion Functions
 
-If an error trace includes several threads, then comparison function return Jaccard index for their equal thread, and
-we consider them equal if it is more, than a given similarity threshold. By default similarity threshold is 100%.
+1. **Model Functions Call Tree (`model functions`)** *(default)*
+   Uses model function markers or error descriptions from the verifier.
+2. **Call Tree (`call tree`)**
+   Keeps only function calls and returns (stricter than model functions).
+3. **Conditions (`conditions`)**
+   Retains only conditions in the trace.
+4. **Error Descriptions (`error descriptions`)**
+   Keeps only verifier error descriptions.
+5. **Full Trace (`full`)**
+   No conversion; keeps the complete trace.
 
-### Deployment
-MEA library can be installed in the `<deployment directory>` with the following command:
+### Supported Comparison Functions
+
+1. **Full Equality (`equal`)** *(default)*
+   All elements must match exactly.
+2. **Inclusion (`include`)**
+   One trace must be a subsequence of another.
+3. **No Filtering (`skip`)**
+   Considers all traces different.
+
+For multi-threaded traces, MEA calculates the **Jaccard index** for thread similarity. Equality requires meeting the **
+similarity threshold** (default: 100%).
+
+## Deployment
+
+Install MEA into the deployment directory:
+
 ```shell
-make install-mea DEPLOY_DIR=<deployment directory>
+make install-mea DEPLOY_DIR=<deployment_directory>
 ```
 
-### Usage
+## Usage
+
+Run the filtering script:
+
 ```shell
-<deployment directory>/scripts/filter.py -d <directory with violation witnesses>
+<deployment_directory>/scripts/filter.py -d <directory_with_violation_witnesses>
 ```
-All unique violation witnesses will be printed as a result.
 
-## Manual filtering
+The script outputs only **unique violation witnesses**.
 
-[CVV web-interface](https://github.com/vmordan/cvv) can be used to perform manual filtering.
-If there are several error traces, which correspond to the same bug, were uploaded after manual filtering,
-the user needs to analyse them all (e.g., to create a bug report). In order to avoid analysing of the same traces,
-manual filtering is performed. In this case the user crates a mark (`conversion`, `comparison`, `similarity`) and manually edits
-the trace if needed (e.g., some function call does not relate to the bug). After that, `CVV` mark all other traces
-as equal, and the user may skip their analysis. If mark was created incorrect
-(e.g., the user then finds another similar trace, which was not marked), it can be edited.
+## Manual Filtering
+
+For advanced analysis, use the [CVV web interface](https://github.com/vmordan/cvv):
+
+- Users can manually edit traces (e.g., remove irrelevant calls).
+- Assign a **mark** (conversion, comparison, similarity) to indicate trace equivalence.
+- All related traces are then marked as duplicates and skipped in later reviews.
+- Incorrect marks can be modified later.
+
+This process reduces redundant bug reporting by grouping equivalent traces.

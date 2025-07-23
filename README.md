@@ -1,47 +1,66 @@
 # Continuous Verification Framework
 
 [![Apache 2.0 License](https://img.shields.io/badge/license-Apache--2-brightgreen.svg)](https://www.apache.org/licenses/LICENSE-2.0)
-![example workflow](https://github.com/ispras/cv/actions/workflows/deploy.yml/badge.svg)
-![example workflow](https://github.com/ispras/cv/actions/workflows/pylint.yml/badge.svg)
+![Deploy Workflow](https://github.com/ispras/cv/actions/workflows/deploy.yml/badge.svg)
+![Pylint Workflow](https://github.com/ispras/cv/actions/workflows/pylint.yml/badge.svg)
 
-This framework aims at applying continuous verification to generic software systems.
-The framework consist of the following tools:
-- `Continuous Verifier` (CV) verifies a given software systems. In order to support generic 
-software system, a specific plugin is required, which shows
-  - how to decompose a system (currently, only C language is supported);
-  - how to create an environment for the system;
-  - what properties should be verified in the system.
+This framework enables **continuous verification** of generic software systems. It consists of the following tools:
 
-  [CV documentation](docs/cv.md).
-- `Klever Bridge` allows to verify Linux kernel modules with help of [Klever framework](https://github.com/ldv-klever/klever).
-[Klever Bridge documentation](docs/klever_bridge.md).
-- `Benchmark Visualizer` allows to process and visualise verification benchmarks from [SV-COMP](https://sv-comp.sosy-lab.org).
-[Benchmark Visualizer documentation](docs/benchmark_visualizer.md).
-- `Witness Visualizer` converts generic witnesses (potential bug or proof) from [SV-COMP](https://sv-comp.sosy-lab.org) tools into user-friendly format.
-[Witness Visualizer documentation](docs/witness_visualizer.md).
-- `Multiple Error Analyser` (MEA) filters several witnesses in order to present only those, which corresponds to unique potential bugs.
-[Witness Visualizer documentation](docs/mea.md).
+- **Continuous Verifier (CV)**
+  Verifies a target software system. To support a specific system, a plugin must define:
+    - how to decompose the system (currently supports only C programs);
+    - how to construct an environment model;
+    - which properties to verify.
 
-All produced verification results can be visualised with help of [Continuous Verification Visualizer](https://github.com/vmordan/cvv).
+  📖 [CV Documentation](docs/cv.md)
+
+- **Klever Bridge**
+  Integrates with the [Klever framework](https://github.com/ldv-klever/klever) to verify Linux kernel modules.
+  📖 [Klever Bridge Documentation](docs/klever_bridge.md)
+
+- **Benchmark Visualizer**
+  Processes and visualizes verification benchmarks from [SV-COMP](https://sv-comp.sosy-lab.org).
+  📖 [Benchmark Visualizer Documentation](docs/benchmark_visualizer.md)
+
+- **Witness Visualizer**
+  Converts SV-COMP witnesses (error traces or proofs) into human-readable format.
+  📖 [Witness Visualizer Documentation](docs/witness_visualizer.md)
+
+- **Multiple Error Analyser (MEA)**
+  Filters multiple witnesses to report only unique potential bugs.
+  📖 [MEA Documentation](docs/mea.md)
+
+📊 All verification results can be viewed using
+the [Continuous Verification Visualizer (CVV)](https://github.com/vmordan/cvv).
 
 ## Requirements
 
-The framework works with Ubuntu 18 and above.
-All requirements can be installed with command:
+Tested on **Ubuntu 20.04 and above**.
 
-```shell
-sudo apt install git openjdk-11-jdk python3 python3-dev ant lcov cmake libmpc-dev lib32z1 libxslt-dev libpq-dev python3-pip
+### Ubuntu Packages
+
+Install required packages using:
+
+```bash
+sudo apt update
+sudo apt install -y \
+  git openjdk-17-jdk python3 python3-dev python3-pip ant lcov cmake
 ```
 
-Additional python modules:
+### Python Dependencies
 
-```shell
-sudo pip3 install requests ujson graphviz ply pytest atomicwrites pathlib2 more-itertools pluggy py attrs setuptools six django clade==3.6 psycopg2 pyyaml pycparser sympy
+Install Python modules with:
+
+```bash
+pip3 install -r requirements.txt
 ```
 
 ## Installation
 
-The framework is installed with the following command:
+Run the following command to install the framework:
+
+```bash
+make install -j DEPLOY_DIR=<working_directory>
 ```
-make install -j DEPLOY_DIR=<working dir>
-```
+
+Replace `<working_directory>` with your preferred deployment path.

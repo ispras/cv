@@ -1,46 +1,59 @@
 # Witness Visualizer
 
-Witness Visualizer converts generic witnesses from [SV-COMP](https://sv-comp.sosy-lab.org) tools into user-friendly format.
+**Witness Visualizer** converts generic witnesses produced by [SV-COMP](https://sv-comp.sosy-lab.org) tools into a user-friendly, human-readable format.
 
 ## Requirements
 
-Python (version>=3.6), python modules:
+Python (version ≥ 3.6) and the following Python modules:
+
 ```shell
-sudo pip3 install requests ujson graphviz ply pytest atomicwrites more-itertools pluggy py attrs setuptools six django psycopg2 pycparser sympy
+pip3 install -r requirements.txt
 ```
 
 ## Deployment
-
-In order to install `Witness Visualizer` in the `<deployment directory>` execute the following command:
+To install Witness Visualizer in a desired directory, run:
 
 ```bash
 make install-witness-visualizer DEPLOY_DIR=<deployment directory>
 ```
 
 ## Usage
+After deployment, Witness Visualizer can be used to visualize witnesses with the following command:
 
-After deployment Witness Visualizer can be used to visualise witnesses with command:
-
-```
+```shell
 <deployment directory>/scripts/visualize_witnesses.py OPTIONS
 ```
+### Primary Options
 
-Primary options:
-* `-w` WITNESS, `--witness` WITNESS: path to the witness to be visualized;
-* `-d` DIRECTORY, `--directory` DIRECTORY: directory with witnesses to be visualized (either `-w` or `-d` option must be specified);
-* `-r` RESULT_DIR, `--result-dir` RESULT_DIR: directory, in which visualized witnesses will be placed in html format;
-* `-s` SOURCE_DIR, `--source-dir` SOURCE_DIR: source files directory;
-* `--dry-run`: do not visualize witnesses, only check their quality;
-* `-u`, `--unzip`: unzip archives with visualized witnesses.
+- `-w`, `--witness <WITNESS>`
+  Path to a single witness file to visualize.
 
-For example:
+- `-d`, `--directory <DIRECTORY>`
+  Directory containing multiple witness files to visualize.
+  Either `--witness` or `--directory` must be specified.
 
+- `-r`, `--result-dir <RESULT_DIR>`
+  Directory where the HTML visualizations will be saved.
+
+- `-s`, `--source-dir <SOURCE_DIR>`
+  Path to the source code directory used to match the witness with code locations.
+
+- `--dry-run`
+  Perform a validation check on the witness files without generating visualizations.
+
+- `-u`, `--unzip`
+  Automatically unzip archives containing witness files before processing.
+
+### Example
 ```bash
-<deployment directory>/scripts/visualize_witnesses.py --witness output/witness.graphml --result-dir results/ --source-dir ~/sv-benchmarks
+<deployment directory>/scripts/visualize_witnesses.py \
+  --witness output/witness.graphml \
+  --result-dir results/ \
+  --source-dir ~/sv-benchmarks
 ```
 
-There are some examples of [SV-COMP](https://sv-comp.sosy-lab.org) witnesses in the `docs/examples/witnesses` directory,
-which can be used to validate Witness Visualizer installation.
+A set of example [SV-COMP](https://sv-comp.sosy-lab.org) witnesses is provided in the `docs/examples/witnesses` directory.
+You can use these to verify that Witness Visualizer is correctly installed and functioning.
 
-Example of violation witness visualization:
+Below is a sample visualization of a violation witness:
 ![violation witness](images/violation_witness.png)

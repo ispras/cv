@@ -1,40 +1,60 @@
-# Development
+# Development Guide
 
-## Description of third party tools
+This document describes third-party tools used in the Continuous Verification (CV) framework and provides an overview of CV components.
 
-1. [CVV web-interface](https://github.com/vmordan/cvv) continuous verification visualizer.
-2. [Software verifier CPAchecker](https://cpachecker.sosy-lab.org) is a verification backend.
-Required versions of the tool are placed in the `cpa.config` in the following format:
+## Third-Party Tools
+
+### CVV Web Interface
+- **Repository:** [CVV](https://github.com/vmordan/cvv)
+- Purpose: Visualization of Continuous Verification results.
+
+### CPAchecker
+- **Repository:** [CPAchecker](https://cpachecker.sosy-lab.org)
+- Purpose: Main software verification backend.
+- Required versions are listed in `cpa.config` in the format:
 ```
-`<mode>;<repository>;<branch>`
+<mode>;<repository>;<branch>
 ```
-3. [BenchExec](https://github.com/sosy-lab/benchexec.git) limits resource usage for verifier tool.
-Note: does not work with Ubuntu 22.
-4. [CIL](https://forge.ispras.ru/projects/astraver/repository/framac) simplifies C files and unifies them in a single file.
-By default, an old version is used (`tools/cil.xz`), which is not supported anymore.
-Alternatively you can use new version:
+
+### BenchExec
+- **Repository:** [BenchExec](https://github.com/sosy-lab/benchexec.git)
+- Purpose: Enforces resource limits (CPU time, memory, cores) for verification tools.
+- **Note:** BenchExec does **not fully work on Ubuntu 22** due to cgroup v1 deprecation.
+
+### CIL (C Intermediate Language)
+- **Repository:** [Frama-C CIL](https://forge.ispras.ru/projects/astraver/repository/framac)
+- Purpose: Simplifies and unifies C files into a single file.
+- Default: An old version (`tools/cil.xz`) is included but no longer supported.
+- Install a newer version:
 ```shell
-make install-frama-c-cil DEPLOY_DIR=<CV deploy directory>
-```
-5. [Clade](https://github.com/17451k/clade) is a tool for intercepting build commands. It is required for building.
-Installed as a python package.
-Note, version `3.6` is required.
-6. [CIF](https://github.com/ldv-klever/cif) is required for call graph creation.
-You can use either a compiled for `linux-x86_64` version:
-```shell
-DEPLOY_DIR=<CV deploy directory> make install-cif-compiled
-```
-or build the latest version (requires `flex` package and about 30 minutes):
-```shell
-DEPLOY_DIR=<CV deploy directory> make install-cif
+make install-frama-c-cil DEPLOY_DIR=<CV_deploy_directory>
 ```
 
-## CV components
+### Clade
+- **Repository:** [Clade](https://github.com/17451k/clade)
+- Purpose: Intercepts build commands and extracts compilation details.
+- Installed as a Python package.
+- **Required version:** `3.6`.
 
- - `Builder` – builds the source code and extracts build commands.
- - `Qualifier` – determines, which parts of a system was changed in the given commit range.
- - `Preparator` – prepares verification task by unifying source code.
- - `CPAchecker` – verification backend, which solves verification tasks.
- - `MEA` – filters error traces.
- - `Exporter` – prepares final report.
- - `Launcher` – main component.
+### CIF (C Instrumentation Framework)
+- **Repository:** [CIF](https://github.com/ldv-klever/cif)
+- Purpose: Generates call graphs for continuous verification.
+- Installation options:
+  - **Precompiled version for Linux (x86_64):**
+    ```shell
+    DEPLOY_DIR=<CV_deploy_directory> make install-cif-compiled
+    ```
+  - **Build from source** (requires `flex` and ~30 minutes):
+    ```shell
+    DEPLOY_DIR=<CV_deploy_directory> make install-cif
+    ```
+
+## CV Components
+
+- **Builder** – Builds source code and extracts build commands.
+- **Qualifier** – Detects changed parts of a system within a commit range.
+- **Preparator** – Prepares verification tasks by unifying source code.
+- **CPAchecker** – Verification backend for solving verification tasks.
+- **MEA** – Filters duplicate error traces.
+- **Exporter** – Generates the final verification report.
+- **Launcher** – Orchestrates the entire verification process.

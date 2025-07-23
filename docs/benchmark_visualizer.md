@@ -1,49 +1,52 @@
 # Benchmark Visualizer
 
-Benchmark Visualizer is a tool for visualizing benchmark verification results in [SV-COMP](https://sv-comp.sosy-lab.org) format.
+**Benchmark Visualizer** extends Witness Visualizer to support full-benchmark verification results in [SV-COMP](https://sv-comp.sosy-lab.org) format.
 
 ## Deployment
 
-1. [CVV web-interface](https://github.com/vmordan/cvv) should be deployed according to its instructions.
+1. First, deploy the [CVV web interface](https://github.com/vmordan/cvv) according to its documentation.
 
-2. `Benchmark Visualizer` is installed with the following command:
+2. Install Benchmark Visualizer using the following command:
 
 ```shell
-make install-benchmark-visualizer DEPLOY_DIR=<deployment directory>
+make install-benchmark-visualizer DEPLOY_DIR=<deployment_directory>
 ```
 
 ## Usage
 
-It is supposed that the following parameters are known:
-* `<host>` and `<port>` for web-interface server;
-* `<user name>` and `<user password>` to access web-interface;
-* `<deployment directory>` is a directory, in which `Benchmark Visualizer` was installed.
+You will need the following information before proceeding:
+- `<host>` and `<port>` of the CVV web interface server.
+- `<username>` and `<password>` for web interface authentication.
+- `<deployment_directory>` where Benchmark Visualizer is installed.
 
-1. Create the following configuration file:
+### 1. Create a Configuration File
+
+Create a JSON configuration file with the following structure:
+
 ```json
 {
   "uploader": {
     "upload results": true,
     "parent id": true,
-    "identifier": "<parent report identifier>",
+    "identifier": "<parent_report_identifier>",
     "server": "<host>:<port>",
-    "user": "<user name>",
-    "password": "<user password>",
-    "name": "<new report name>"
+    "user": "<username>",
+    "password": "<password>",
+    "name": "<new_report_name>"
   },
   "Benchmark Launcher": {
-    "output dir": "<absolute path to the directory with benchmark verification results>",
-    "tasks dir": "<absolute path to the directory with source files>",
-    "tool": "<tool name>"
+    "output dir": "<absolute_path_to_verification_results>",
+    "tasks dir": "<absolute_path_to_source_files>",
+    "tool": "<verification_tool>"
   }
 }
 ```
-where 
-- `<parent report identifier>` is name or id from reports tree (if the database is new and there is no 
-reports tree, then you can use value `1` to make new report as a child of the root report),
-- `<new report name>` is an arbitrary name, which will be used in the web-interface to distinguish the upload benchmark verification results from other results.
 
-Here is an example of such configuration file:
+**Explanation:**
+- `<parent_report_identifier>`: Report ID or name from the reports tree. If the database is new, use `1` to make the new report a child of the root.
+- `<new_report_name>`: A descriptive name to identify the uploaded benchmark in the web interface.
+
+#### Example Configuration
 
 ```json
 {
@@ -64,27 +67,33 @@ Here is an example of such configuration file:
 }
 ```
 
-2. Process already solved benchmark verification results from `<deployment directory>` with the command:
+### 2. Process Benchmark Results
+
+To process existing verification results, run:
 
 ```bash
-./scripts/process_benchmark.py --config <path to the configuration file>
+<deployment_directory>/scripts/process_benchmark.py --config <path_to_config_file>
 ```
 
-If benchmark should be launched first, then use:
+To first launch the benchmark and then process the results, use:
 
 ```bash
-./scripts/process_benchmark.py --config <path to the configuration file> --launch
+<deployment_directory>/scripts/process_benchmark.py --config <path_to_config_file> --launch
 ```
 
-In case of successful uploading the following line should apper in the log:
+If the upload is successful, you will see a confirmation in the log such as:
 
-```bash
-ZIP archive with reports "..." was successfully uploaded on "<host>:<port>/jobs/<new report id>"
-``` 
+```text
+ZIP archive with reports "..." was successfully uploaded to "<host>:<port>/jobs/<new_report_id>"
+```
 
-After that you can access uploaded results on the page `<host>:<port>/jobs/<new report id>`.
+You can then view the uploaded results at:
+`http://<host>:<port>/jobs/<new_report_id>`
 
-Some simple examples of benchmark verification results can be found in the `docs/examples/benchmarks` directory.
+## Examples
 
-Example of benchmark visualization:
+Sample benchmark verification results are available in the `docs/examples/benchmarks` directory.
+
+### Visualization Example
+
 ![benchmark](images/benchmark.png)

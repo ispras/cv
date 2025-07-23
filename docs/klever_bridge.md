@@ -1,73 +1,98 @@
-# Klever bridge
+# Klever Bridge
 
-This component allows to export results of [Klever verification system](https://github.com/ldv-klever/klever) into `CV` format for their visualization.
+Klever Bridge is a component of the Continuous Verification framework that **exports results from the [Klever verification system](https://github.com/ldv-klever/klever)** into the CV format for visualization.
 
-Here we use the following Klever terminology:
-- `Verification task` is a C file with a given entry point a set of error locations and configuration.
-Klever creates verification tasks based on a given Linux kernel module and checked properties (for example, memory safety).
-- Verification backend (for example, CPAchecker) solves a given task and provides verification result.
-- `Verification result` is:
-  - a correctness witness (proof that error location cannot be reached from a given entry point) or
-  - a set of violation witnesses (paths in source code from an entry point to an error location) or
-  - a reason of incorrect verifier termination (may be along with violation witnesses).
-- `Job` is a set of solved verification tasks, grouped by some attributes.
-- `Build base` - source code of Linux kernel, which was prepared by Clade tool.
+## Overview
 
-Klever bridge finds all solved verification tasks for a given job and export them for visualization.
+Klever Bridge provides an interface between **Klever** and **CV** by transforming Klever verification results into a format suitable for CV visualization.
 
-## Installation of Klever bridge
+## Terminology
 
-[CVV web-interface](https://github.com/vmordan/cvv) should be deployed according to its instructions.
+Key Klever concepts used in this integration:
 
+- **Verification Task**
+  A single task consists of:
+  - A C file with a given entry point
+  - A set of error locations
+  - A configuration
+  Klever generates tasks based on Linux kernel modules and properties (e.g., memory safety).
+
+- **Verification Backend**
+  A verification tool (e.g., CPAchecker) that processes the task and produces a result.
+
+- **Verification Result**
+  Can include:
+  - **Correctness witness**: proof that an error location is unreachable from the entry point
+  - **Violation witnesses**: paths from the entry point to error locations in the source code
+  - **Failure reason**: why the verifier failed (optionally with violation witnesses)
+
+- **Job**
+  A set of solved verification tasks grouped by certain attributes.
+
+- **Build Base**
+  Source code of the Linux kernel prepared by the **Clade** tool.
+
+## How Klever Bridge Works
+
+Klever Bridge locates all solved verification tasks for a given **job**, converts them into CV format, and exports them for visualization.
+
+## Installation
+
+First, deploy the [CVV web interface](https://github.com/vmordan/cvv) following its documentation.
+
+Install Klever Bridge in the CV deployment directory:
 ```shell
-make install-klever-bridge DEPLOY_DIR=<path to deploy directory>
+make install-klever-bridge DEPLOY_DIR=<path_to_deploy_directory>
 ```
 
 ## Usage
 
-Create a configuration file `klever.json` in `<deploy directory>` with the following content:
-
+Create a configuration file `klever.json` in the `<deploy directory>`:
 ```json
 {
   "Benchmark Launcher": {
     "tool": "CPAchecker",
-    "job id": "<job id>",
-    "output dir": "<path to directory with Klever solved tasks>",
-    "tasks dir": "<path to directory with build base>/Storage/"
+    "job id": "<job_id>",
+    "output dir": "<path_to_directory_with_Klever_solved_tasks>",
+    "tasks dir": "<path_to_build_base>/Storage/"
   },
   "uploader": {
     "upload results": true,
     "parent id": true,
-    "identifier": "<parent report identifier>",
+    "identifier": "<parent_report_identifier>",
     "server": "<host>:<port>",
-    "user": "<user name>",
-    "password": "<user password>",
-    "name": "<new report name>"
+    "user": "<username>",
+    "password": "<password>",
+    "name": "<new_report_name>"
   }
 }
 ```
 
-Then launch the following command:
-
+Run Klever Bridge:
 ```shell
 ./scripts/bridge.py -c klever.json
 ```
 
-### Klever runner
+## Klever Runner
 
-Klever runner allows to create a build base for a Linux kernel, then to launch Klever and at last export results with Klever Bridge.
-You can find example of configuration files in `configs/bridge` directory.
-In order to launch a Klever runner from `<deploy directory>` run the following content:
+Klever Runner automates:
+1. Building the **build base** for a Linux kernel
+2. Launching Klever
+3. Exporting results via Klever Bridge
+
+Example configs are in `configs/bridge/`.
+
+Run Klever Runner from the `<deploy directory>`:
 ```shell
-sudo ./scripts/runner.py -c runner.json -d <path to Linux kernel>
+sudo ./scripts/runner.py -c runner.json -d <path_to_Linux_kernel>
 ```
 
-## Klever config
+## Klever Configuration
 
-Klever job configuration should specify `Keep intermediate files inside the working directory of Klever Core` inside
-`Other settings` section in order to visualize generated files in the error trace.
+To ensure proper visualization in CV, enable:
+- `Keep intermediate files inside the working directory of Klever Core` in **Other settings** of the Klever job configuration.
 
-If you need to visualise correctness witnesses in CV, the following options are required:
+For **correctness witness visualization** in CV, add these options:
 ```json
 {"-setprop": "cpa.arg.proofWitness=witness.correctness.graphml"},
 {"-setprop": "cpa.arg.export=true"},
