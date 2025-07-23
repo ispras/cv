@@ -53,6 +53,7 @@ TAG_COMMITS = "commits"
 TAG_BACKUP_WRITE = "backup write"
 TAG_BACKUP_READ = "backup read"
 TAG_BENCHMARK_ARGS = "benchmark args"
+TAG_BENCHEXEC_OPTIONS = "benchexec options"
 TAG_PARALLEL_LAUNCHES = "parallel launches"
 TAG_RESOURCE_LIMITATIONS = "resource limits"
 TAG_PROCESSES = "processes"
@@ -87,6 +88,8 @@ SCHEDULERS = [SCHEDULER_CLOUD, SCHEDULER_LOCAL]
 CLOUD_PRIORITIES = ["IDLE", "LOW", "HIGH", "URGENT"]
 DEFAULT_CLOUD_PRIORITY = "LOW"
 CLOUD_BENCHMARK_LOG = "benchmark_log.txt"
+
+DEFAULT_BENCHEXEC_CONTAINER = "--container --full-access-dir /"
 
 HARDCODED_RACES_OUTPUT_DIR = "output"
 
@@ -169,6 +172,7 @@ class Launcher(Component):
         # Defines type of scheduler.
         self.scheduler = self.component_config.get(TAG_SCHEDULER)
         self.benchmark_args = self.component_config.get(TAG_BENCHMARK_ARGS, "")
+        self.benchexec_options = self.component_config.get(TAG_BENCHEXEC_OPTIONS, DEFAULT_BENCHEXEC_CONTAINER)
         if self.scheduler == SCHEDULER_CLOUD:
             cloud_master = self.config.get(TAG_CLOUD, {}).get(TAG_CLOUD_MASTER)
             cloud_priority = self.config.get(TAG_CLOUD, {}).get(TAG_CLOUD_PRIORITY,

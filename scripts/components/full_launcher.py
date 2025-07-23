@@ -207,7 +207,7 @@ class FullLauncher(Launcher):
             os.chdir(launch_directory)
 
         # Verifier launch.
-        subprocess.check_call(f"benchexec --no-compress-results --container --full-access-dir / -o "
+        subprocess.check_call(f"benchexec --no-compress-results {self.benchexec_options} -o "
                               f"{launch_directory} {benchmark_name} {self.benchmark_args}",
                               shell=True, stderr=self.output_desc, stdout=self.output_desc)
 

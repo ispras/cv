@@ -1,0 +1,21 @@
+# Core dependencies
+requests
+ujson
+graphviz
+ply
+pytest
+atomicwrites
+pathlib2
+more-itertools
+pluggy
+py
+attrs
+setuptools
+six
+django
+pyyaml
+pycparser
+sympy
+
+# Specific versions
+clade==3.6
