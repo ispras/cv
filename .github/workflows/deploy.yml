@@ -63,7 +63,7 @@ jobs:
       run: |
         python3 -m pip install --upgrade pip
         pip3 install -r requirements.txt
-    - name: Deployment of CVV
+    - name: Deployment of MEA
       run: |
         DEPLOY_DIR=build make install-mea -j$(nproc)
         cd build
@@ -79,12 +79,21 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
+
     - name: Install dependencies
       run: |
         python3 -m pip install --upgrade pip
         pip3 install -r requirements.txt
-    - name: Deployment of MEA
+
+    - name: Install system dependencies
+      run: |
+        echo "Installing required packages..."
+        sudo apt-get update
+        sudo apt-get install -y postgresql libpq-dev gettext
+
+    - name: Deployment of CVV
       run: |
         DEPLOY_DIR=build make deploy-cvv -j$(nproc)
         cd build/cvv
+        pip3 install requests ujson graphviz django psycopg2 pluggy py attrs six more-itertools ply pytest atomicwrites pycparser psycopg2 sympy pytz
         deploys/deployment.sh __cvf_cvv_deploy
