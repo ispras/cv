@@ -13,7 +13,7 @@ tools_config_file=${install_dir}/config.json
 
 # Repositories
 cvv_repo_1="https://gitlab.ispras.ru/verification/cvv.git"
-cvv_repo_2="https://github.com/vmordan/cvv.git"
+cvv_repo_2="https://github.com/ispras/cv-visualizer.git"
 
 # Aux constants.
 cvv_branch=master
