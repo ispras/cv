@@ -1,7 +1,6 @@
-# Continuous Verification Framework provides processing and managing verification results.
-# https://github.com/ispras/cv
+# Continuous Verification Framework - processing and managing verification results.
+# Repository: https://github.com/ispras/cv
 #
-# Copyright © 2025 ISP RAS
-# Copyright © 2025 Vitalii Mordan
+# Copyright © 2025 Vitalii Mordan, ISP RAS
 #
 # SPDX-License-Identifier: Apache-2.0
