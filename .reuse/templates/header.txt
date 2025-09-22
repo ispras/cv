@@ -1,5 +1,5 @@
-Continuous Verification Framework provides processing and managing verification results.
-https://github.com/ispras/cv
+Continuous Verification Framework - processing and managing verification results.
+Repository: https://github.com/ispras/cv
 
 {% for copyright_line in copyright_lines %}
 {{ copyright_line }}
