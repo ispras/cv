@@ -69,7 +69,7 @@ make install-mea DEPLOY_DIR=<deployment_directory>
 Run the filtering script:
 
 ```shell
-<deployment_directory>/scripts/filter.py -d <directory_with_violation_witnesses>
+<deployment_directory>/cv/mea.py -d <directory_with_violation_witnesses>
 ```
 
 The script outputs only **unique violation witnesses**.

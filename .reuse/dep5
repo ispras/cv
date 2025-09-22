@@ -1,0 +1,10 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: CV-common
+Upstream-Contact: Vitalii Mordan <mordan@ispras.ru>
+Source: https://github.com/ispras/cv
+
+# Sample paragraph, commented out:
+#
+# Files: cv/*
+# Copyright: $YEAR $NAME <$CONTACT>
+# License: ...

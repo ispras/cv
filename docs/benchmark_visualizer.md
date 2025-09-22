@@ -9,7 +9,7 @@
 2. Install Benchmark Visualizer using the following command:
 
 ```shell
-make install-benchmark-visualizer DEPLOY_DIR=<deployment_directory>
+make install DEPLOY_DIR=<deployment_directory>
 ```
 
 ## Usage
@@ -72,13 +72,13 @@ Create a JSON configuration file with the following structure:
 To process existing verification results, run:
 
 ```bash
-<deployment_directory>/scripts/process_benchmark.py --config <path_to_config_file>
+<deployment_directory>/cv/benchmark_visualizer.py --config <path_to_config_file>
 ```
 
 To first launch the benchmark and then process the results, use:
 
 ```bash
-<deployment_directory>/scripts/process_benchmark.py --config <path_to_config_file> --launch
+<deployment_directory>/cv/benchmark_visualizer.py --config <path_to_config_file> --launch
 ```
 
 If the upload is successful, you will see a confirmation in the log such as:

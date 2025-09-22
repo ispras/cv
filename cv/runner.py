@@ -1,0 +1,324 @@
+#!/usr/bin/env python3
+
+# pylint: disable=line-too-long
+
+"""
+Klever runner - creates a build base, launches Klever and converts results to CVV format.
+"""
+
+import argparse
+import json
+import os
+import re
+import shutil
+import sys
+import time
+
+from components.component import Component
+from models.tags import ComponentName
+
+TAG_BRIDGE = "Bridge"
+TAG_KLEVER = "Klever"
+TAG_BUILDER = "Builder"
+TAG_INSTALL_DIR = "install dir"
+TAG_KERNEL_DIR = "kernel dir"
+TAG_CIF = "cif"
+TAG_WORK_DIR = "work dir"
+TAG_CACHE = "cache"
+TAG_HOME_DIR = "home dir"
+TAG_ARCH = "architecture"
+TAG_KLEVER_HOST = "host"
+TAG_KLEVER_USER = "user"
+TAG_KLEVER_PASS = "pass"
+TAG_LAUNCH_CONFIG = "launch config"
+TAG_JOB_CONFIG = "job config"
+TAG_RESOURCE_CONFIG = "resource config"
+TAG_VERIFIER_OPTIONS_CONFIG = "verifier options"
+TAG_JOB_ID = "job id"
+TAG_PYTHON_VENV = "python-venv"
+TAG_BRIDGE_CONFIG = "bridge config"
+TAG_DEPLOY_DIR = "deploy dir"
+TAG_BUILD_BASE = "build base"
+TAG_OUTPUT_DIR = "output dir"
+TAG_TASKS_DIR = "tasks dir"
+TAG_CONFIG_COMMAND = "config command"
+TAG_EXPORTER = "Exporter"
+TAG_VERSION = "version"
+TAG_PROPERTIES = "requirement specifications"
+TAG_UPLOADER = "uploader"
+TAG_NAME = "name"
+TAG_IDENTIFIER = "identifier"
+TAG_CVV_USER = "user"
+TAG_CVV_PASS = "password"
+TAG_CVV_HOST = "server"
+TAG_CVV_HOST_REDIRECT = "redirect-server"
+JOB_PROGRESS_SOLVED_STATUS = 3
+
+DEFAULT_CONFIG_COMMAND = "allmodconfig"
+DEFAULT_ARCH = "x86_64"
+BUILDER_SCRIPT = os.path.join("klever", "deploys", "builder.sh")
+COMPARATOR_SCRIPT = os.path.join("tools", "cvv", "utils", "bin", "get-compare-data.py")
+KLEVER_LAUNCH_SCRIPT = "klever-start-solution"
+KLEVER_CHECK_SCRIPT = "klever-download-progress"
+DEFAULT_VENV_PATH = "venv/bin"
+KLEVER_PROGRESS_FILE = ".klever_progress.json"
+BRIDGE_SCRIPT = os.path.join("scripts", "bridge.py")
+KLEVER_BUILD_BASE_DIR = "build bases"
+COMPONENT_RUNNER = "Runner"
+KLEVER_TASKS_DIR = os.path.join("klever-work", "native-scheduler", "scheduler", "tasks")
+BUILD_BASE_STORAGE_DIR = "Storage"
+RESULT_FILE = "runner_result.log"
+BIG_WAIT_INTERVAL = 100
+SMALL_WAIT_INTERVAL = 10
+CACHED_VERSION_FILE_NAME = ".cached_version"
+
+
+class Runner(Component):
+    """
+    Component for performing full Klever run, which consist of:
+    1. Creating of a build base;
+    2. Launching klever;
+    3. Converting results to CVV.
+    """
+    def __init__(self, general_config: dict, kernel_dir_override: str, version_override: str, properties: list,
+                 parent_job_id: str):
+
+        super().__init__(COMPONENT_RUNNER, general_config)
+        bridge_config = self.config[TAG_BRIDGE]
+        klever_config = self.config[TAG_KLEVER]
+        builder_config = self.config[TAG_BUILDER]
+
+        # Builder config
+        self.kernel_dir = builder_config.get(TAG_KERNEL_DIR, None)
+        if kernel_dir_override:
+            self.kernel_dir = kernel_dir_override
+        if version_override:
+            self.version = version_override
+        self.properties = properties
+        self.cif_path = self.__normalize_dir(builder_config.get(TAG_CIF, ""))
+        self.builder_work_dir = self.__normalize_dir(builder_config.get(TAG_WORK_DIR, ""))
+        self.build_base_cached = self.__normalize_dir(builder_config.get(TAG_CACHE, ""))
+        self.arch = builder_config.get(TAG_ARCH, DEFAULT_ARCH)
+        self.make_cmd = builder_config.get(TAG_CONFIG_COMMAND, DEFAULT_CONFIG_COMMAND)
+
+        # Klever config
+        self.klever_home_dir = self.__normalize_dir(klever_config.get(TAG_HOME_DIR), TAG_HOME_DIR)
+        self.klever_deploy_dir = self.__normalize_dir(klever_config.get(TAG_DEPLOY_DIR), TAG_DEPLOY_DIR)
+        self.launch_config = self.__normalize_dir(klever_config.get(TAG_LAUNCH_CONFIG), TAG_LAUNCH_CONFIG)
+        self.verifier_options_config = self.__normalize_dir(klever_config.get(TAG_VERIFIER_OPTIONS_CONFIG),
+                                                            TAG_VERIFIER_OPTIONS_CONFIG)
+        self.klever_host = klever_config.get(TAG_KLEVER_HOST)
+        self.klever_user = klever_config.get(TAG_KLEVER_USER)
+        self.klever_pass = klever_config.get(TAG_KLEVER_PASS)
+        self.klever_job_id = klever_config.get(TAG_JOB_ID)
+        self.launch_config = self.__normalize_dir(klever_config.get(TAG_LAUNCH_CONFIG), TAG_LAUNCH_CONFIG)
+        self.job_config = self.__normalize_dir(klever_config.get(TAG_JOB_CONFIG), TAG_JOB_CONFIG)
+        self.resource_config = self.__normalize_dir(klever_config.get(TAG_RESOURCE_CONFIG), TAG_RESOURCE_CONFIG)
+        self.python_venv = self.__normalize_dir(klever_config.get(TAG_PYTHON_VENV, ""))
+        self.parent_job_id = parent_job_id
+
+        # Klever Bridge config
+        self.bridge_dir = self.__normalize_dir(bridge_config.get(TAG_HOME_DIR), TAG_HOME_DIR)
+        self.bridge_config = self.__normalize_dir(bridge_config.get(TAG_BRIDGE_CONFIG), TAG_BRIDGE_CONFIG)
+        self.jobs_dir = self.__normalize_dir(bridge_config.get(TAG_WORK_DIR, ""))
+
+    @staticmethod
+    def __normalize_dir(dirname: str, fail_with_text="") -> str:
+        if dirname:
+            if os.path.exists(dirname):
+                return os.path.abspath(dirname)
+            sys.exit(f"Name '{dirname}' does not exist")
+        else:
+            if fail_with_text:
+                sys.exit(f"Name '{fail_with_text}' was not specified")
+            return ""
+
+    def __is_use_cache(self) -> bool:
+        if not (self.build_base_cached and os.path.exists(self.build_base_cached)):
+            return False
+        if os.path.exists(CACHED_VERSION_FILE_NAME):
+            # There is a cached file - then we need to check version.
+            with open(CACHED_VERSION_FILE_NAME, errors='ignore', encoding='ascii') as f_version:
+                last_version = f_version.read()
+            if last_version == self.version:
+                self.logger.info(f"Reusing build base from {self.build_base_cached}, version: {last_version}")
+                return True
+            self.logger.info(f"Cached build base is outdated. "
+                             f"Previous version is {last_version}, current version is {self.version}")
+            return False
+        # No cached file - do not reuse.
+        self.logger.info("Cannot find last cached version")
+        return False
+
+    def __cache_build_base(self):
+        if self.build_base_cached:
+            with open(CACHED_VERSION_FILE_NAME, "w", encoding='ascii') as f_version:
+                f_version.write(self.version)
+
+    def builder(self) -> str:
+        """
+        Create a build base for specific kernel
+        """
+        if self.__is_use_cache():
+            return self.build_base_cached
+        self.logger.info("Preparing build base")
+        builder_script = os.path.join(self.klever_home_dir, BUILDER_SCRIPT)
+        cmd = f"{builder_script} --cif {self.cif_path} --kernel-dir {self.kernel_dir} " \
+              f"--workdir {self.builder_work_dir} --arch {self.arch} --kernel-config {self.make_cmd}"
+        self.logger.debug(cmd)
+        if self.command_caller(cmd):
+            sys.exit("Cannot build Linux kernel")
+        kernel_dir_rel = os.path.basename(self.kernel_dir)
+        build_base_dir = os.path.join(self.builder_work_dir,
+                                      f"build-base-{kernel_dir_rel}-{self.arch}-{self.make_cmd}")
+        self.logger.info(f"Build base has been prepared in {build_base_dir}")
+        self.__cache_build_base()
+        return build_base_dir
+
+    def __update_job_config(self, build_base_dir: str):
+        with open(self.job_config, errors='ignore', encoding='ascii') as f_jconfig:
+            job_config = json.load(f_jconfig)
+        with open(self.bridge_config, errors='ignore', encoding='ascii') as f_bconfig:
+            bridge_config = json.load(f_bconfig)
+        build_base_dir_name = os.path.basename(build_base_dir)
+        dst_build_base_dir = os.path.join(self.klever_deploy_dir, KLEVER_BUILD_BASE_DIR, build_base_dir_name)
+        if os.path.islink(dst_build_base_dir):
+            os.unlink(dst_build_base_dir)
+        os.symlink(build_base_dir, dst_build_base_dir)
+        job_config[TAG_BUILD_BASE] = build_base_dir_name
+        if TAG_EXPORTER not in bridge_config:
+            bridge_config[TAG_EXPORTER] = {}
+        if self.version:
+            bridge_config[TAG_EXPORTER][TAG_VERSION] = self.version
+        if self.properties:
+            job_config[TAG_PROPERTIES] = self.properties
+        uploaded_name = f"{'_'.join(self.properties)} - {self.version} - <timestamp>"
+        bridge_config[TAG_UPLOADER][TAG_NAME] = uploaded_name
+        if self.parent_job_id:
+            bridge_config[TAG_UPLOADER][TAG_IDENTIFIER] = self.parent_job_id
+        bridge_config[ComponentName.BENCHMARK_LAUNCHER][TAG_OUTPUT_DIR] = \
+            os.path.join(self.klever_deploy_dir, KLEVER_TASKS_DIR)
+        bridge_config[ComponentName.BENCHMARK_LAUNCHER][TAG_TASKS_DIR] = \
+            os.path.join(dst_build_base_dir, BUILD_BASE_STORAGE_DIR)
+        with open(self.job_config, 'w', encoding='ascii') as f_jconfig:
+            json.dump(job_config, f_jconfig, sort_keys=True, indent=4)
+        with open(self.bridge_config, 'w', encoding='ascii') as f_bconfig:
+            json.dump(bridge_config, f_bconfig, sort_keys=True, indent=4)
+
+    @staticmethod
+    def __create_credentials(user: str, password: str, host: str) -> str:
+        return f"--host {host} --username {user} --password {password}"
+
+    def klever(self, build_base_dir: str) -> str:
+        """
+        Create a new Klever job and launch it.
+        """
+        def clear_klever_resources():
+            if os.path.exists(KLEVER_PROGRESS_FILE):
+                os.unlink(KLEVER_PROGRESS_FILE)
+        self.logger.info("Launching Klever tool")
+        wall_time_start = time.time()
+        self.__update_job_config(build_base_dir)
+        credentials = self.__create_credentials(self.klever_user, self.klever_pass, self.klever_host)
+        replacement = f"{{\"job.json\": \"{self.job_config}\", \"tasks.json\": \"{self.resource_config}\"," \
+                      f"\"verifier profiles.json\": \"{self.verifier_options_config}\"}}"
+        cmd = f"{KLEVER_LAUNCH_SCRIPT} {credentials} --rundata {self.launch_config} " \
+              f"--replacement '{replacement}' {self.klever_job_id}"
+        if self.python_venv:
+            os.chdir(self.klever_home_dir)
+            if self.command_caller(f"{self.python_venv} -m venv venv"):
+                self.logger.warning("Cannot use python venv")
+            sys.path.insert(1, os.path.abspath(DEFAULT_VENV_PATH))
+            os.environ["PATH"] += os.pathsep + os.path.abspath(DEFAULT_VENV_PATH)
+        launcher_output = self.command_caller_with_output(cmd)
+        if not launcher_output:
+            sys.exit("Cannot launch Klever")
+        res = re.search(r': (.+)', launcher_output)
+        if not res:
+            sys.exit(f"Cannot obtain new job id from output '{launcher_output}'")
+        new_job_id = res.group(1)
+
+        # Wait until job is finished
+        time.sleep(BIG_WAIT_INTERVAL)
+        clear_klever_resources()
+        while True:
+            cmd = f"{KLEVER_CHECK_SCRIPT} {credentials} -o {KLEVER_PROGRESS_FILE} {new_job_id}"
+            if self.command_caller(cmd):
+                sys.exit("Cannot obtain Klever job progress")
+            with open(KLEVER_PROGRESS_FILE, errors='ignore', encoding='ascii') as f_progress:
+                job_progress = json.load(f_progress)
+                job_cur_status = int(job_progress['status'])
+            if job_cur_status >= JOB_PROGRESS_SOLVED_STATUS:
+                break
+            time.sleep(SMALL_WAIT_INTERVAL)
+        clear_klever_resources()
+        if job_cur_status != JOB_PROGRESS_SOLVED_STATUS:
+            sys.exit(f"Klever launch has failed with code {job_cur_status}")
+        wall_time_start = round(time.time() - wall_time_start, 3)
+        self.logger.info(f"Klever has been successfully completed in {wall_time_start}s")
+        return new_job_id
+
+    def bridge(self, new_job_id: str):
+        """
+        Run Klever Bridge and export solved job into CVV.
+        """
+        self.logger.info("Exporting results to CVV format via Klever Bridge")
+        os.chdir(self.bridge_dir)
+        cmd = f"{BRIDGE_SCRIPT} -c {self.bridge_config} -j {new_job_id} --kernel-dir {self.kernel_dir}"
+        self.logger.debug(f"Run Klever Bridge with {cmd}")
+        if self.command_caller(cmd):
+            sys.exit(f"Cannot export results via Klever Bridge. Reproduce with {cmd}")
+        if self.jobs_dir:
+            self.logger.info("Clear job files")
+            shutil.rmtree(os.path.join(self.jobs_dir, new_job_id), ignore_errors=True)
+        self.command_caller("service klever-native-scheduler restart")
+
+    def print_statistics(self):
+        """
+        Print comparison data with the previous run.
+        """
+        if self.parent_job_id:
+            with open(self.bridge_config, errors='ignore', encoding='ascii') as f_bconfig:
+                bridge_config = json.load(f_bconfig)
+            cvv_pass = bridge_config[TAG_UPLOADER][TAG_CVV_PASS]
+            cvv_user = bridge_config[TAG_UPLOADER][TAG_CVV_USER]
+            cvv_host = bridge_config[TAG_UPLOADER][TAG_CVV_HOST]
+            additional_args = ""
+            if TAG_CVV_HOST_REDIRECT in bridge_config[TAG_UPLOADER]:
+                additional_args += f"--redirect-host {bridge_config[TAG_UPLOADER][TAG_CVV_HOST_REDIRECT]}"
+            credentials = self.__create_credentials(cvv_user, cvv_pass, cvv_host)
+            os.chdir(self.bridge_dir)
+            cvv_python_path = os.path.abspath(os.path.join(os.path.dirname(COMPARATOR_SCRIPT), os.path.pardir))
+            command = f"PYTHONPATH={cvv_python_path} {COMPARATOR_SCRIPT} {credentials} {additional_args} " \
+                      f"{self.parent_job_id} > {RESULT_FILE}"
+            self.logger.debug(command)
+            self.command_caller(command)
+
+    def run(self):
+        """
+        Performs full run.
+        """
+        build_base_dir = self.builder()
+        new_job_id = self.klever(build_base_dir)
+        self.bridge(new_job_id)
+        self.print_statistics()
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-c", "--config", help="config file", required=True)
+    parser.add_argument("-d", "--kernel-dir", dest="kernel_dir", help="path to kernel directory")
+    parser.add_argument("-v", "--version", dest="version", help="Linux kernel version")
+    parser.add_argument("-p", "--properties", type=str, dest="properties",
+                        help="list of properties to be checked separated by semicolon")
+    parser.add_argument("-j", "--parent-job-id", dest="parent_job_id", help="parent job id")
+
+    options = parser.parse_args()
+    with open(options.config, errors='ignore', encoding='ascii') as data_file:
+        config = json.load(data_file)
+    kernel_dir = options.kernel_dir
+    version = options.version
+    props = str(options.properties).split(";")
+
+    runner = Runner(config, kernel_dir, version, props, options.parent_job_id)
+    runner.run()

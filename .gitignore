@@ -1,6 +1,4 @@
 __pycache__/
-work_dir*
+work_dir
 results
-tools/
-buildbot/
-plugin/
+tools
