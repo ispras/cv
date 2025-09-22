@@ -21,7 +21,7 @@ make install-witness-visualizer DEPLOY_DIR=<deployment directory>
 After deployment, Witness Visualizer can be used to visualize witnesses with the following command:
 
 ```shell
-<deployment directory>/scripts/visualize_witnesses.py OPTIONS
+<deployment directory>/cv/witness_visualizer.py OPTIONS
 ```
 ### Primary Options
 
@@ -46,7 +46,7 @@ After deployment, Witness Visualizer can be used to visualize witnesses with the
 
 ### Example
 ```bash
-<deployment directory>/scripts/visualize_witnesses.py \
+<deployment directory>/cv/witness_visualizer.py \
   --witness output/witness.graphml \
   --result-dir results/ \
   --source-dir ~/sv-benchmarks

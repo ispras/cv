@@ -16,6 +16,3 @@ django
 pyyaml
 pycparser
 sympy
-
-# Specific versions
-clade==3.6

@@ -42,7 +42,7 @@ First, deploy the [CVV web interface](https://github.com/vmordan/cvv) following 
 
 Install Klever Bridge in the CV deployment directory:
 ```shell
-make install-klever-bridge DEPLOY_DIR=<path_to_deploy_directory>
+make install DEPLOY_DIR=<path_to_deploy_directory>
 ```
 
 ## Usage
@@ -70,7 +70,7 @@ Create a configuration file `klever.json` in the `<deploy directory>`:
 
 Run Klever Bridge:
 ```shell
-./scripts/bridge.py -c klever.json
+./cv/bridge.py -c klever.json
 ```
 
 ## Klever Runner
@@ -84,7 +84,7 @@ Example configs are in `configs/bridge/`.
 
 Run Klever Runner from the `<deploy directory>`:
 ```shell
-sudo ./scripts/runner.py -c runner.json -d <path_to_Linux_kernel>
+sudo ./cv/runner.py -c runner.json -d <path_to_Linux_kernel>
 ```
 
 ## Klever Configuration

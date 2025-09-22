@@ -3,35 +3,21 @@
 [![Apache 2.0 License](https://img.shields.io/badge/license-Apache--2-brightgreen.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 ![Deploy Workflow](https://github.com/ispras/cv/actions/workflows/deploy.yml/badge.svg)
 ![Pylint Workflow](https://github.com/ispras/cv/actions/workflows/pylint.yml/badge.svg)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.16032807.svg)](https://doi.org/10.5281/zenodo.16032807)
 
-This framework enables **continuous verification** of generic software systems. It consists of the following tools:
+# **Continuous Verification Framework (CVF)**
 
-- **Continuous Verifier (CV)**
-  Verifies a target software system. To support a specific system, a plugin must define:
-    - how to decompose the system (currently supports only C programs);
-    - how to construct an environment model;
-    - which properties to verify.
+**Continuous Verification Framework (CVF)** is an integrated environment for analyzing, visualizing, and managing software verification results.
+It builds on the [SV-COMP](https://sv-comp.sosy-lab.org) standards and extends them with a set of complementary tools to improve verification usability, trace inspection, and regression analysis.
 
-  📖 [CV Documentation](docs/cv.md)
+## Key Components
 
-- **Klever Bridge**
-  Integrates with the [Klever framework](https://github.com/ldv-klever/klever) to verify Linux kernel modules.
-  📖 [Klever Bridge Documentation](docs/klever_bridge.md)
+* **Witness Visualizer** – converts SV-COMP witnesses (error traces or proofs) into a human-readable format. [📖 Documentation](docs/witness_visualizer.md)
+* **Benchmark Visualizer** – processes and visualizes complete verification benchmarks. [📖 Documentation](docs/benchmark_visualizer.md)
+* **Multiple Error Analyser (MEA)** – filters multiple witnesses to report only unique potential bugs. [📖 Documentation](docs/mea.md)
+* **Klever Bridge** – integrates with the [Klever framework](https://github.com/ldv-klever/klever) to visualize Linux kernel module verification tasks. [📖 Documentation](docs/klever_bridge.md)
 
-- **Benchmark Visualizer**
-  Processes and visualizes verification benchmarks from [SV-COMP](https://sv-comp.sosy-lab.org).
-  📖 [Benchmark Visualizer Documentation](docs/benchmark_visualizer.md)
-
-- **Witness Visualizer**
-  Converts SV-COMP witnesses (error traces or proofs) into human-readable format.
-  📖 [Witness Visualizer Documentation](docs/witness_visualizer.md)
-
-- **Multiple Error Analyser (MEA)**
-  Filters multiple witnesses to report only unique potential bugs.
-  📖 [MEA Documentation](docs/mea.md)
-
-📊 All verification results can be viewed using
-the [Continuous Verification Visualizer (CVV)](https://github.com/vmordan/cvv).
+📊 Verification results can be explored through the web interface [Continuous Verification Visualizer (CVV)](https://github.com/vmordan/cvv).
 
 ## Requirements
 
@@ -44,7 +30,7 @@ Install required packages using:
 ```bash
 sudo apt update
 sudo apt install -y \
-  git openjdk-17-jdk python3 python3-dev python3-pip ant lcov cmake
+  git python3 python3-dev python3-pip lcov
 ```
 
 ### Python Dependencies

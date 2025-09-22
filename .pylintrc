@@ -1,8 +1,6 @@
 [MESSAGES CONTROL]
 
 disable=
-    wildcard-import,
-    unused-wildcard-import,
     too-many-instance-attributes,
     too-many-locals,
     too-many-arguments,
@@ -10,7 +8,6 @@ disable=
     fixme,
     logging-fstring-interpolation,
     too-many-branches,
-    unused-import,
     import-error,
     too-many-statements,
     too-many-nested-blocks,
@@ -18,7 +15,4 @@ disable=
     no-member,
     duplicate-code,
     too-few-public-methods,
-    unnecessary-lambda,
-    no-name-in-module,
     line-too-long
-

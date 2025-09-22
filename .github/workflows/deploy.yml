@@ -17,24 +17,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Configure system for container mode
-        run: |
-          echo "Enabling unprivileged user namespaces..."
-          sudo sysctl kernel.unprivileged_userns_clone=1
-          sudo sysctl -w user.max_user_namespaces=10000
-
-      - name: Install system dependencies
-        run: |
-          echo "Installing required packages..."
-          sudo apt-get update
-          sudo apt-get install -y openjdk-17-jdk
-          echo "Configuring Java 17 as default..."
-          sudo update-alternatives --install /usr/bin/java java /usr/lib/jvm/java-17-openjdk-amd64/bin/java 1
-          sudo update-alternatives --install /usr/bin/javac javac /usr/lib/jvm/java-17-openjdk-amd64/bin/javac 1
-          sudo update-alternatives --set java /usr/lib/jvm/java-17-openjdk-amd64/bin/java
-          sudo update-alternatives --set javac /usr/lib/jvm/java-17-openjdk-amd64/bin/javac
-          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
-
       - name: Install Python dependencies
         run: |
           python3 -m pip install --upgrade pip
@@ -44,19 +26,8 @@ jobs:
         run: |
           echo "Building and deploying CV..."
           make install -j"$(nproc)" DEPLOY_DIR=build
-          make install-cif-compiled -j"$(nproc)" DEPLOY_DIR=build
 
-      - name: Run integration tests
-        run: |
-          echo "Running integration tests..."
-          cp -r docs/examples/sources/ build/
-          cd build
-          python3 ./scripts/launch.py -c configs/it.json
-
-          echo "Verifying results..."
-          grep "it;smg;no_memory_leak_caller;TRUE;SUCCESS" results/report_launches_it_*.csv || exit 1
-          grep "it;smg;memory_leak_caller;FALSE;SUCCESS" results/report_launches_it_*.csv || exit 1
-  build-visualizer:
+  build-witness-visualizer:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -71,12 +42,12 @@ jobs:
       run: |
         python3 -m pip install --upgrade pip
         pip3 install -r requirements.txt
-    - name: Deployment of Benchmark Visualizer
+    - name: Deployment of Witness Visualizer
       run: |
-        DEPLOY_DIR=build make install-benchmark-visualizer -j$(nproc)
+        DEPLOY_DIR=build make install-witness-visualizer -j$(nproc)
         cd build
-        python3 ./scripts/visualize_witnesses.py -r results/ -d ../docs/examples/witnesses/violation/
-        python3 ./scripts/visualize_witnesses.py -r results/ -d ../docs/examples/witnesses/correctness/
+        python3 ./cv/witness_visualizer.py -r results/ -d ../docs/examples/witnesses/violation/
+        python3 ./cv/witness_visualizer.py -r results/ -d ../docs/examples/witnesses/correctness/
   build-mea:
     runs-on: ubuntu-latest
     strategy:
@@ -96,8 +67,8 @@ jobs:
       run: |
         DEPLOY_DIR=build make install-mea -j$(nproc)
         cd build
-        python3 ./scripts/filter.py -d ../docs/examples/witnesses/violation/
-  build-frama-c-cil:
+        python3 ./cv/mea.py -d ../docs/examples/witnesses/violation/
+  deploy-cvv:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -108,6 +79,21 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Deployment of Frama-C CIL
+
+    - name: Install dependencies
       run: |
-        DEPLOY_DIR=build make install-frama-c-cil -j$(nproc)
+        python3 -m pip install --upgrade pip
+        pip3 install -r requirements.txt
+
+    - name: Install system dependencies
+      run: |
+        echo "Installing required packages..."
+        sudo apt-get update
+        sudo apt-get install -y postgresql libpq-dev gettext
+
+    - name: Deployment of CVV
+      run: |
+        DEPLOY_DIR=build make deploy-cvv -j$(nproc)
+        cd build/cvv
+        pip3 install requests ujson graphviz django psycopg2 pluggy py attrs six more-itertools ply pytest atomicwrites pycparser psycopg2 sympy pytz
+        deploys/deployment.sh __cvf_cvv_deploy

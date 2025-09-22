@@ -1,0 +1,10 @@
+Continuous Verification Framework - processing and managing verification results.
+Repository: https://github.com/ispras/cv
+
+{% for copyright_line in copyright_lines %}
+{{ copyright_line }}
+{% endfor %}
+
+{% for expression in spdx_expressions %}
+SPDX-License-Identifier: {{ expression }}
+{% endfor %}
