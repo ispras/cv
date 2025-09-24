@@ -50,3 +50,5 @@ make install -j DEPLOY_DIR=<working_directory>
 ```
 
 Replace `<working_directory>` with your preferred deployment path.
+
+A standalone setup of CVF is provided via a Dockerfile.
