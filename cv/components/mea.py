@@ -41,6 +41,7 @@ TAG_CLEAN = "clean"
 TAG_UNZIP = "unzip"
 TAG_DRY_RUN = "dry run"
 TAG_SOURCE_DIR = "source dir"
+TAG_PROCESSED_TRACE = "cet"
 
 DO_NOT_FILTER = "do not filter"
 
@@ -106,8 +107,9 @@ class MEA(Component):
 
         start_time = time.time()
         process_pool = []
+        memory_usage_all = []
         queue = multiprocessing.Queue()
-        converted_error_traces = multiprocessing.Manager().dict()
+        converted_error_traces = {}
         for i in range(self.parallel_processes):
             process_pool.append(None)
         for error_trace_file in self.error_traces:
@@ -121,10 +123,12 @@ class MEA(Component):
                             process_pool[i] = multiprocessing.Process(target=self.__process_trace,
                                                                       name=error_trace_file,
                                                                       args=(error_trace_file,
-                                                                            converted_error_traces,
                                                                             queue))
                             process_pool[i].start()
                             raise NestedLoop
+                    else:
+                        if not queue.empty():
+                            self.__drain_processing_queue(queue, converted_error_traces, memory_usage_all)
                     time.sleep(BUSY_WAITING_INTERVAL)
             except NestedLoop:
                 pass
@@ -133,7 +137,8 @@ class MEA(Component):
                 kill_launches(process_pool)
 
         wait_for_launches(process_pool)
-        self.__count_resource_usage(queue)
+        self.__drain_processing_queue(queue, converted_error_traces, memory_usage_all)
+        self.__compute_max_memory_usage(memory_usage_all)
         self.package_processing_time = time.time() - start_time
 
         # Need to sort traces for deterministic results.
@@ -211,22 +216,20 @@ class MEA(Component):
         is_exported = False
         witness_type = WitnessType.VIOLATION
         for error_trace_file in self.error_traces:
-            converted_error_traces = {}
-            is_exported, witness_type = self.__process_trace(error_trace_file,
-                                                             converted_error_traces)
+            is_exported, witness_type = self.__process_trace(error_trace_file)
             if is_exported:
                 self.__print_trace_archive(error_trace_file, witness_type)
         self.memory = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) * 1024
         return is_exported, witness_type
 
-    def __process_trace(self, error_trace_file: str, converted_error_traces: dict,
-                        queue: multiprocessing.Queue = None):
+    def __process_trace(self, error_trace_file: str, queue: multiprocessing.Queue = None):
         # TODO: if we receive several witnesses they are considered to be violation witnesses only.
         if queue and not self.is_standalone:
             supported_types = {WitnessType.VIOLATION}
         else:
             supported_types = {WitnessType.VIOLATION, WitnessType.CORRECTNESS}
         parsed_error_trace = self.__parse_trace(error_trace_file, supported_types)
+        converted_error_trace = []
         if parsed_error_trace:
             self.__process_parsed_trace(parsed_error_trace)
             if self.clean:
@@ -241,13 +244,12 @@ class MEA(Component):
                                                         self.conversion_function_args)
             self.__print_parsed_error_trace(parsed_error_trace, converted_error_trace,
                                             error_trace_file)
-            converted_error_traces[error_trace_file] = converted_error_trace
-
         if queue:
             user_time, system_time, memory = resource.getrusage(resource.RUSAGE_SELF)[0:3]
             queue.put({
                 Resource.CPU_TIME: float(user_time + system_time),
-                Resource.MEMORY_USAGE: int(memory) * 1024
+                Resource.MEMORY_USAGE: int(memory) * 1024,
+                TAG_PROCESSED_TRACE: [error_trace_file, converted_error_trace]
             })
             sys.exit(0)
         else:
@@ -401,13 +403,19 @@ class MEA(Component):
         converted_traces_files = common_part + CONVERTED_ERROR_TRACES
         return json_trace_name, source_files, converted_traces_files
 
-    def __count_resource_usage(self, queue: multiprocessing.Queue):
-        memory_usage_all = []
-        children_memory = 0
+    def __drain_processing_queue(self, queue: multiprocessing.Queue,
+                                 converted_error_traces: dict,
+                                 memory_usage_all: list):
         while not queue.empty():
-            resources = queue.get()
-            memory_usage_all.append(resources.get(Resource.MEMORY_USAGE, 0))
-            self.cpu_time += resources.get(Resource.CPU_TIME, 0.0)
+            proc_result = queue.get()
+            memory_usage_all.append(proc_result.get(Resource.MEMORY_USAGE, 0))
+            self.cpu_time += proc_result.get(Resource.CPU_TIME, 0.0)
+            cet = proc_result.get(TAG_PROCESSED_TRACE, [])
+            if cet and len(cet) == 2 and cet[0] and cet[1]:
+                converted_error_traces[cet[0]] = cet[1]
+
+    def __compute_max_memory_usage(self, memory_usage_all: list):
+        children_memory = 0
         for memory_usage in sorted(memory_usage_all)[:self.parallel_processes]:
             children_memory += memory_usage
         process_memory = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) * 1024
