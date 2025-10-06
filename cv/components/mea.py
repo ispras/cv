@@ -119,6 +119,8 @@ class MEA(Component):
                         if process_pool[i] and not process_pool[i].is_alive():
                             process_pool[i].join()
                             process_pool[i] = None
+                            if not queue.empty():
+                                self.__drain_processing_queue(queue, converted_error_traces, memory_usage_all)
                         if not process_pool[i]:
                             process_pool[i] = multiprocessing.Process(target=self.__process_trace,
                                                                       name=error_trace_file,
@@ -126,9 +128,6 @@ class MEA(Component):
                                                                             queue))
                             process_pool[i].start()
                             raise NestedLoop
-                    else:
-                        if not queue.empty():
-                            self.__drain_processing_queue(queue, converted_error_traces, memory_usage_all)
                     time.sleep(BUSY_WAITING_INTERVAL)
             except NestedLoop:
                 pass
@@ -144,7 +143,7 @@ class MEA(Component):
         # Need to sort traces for deterministic results.
         # Moreover, first traces are usually more "simpler".
         sorted_traces = {}
-        for trace in converted_error_traces.keys():
+        for trace in converted_error_traces:
             identifier = re.search(rf'witness(.*){Extension.GRAPHML}', trace).group(1)
             key = identifier
             if identifier.isdigit():
