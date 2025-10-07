@@ -352,7 +352,7 @@ class VerificationResults:
         """
         start_time_cpu = time.process_time()
         start_wall_time = time.time()
-        traces = glob.glob(f"{launch_dir}/witness*")
+        traces = glob.glob(f"{launch_dir}/witness*{Extension.GRAPHML}")
         mea = MEA(self.config, traces, install_dir, self.rule, result_dir, remove_prefixes=remove_src_prefixes)
         self.filtered_traces = len(mea.filter())
         if self.filtered_traces:
