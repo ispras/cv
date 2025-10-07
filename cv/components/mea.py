@@ -268,7 +268,7 @@ class MEA(Component):
                 queue.put(proc_elem, timeout=BUSY_WAITING_INTERVAL)
             except Full:
                 self.logger.debug(f"Cannot put trace into queue (size {len(converted_error_trace)}), offloading.")
-                raise NotImplementedError("Implement offloading to a file.")
+                raise NotImplementedError("Implement offloading to a file.")  # pylint: disable=raise-missing-from
             sys.exit(0)
         else:
             return bool(parsed_error_trace), parsed_error_trace.get('type', WitnessType.VIOLATION)
