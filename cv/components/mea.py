@@ -22,13 +22,14 @@ import resource
 import sys
 import time
 import zipfile
+from queue import Empty, Full
 
 from aux.common import NestedLoop, kill_launches, wait_for_launches
 from components import BUSY_WAITING_INTERVAL, ERROR_TRACE_SOURCES
 from components.component import Component, Tool
-from mea.core import convert_error_trace, compare_error_traces, is_equivalent, ConversionFunction, \
-    DEFAULT_CONVERSION_FUNCTION, DEFAULT_COMPARISON_FUNCTION, CACHED_CONVERSION_FUNCTIONS, \
-    DEFAULT_SIMILARITY_THRESHOLD, TAG_CONVERSION_FUNCTION, TAG_COMPARISON_FUNCTION
+from mea.core import convert_error_trace, compare_error_traces, is_equivalent, DEFAULT_CONVERSION_FUNCTION, \
+    DEFAULT_COMPARISON_FUNCTION, CACHED_CONVERSION_FUNCTIONS, \
+    DEFAULT_SIMILARITY_THRESHOLD, TAG_CONVERSION_FUNCTION, TAG_COMPARISON_FUNCTION, ConversionFunction
 from mea.et import import_error_trace
 from models.tags import Tag, ComponentName, Extension, WitnessType, Resource
 
@@ -42,6 +43,8 @@ TAG_UNZIP = "unzip"
 TAG_DRY_RUN = "dry run"
 TAG_SOURCE_DIR = "source dir"
 TAG_PROCESSED_TRACE = "cet"
+
+BUSY_WAITING_MEA = 0.1  # MEA subprocesses usually finish quickly.
 
 DO_NOT_FILTER = "do not filter"
 
@@ -128,13 +131,21 @@ class MEA(Component):
                                                                             queue))
                             process_pool[i].start()
                             raise NestedLoop
-                    time.sleep(BUSY_WAITING_INTERVAL)
+                    time.sleep(BUSY_WAITING_MEA)
             except NestedLoop:
                 pass
             except Exception as exception:
                 self.logger.error(f"Could not filter traces: {exception}", exc_info=True)
                 kill_launches(process_pool)
 
+        counter = 0
+        while any(p and p.is_alive() for p in process_pool):
+            # Ensure all processes pushed data to the queue before calling join().
+            self.__drain_processing_queue(queue, converted_error_traces, memory_usage_all)
+            time.sleep(BUSY_WAITING_MEA)
+            if counter and counter % 10 == 0:
+                self.logger.debug(f"Waiting in a loop for {counter / 10}s.")
+            counter += 1
         wait_for_launches(process_pool)
         self.__drain_processing_queue(queue, converted_error_traces, memory_usage_all)
         self.__compute_max_memory_usage(memory_usage_all)
@@ -184,7 +195,7 @@ class MEA(Component):
                                     args=(error_trace_file,))
                                 process_pool[i].start()
                                 raise NestedLoop
-                        time.sleep(0.1)
+                        time.sleep(BUSY_WAITING_MEA)
                 except NestedLoop:
                     pass
                 except Exception as exception:
@@ -245,11 +256,19 @@ class MEA(Component):
                                             error_trace_file)
         if queue:
             user_time, system_time, memory = resource.getrusage(resource.RUSAGE_SELF)[0:3]
-            queue.put({
-                Resource.CPU_TIME: float(user_time + system_time),
-                Resource.MEMORY_USAGE: int(memory) * 1024,
-                TAG_PROCESSED_TRACE: [error_trace_file, converted_error_trace]
-            })
+            proc_elem = {
+                    Resource.CPU_TIME: float(user_time + system_time),
+                    Resource.MEMORY_USAGE: int(memory) * 1024
+            }
+            if parsed_error_trace:
+                proc_elem[TAG_PROCESSED_TRACE] = [error_trace_file, converted_error_trace]
+            try:
+                # Try to put an element into the queue within the specified timeout.
+                # If the queue is full or blocked (e.g., error trace too large), offload to file.
+                queue.put(proc_elem, timeout=BUSY_WAITING_INTERVAL)
+            except Full:
+                self.logger.debug(f"Cannot put trace into queue (size {len(converted_error_trace)}), offloading.")
+                raise NotImplementedError("Implement offloading to a file.")
             sys.exit(0)
         else:
             return bool(parsed_error_trace), parsed_error_trace.get('type', WitnessType.VIOLATION)
@@ -280,6 +299,9 @@ class MEA(Component):
     def __print_trace_archive(self, error_trace_file_name: str, witness_type=WitnessType.VIOLATION):
         json_trace_name, source_files, converted_traces_files = \
             self.__get_aux_file_names(error_trace_file_name)
+        if any(not os.path.isfile(file_path) for file_path in [json_trace_name, source_files, converted_traces_files]):
+            # Sanity check: skip broken results to avoid corrupting output.
+            return
         archive_name = error_trace_file_name[:-len(Extension.GRAPHML)] + Extension.ARCHIVE
         archive_name_base = os.path.basename(archive_name)
         if self.is_standalone:
@@ -405,13 +427,17 @@ class MEA(Component):
     def __drain_processing_queue(self, queue: multiprocessing.Queue,
                                  converted_error_traces: dict,
                                  memory_usage_all: list):
-        while not queue.empty():
-            proc_result = queue.get()
-            memory_usage_all.append(proc_result.get(Resource.MEMORY_USAGE, 0))
-            self.cpu_time += proc_result.get(Resource.CPU_TIME, 0.0)
-            cet = proc_result.get(TAG_PROCESSED_TRACE, [])
-            if cet and len(cet) == 2 and cet[0] and cet[1]:
-                converted_error_traces[cet[0]] = cet[1]
+        # Iterate over elements in the queue until it is empty.
+        while True:
+            try:
+                proc_result = queue.get_nowait()
+                memory_usage_all.append(proc_result.get(Resource.MEMORY_USAGE, 0))
+                self.cpu_time += proc_result.get(Resource.CPU_TIME, 0.0)
+                cet = proc_result.get(TAG_PROCESSED_TRACE, [])
+                if cet and len(cet) == 2:
+                    converted_error_traces[cet[0]] = cet[1]
+            except Empty:
+                break
 
     def __compute_max_memory_usage(self, memory_usage_all: list):
         children_memory = 0
