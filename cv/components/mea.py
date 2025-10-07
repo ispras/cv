@@ -247,7 +247,7 @@ class MEA(Component):
             self.logger.debug(f"Trace '{error_trace_file}' has been parsed")
 
             if parsed_error_trace.get('type') == WitnessType.CORRECTNESS:
-                conversion_function = ConversionFunction.FULL
+                conversion_function = ConversionFunction.CONDITIONS
             else:
                 conversion_function = self.conversion_function
             converted_error_trace = convert_error_trace(parsed_error_trace, conversion_function,
